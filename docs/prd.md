@@ -86,6 +86,7 @@ Mora Knode 기획서에서 영감을 받아 매트릭스 조직 구조를 수용
 - [architecture/ADR-004-agent-identity-and-api.md](architecture/ADR-004-agent-identity-and-api.md) — Agent Identity & API
 - [architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md](architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md) — LLM 비차별 원칙
 - [architecture/ADR-006-byoa-onboarding-ux.md](architecture/ADR-006-byoa-onboarding-ux.md) — BYOA 온보딩 UX (UI + 환경변수 generator)
+- [architecture/ADR-007-short-disclaimer.md](architecture/ADR-007-short-disclaimer.md) — M3 외부 공개용 짧은 면책 (DISCLAIMER.md 원문, 정식 EULA / SLA 는 M5 이전)
 - [architecture/ADR-008-flutter-web-desktop-only.md](architecture/ADR-008-flutter-web-desktop-only.md) — Flutter Web 데스크톱 only (Windows native 제거, 모바일/앱스토어 미래)
 - [architecture/schema-integration-for-agents.md](architecture/schema-integration-for-agents.md) — 스키마 변경 PR 1~6
 - [planning/TODO.md](planning/TODO.md) — 마일스톤별 작업

@@ -421,7 +421,7 @@ ysh 가 결정해야 할 것:
 
 ### 후속 ADR 우선순위
 - [x] **ADR-006 채택 완료** (2026-04-29) — BYOA 온보딩 UX: UI 만 + RBAC 5 프리셋 현행 유지 + 환경변수 자동 generator
-- [ ] ADR-007: Plan 검토 권한 / 책임 / EULA / SLA (M5 정식 출시 이전)
+- [x] **ADR-007 (짧은 버전) 채택 완료** (2026-04-29) — README 간략 + DISCLAIMER.md 원문 + GPT 스타일 중간 톤 + 6 항목 (autonomous actions / your responsibilities / mora-knode 제한 책임 / safeguards 위반 / production 비인증 / dogfooding 메트릭 illustrative). 정식 EULA / SLA 는 M5 이전 별도
 - [x] **ADR-008 채택 완료** (2026-04-29) — Flutter Web 데스크톱 only, Windows native 제거. 모바일 / 앱스토어 / 반응형 / Task 코멘트는 미래 별도 ADR
 - [ ] ADR-009: 데이터 마이그레이션 어댑터 (Jira / Notion / Linear import) — M4 이후
 - [ ] ADR-010 (미래): 모바일 / 앱스토어 / 반응형 / Task 코멘트 — M5 이후 또는 데스크톱 web 데이터 페치 layer 안정화 후

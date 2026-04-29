@@ -135,7 +135,17 @@ CLAUDE.md          Project conventions
 
 [AGPL v3](LICENSE).
 
-Anyone can fork, run, and modify. If you host mora-knode as a service for others, you must publish your modifications. Commercial cloud and on-prem (self-hosted Pro) licensing options are TBD at M5+ (pricing decisions deferred until release-time market signals).
+Anyone can fork, run, and modify. If you host mora-knode as a service for others, you must publish your modifications.
+
+### Important — AI agent operation disclaimer
+
+mora-knode hosts external AI agents that can take **autonomous actions** (creating branches, opening PRs, modifying schedules). You are responsible for plans you approve, RBAC permissions you grant, and your LLM contracts. mora-knode is responsible for its orchestration logic (plan gate, RBAC, audit trail) — not for LLM responses, external tool behavior, or consequences of your approvals. Bypassing built-in safeguards (revision limits, human-only approve defaults, audit logging) voids this limited responsibility.
+
+Until M5 (2026-12 ~ 2027-01) general availability, mora-knode is **not certified for production use**.
+
+See [DISCLAIMER.md](DISCLAIMER.md) for the full text and [ADR-007](docs/architecture/ADR-007-short-disclaimer.md) for the decision record.
+
+Commercial cloud and on-prem (self-hosted Pro) licensing options are TBD at M5+ (pricing decisions deferred until release-time market signals).
 
 ---
 

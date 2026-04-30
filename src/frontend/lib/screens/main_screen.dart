@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/providers.dart';
 import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/my_work_section.dart';
 
 /// Top-level screen: the AppShell wraps a section view chosen by
 /// [appSectionProvider]. Each section is a placeholder for now and gets
@@ -17,7 +18,7 @@ class MainScreen extends ConsumerWidget {
 
     final (header, body) = switch (section) {
       AppSection.myWork =>
-        (_HeaderTitle('My work', subtitle: 'this week'), _Coming(label: 'My work')),
+        (_HeaderTitle('My work', subtitle: 'this week'), const MyWorkSection()),
       AppSection.allWork =>
         (_HeaderTitle('All work'), const AllWorkSection()),
       AppSection.projects =>

@@ -76,11 +76,11 @@ class _MatrixScreenState extends ConsumerState<MatrixScreen> {
             child: load.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
-              data: (rows) {
-                if (rows.isEmpty) {
+              data: (response) {
+                if (response.rows.isEmpty) {
                   return const Center(child: Text('No resources yet.'));
                 }
-                return _MatrixTable(rows: rows, from: _from, to: _to);
+                return _MatrixTable(rows: response.rows, from: _from, to: _to);
               },
             ),
           ),

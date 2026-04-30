@@ -9,7 +9,44 @@ import '../models/resource_load.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
 
-final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+// --- UI / session state ---
+
+/// Dev-mode "logged in as" id. Selected from the user switcher; passed to
+/// the backend as X-Dev-User-Id. null = anonymous (admin-equivalent).
+final currentUserIdProvider = StateProvider<String?>((_) => null);
+
+/// AppShell pane visibility. Sidebar default open, inspector default closed
+/// per wireframes.md §0.1.
+final sidebarOpenProvider = StateProvider<bool>((_) => true);
+final inspectorOpenProvider = StateProvider<bool>((_) => false);
+
+enum AppSection { myWork, allWork, projects, resources, matrix, plans, audit, agents, settings }
+
+final appSectionProvider = StateProvider<AppSection>((_) => AppSection.myWork);
+
+/// What the inspector should display. null = empty state.
+sealed class Inspection {
+  const Inspection();
+}
+
+class TaskInspection extends Inspection {
+  final String taskId;
+  const TaskInspection(this.taskId);
+}
+
+class ProjectInspection extends Inspection {
+  final String projectId;
+  const ProjectInspection(this.projectId);
+}
+
+final inspectionProvider = StateProvider<Inspection?>((_) => null);
+
+// --- API client ---
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final userId = ref.watch(currentUserIdProvider);
+  return ApiClient(currentUserId: userId);
+});
 
 final projectsProvider = FutureProvider<List<Project>>((ref) async {
   return ref.watch(apiClientProvider).listProjects();
@@ -80,6 +117,6 @@ class MatrixRange {
   int get hashCode => Object.hash(from, to);
 }
 
-final matrixLoadProvider = FutureProvider.family<List<ResourceLoad>, MatrixRange>((ref, range) async {
+final matrixLoadProvider = FutureProvider.family<MatrixLoadResponse, MatrixRange>((ref, range) async {
   return ref.watch(apiClientProvider).matrixLoad(from: range.from, to: range.to);
 });

@@ -19,6 +19,7 @@ builder.Services.AddSingleton<ChangeLogRepository>();
 builder.Services.AddSingleton<ResourceRepository>();
 builder.Services.AddSingleton<AssignmentRepository>();
 builder.Services.AddSingleton<MilestoneRepository>();
+builder.Services.AddSingleton<WorkCalendarRepository>();
 
 // Development-only open CORS so the Flutter web client (dart server) can call the API.
 builder.Services.AddCors(options =>
@@ -48,6 +49,7 @@ app.MapResourceEndpoints();
 app.MapAssignmentEndpoints();
 app.MapMatrixEndpoints();
 app.MapMilestoneEndpoints();
+app.MapWorkCalendarEndpoints();
 
 using (var scope = app.Services.CreateScope())
 {

@@ -21,6 +21,7 @@ public class MongoContext
     public IMongoCollection<Resource> Resources => _db.GetCollection<Resource>("resources");
     public IMongoCollection<Assignment> Assignments => _db.GetCollection<Assignment>("assignments");
     public IMongoCollection<ScheduleChangeLog> ChangeLogs => _db.GetCollection<ScheduleChangeLog>("change_logs");
+    public IMongoCollection<WorkCalendar> WorkCalendars => _db.GetCollection<WorkCalendar>("work_calendar");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {

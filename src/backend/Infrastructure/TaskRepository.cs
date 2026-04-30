@@ -35,9 +35,14 @@ public class TaskRepository
             task.OriginTimeline = new Timeline
             {
                 Start = task.CurrentTimeline.Start,
-                End = task.CurrentTimeline.End
+                End = task.CurrentTimeline.End,
+                IsAllDay = task.CurrentTimeline.IsAllDay
             };
         }
+
+        NormalizeAllDay(task.OriginTimeline);
+        NormalizeAllDay(task.CurrentTimeline);
+        NormalizeAllDay(task.RealTimeline);
 
         await _ctx.Tasks.InsertOneAsync(task, cancellationToken: ct);
         return task;
@@ -61,6 +66,10 @@ public class TaskRepository
         {
             incoming.OriginTimeline = existing.OriginTimeline;
         }
+
+        NormalizeAllDay(incoming.OriginTimeline);
+        NormalizeAllDay(incoming.CurrentTimeline);
+        NormalizeAllDay(incoming.RealTimeline);
 
         var logs = BuildTimelineChangeLogs(existing, incoming, incomingReason, incomingChangedBy);
         if (existing.Status != incoming.Status)
@@ -162,4 +171,25 @@ public class TaskRepository
 
     private static string? FormatDate(DateTime? value) =>
         value?.ToString("o");
+
+    /// <summary>
+    /// ADR-009: when a timeline is marked all-day, snap Start to 00:00:00.000
+    /// UTC and End to 23:59:59.999 UTC of their respective dates. Idempotent.
+    /// Skipped when the timeline is empty.
+    /// </summary>
+    private static void NormalizeAllDay(Timeline t)
+    {
+        if (!t.IsAllDay) return;
+        if (t.Start is { } s)
+        {
+            t.Start = DateTime.SpecifyKind(new DateTime(s.Year, s.Month, s.Day, 0, 0, 0, 0), DateTimeKind.Utc);
+        }
+        if (t.End is { } e)
+        {
+            // 23:59:59.999 of that calendar day in UTC.
+            t.End = DateTime.SpecifyKind(
+                new DateTime(e.Year, e.Month, e.Day, 23, 59, 59, 999),
+                DateTimeKind.Utc);
+        }
+    }
 }

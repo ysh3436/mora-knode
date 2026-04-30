@@ -13,6 +13,9 @@
 | My work 진입 뷰 | 채택 (기본 진입) |
 | 메인 탭 | **List · Board · Gantt · Calendar** (모두 4탭) |
 | 간트 시간 단위 | **Day / Week / Month** 토글 |
+| Timeline 데이터 단위 | **timestamp (시:분 정밀도)** + **종일 토글 (timeline 단위)** — [ADR-009](../architecture/ADR-009-timeline-timestamps-allday-workcalendar.md) |
+| WorkCalendar | 글로벌 1개 (org-level) MVP, 기본 Mon~Fri 09:00~18:00, 미설정 시 24/7 fallback — [ADR-009](../architecture/ADR-009-timeline-timestamps-allday-workcalendar.md) |
+| 캘린더 Week 뷰 | **(b) 시간 슬롯 grid** (Outlook/Google Cal 식). 종일 task 는 상단 all-day 영역에 별도 막대 |
 | 다크 모드 | M3 까지 미룸 (Material 3 기본 라이트 팔레트) |
 | 컬러 토큰 | Material 3 기본 (브랜드 팔레트는 M3 공개 즈음 재검토) |
 
@@ -199,8 +202,9 @@ Jira 와 Plane 의 일부 뷰가 이 패턴. 메인 뷰가 항상 풀폭이라 �
 - 헤더 1단 (분기 / 월) 이 두께 24px, 2단 (주 / 일) 이 두께 16px
 
 ### 4.4 All work — calendar mode
-> 월 grid 가 기본. 태스크 = L2 Current 기간을 가로 막대로 그 주의 셀에 걸침. 마일스톤 = 단일 일자 아이콘.
+> Month grid 와 Week grid 를 토글. 태스크 = `IsAllDay` 여부에 따라 다르게 그려짐 ([ADR-009](../architecture/ADR-009-timeline-timestamps-allday-workcalendar.md)).
 
+#### 4.4.1 Month 뷰 (기본)
 ```
 [Header] All work   [List | Board | Gantt | Calendar]   [Month · Week]   [< prev] [today] [next >]
 [Filter row]
@@ -211,36 +215,61 @@ Jira 와 Plane 의 일부 뷰가 이 패턴. 메인 뷰가 항상 풀폭이라 �
 | ▓▓▓ Resource model rewrite ▓▓▓▓▓▓▓ |        |        |        |
 |        |   ▒▒ Migration script ▒▒  |        |        |        |
 |        |        | ▒▒▒ Plan gate API ▒▒▒▒▒▒▒ |        |        |
+|        |        |        | ◷ Sync 14:00     |        |        |
 +--------+--------+--------+--------+--------+--------+--------+
-| Mon  4 | Tue  5 | Wed  6 | Thu  7 | Fri  8 | Sat  9 | Sun 10 |
-+--------+--------+--------+--------+--------+--------+--------+
-| ▓▓ Plan gate API (cont.) ▓▓ |        |        |        |        |
-|        |        |        |        |        | ◆ MVP  |        |
-+--------+--------+--------+--------+--------+--------+--------+
-... (월말까지 유사)
 ```
+- ◆ = 마일스톤. ◷ = 시간 task (시각 라벨 함께)
+- 종일 task 는 가로 막대로 셀에 걸침. 시간 task 는 ◷ 아이콘 + 시각 + 제목 (한 줄)
+- 행 부족 시 `+N more` 칩 → 클릭 시 인스펙터에 그날 목록
 
-- 막대 색 = 현재 간트와 동일 (L2 Current 기준). 행 부족 시 "+N more" 칩
-- ◆ = 마일스톤 (점 이벤트). 클릭 → 인스펙터 열림
-- 일주일 단위로 새 행. 토요일 끝→일요일은 동일 행에 표시 (PM 컨벤션 따라 월요일 시작)
-- **Week 모드** (옵션): 한 주만 확대해서 시간대 grid 없이 일자별 컬럼만. 데스크톱에서 굳이 day/hour 까지 안 가도록 — Calendar 의 본질은 "월/주의 흐름 파악"
+#### 4.4.2 Week 뷰 — 시간 슬롯 grid (b)
+```
+[Header] All work · Week of Apr 27   [Month · Week]   [< prev] [today] [next >]
++-------+--------+--------+--------+--------+--------+--------+--------+
+| time  | Mon 27 | Tue 28 | Wed 29 | Thu 30 | Fri  1 | Sat  2 | Sun  3 |
++-------+--------+--------+--------+--------+--------+--------+--------+
+| All-  | ▓▓▓ Resource model rewrite ▓▓▓▓▓▓▓ |        |        |        |
+| day   |        |        | ▒▒▒ Plan gate API ▒▒▒▒▒▒▒ |        |        |
++-------+--------+--------+--------+--------+--------+--------+--------+
+|  8AM  |        |        |        |        |        |        |        |
+|  9AM  | ░ work hours start (WorkCalendar) ──────────────────────────  |
+| 10AM  |        | █ 9:30 │        |        |        |        |        |
+| 11AM  |        | █ Sync │        |        |        |        |        |
+| 12PM  |        | (1.5h) │        |        |        |        |        |
+|  1PM  |        |        |        |        |        |        |        |
+|  2PM  |        |        | █ 14:00│        |        |        |        |
+|  3PM  |        |        | █ Plan │        |        |        |        |
+|  4PM  |        |        | review │        |        |        |        |
+|  5PM  |        |        | (3h)   |        |        |        |        |
+|  6PM  | ░ work hours end ────────────────────────────────────────────  |
+|  7PM  |        |        |        |        |        |        |        |
++-------+--------+--------+--------+--------+--------+--------+--------+
+```
+- 상단 **All-day 행**: 종일 task 가로 막대 (Outlook 패턴)
+- 시간 grid: WorkCalendar 의 `DailyStart-1h ~ DailyEnd+1h` 자동 (기본 8AM~7PM). 미설정 시 6AM~10PM
+- 시간 task = 시각 슬롯 안 박스. 박스 안에 시작 시각 + 제목 + 길이
+- ░ = work hours 시작/끝 라인 (수평 가이드)
+- 비업무일 (토/일) 컬럼은 옅은 회색 배경 (WorkDays 비포함)
 
 ### 4.5 Resource matrix
 ```
-[Header] Matrix load   week of Apr 27 — May 3   [< prev] [next >]
+[Header] Matrix load   week of Apr 27 — May 3   WorkCalendar: Mon–Fri 09–18
+                                                [< prev] [next >] [⚙ calendar]
 +--------------+------+------+------+------+------+------+------+
 | Resource     | Mon  | Tue  | Wed  | Thu  | Fri  | Sat  | Sun  |
 +--------------+------+------+------+------+------+------+------+
-| 👤 ysh       |  60% |  60% |  60% | 110% |  60% |   0% |   0% |
+| 👤 ysh       |  60% |  60% |  60% | 110% |  60% |   —  |   —  |
 |              |      |      |      | ⚠    |      |      |      |
-| 👤 dohyun    |   0% |  50% |  50% |  50% |  50% |   0% |   0% |
-| 🤖 dev-01    |  80% | 100% | 100% |  80% |  60% |  60% |  60% |
+| 👤 dohyun    |   —  |  50% |  50% |  50% |  50% |   —  |   —  |
+| 🤖 dev-01    |  80% | 100% | 100% |  80% |  60% |   —  |   —  |
 |    (agent)   |      |      |      |      |      |      |      |
-| 🤖 res-01    |   0% |   0% |  40% |  40% |  40% |   0% |   0% |
 +--------------+------+------+------+------+------+------+------+
 
-Heatmap: 0–60% green · 60–100% yellow · >100% red ⚠
-Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목록
+- Heatmap: 0–60% green · 60–100% yellow · >100% red ⚠
+- 비업무일 (Sat/Sun) = `—` (계산 제외, 옅은 회색)
+- WorkCalendar 미설정 시 모든 칸이 24h 기준으로 계산되고 헤더 표기 = "24/7"
+- 셀 클릭 → 우측 인스펙터: 그날 그 사람의 task 목록 (시작-끝 시각, 시간 task 는 hh:mm 표시)
+- [⚙ calendar] → WorkCalendar 설정 모달 (요일 토글, DailyStart/End 시각 picker, Timezone)
 ```
 
 ### 4.6 Project detail (단일 프로젝트 진입)
@@ -262,9 +291,13 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 | Project    mora-knode              |
 | Status     ● InProgress            |
 |                                    |
-| L1 Origin   Apr 28 — May 3         |
-| L2 Current  Apr 28 — May 3   ⏵    |
-| L3 Real     Apr 29 — …             |
+| L1 Origin   ☐ all-day              |
+|             Apr 28 — May 3         |
+| L2 Current  ☐ all-day              |
+|             Apr 28 — May 3   ⏵    |
+| L3 Real     ☑ timed                |
+|             Apr 29 09:30 — 14:00   |
+|             (4.5h, planned 1d)     |
 |                                    |
 | Assignees                          |
 | 👤 ysh 60% · 🤖 dev-01 40%          |
@@ -280,6 +313,8 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 | [Edit]  [Delete]  [Open full →]    |
 +------------------------------------+
 ```
+- 각 timeline 옆 `☐ all-day` / `☑ timed` 토글
+- timed 모드: 시각 함께 표기. L3 의 (실제시간, plan 견적) 비교 자동 계산
 
 ### 4.8 Inspector — plan review (M2)
 ```
@@ -332,16 +367,11 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 | 데이터 밀도 | ★★★ | ★★★ | ★★ |
 | 모바일 확장성 (M5+) | ★ | ★★ | ★★ |
 
-## 8. 미결 — 지금 결정 필요한 항목
+## 8. 미결
 
-### 8.1 캘린더 Week 모드 깊이
-§4.4 의 Week 모드를 어디까지 만들지:
-- (a) **단순 7일 컬럼** — 하루 안의 시간대 grid 없이, 일자별 막대만 확대 (Month 모드의 단일 주 확대 버전)
-- (b) **시간대 grid** — 8AM~8PM 같은 시간 슬롯에 task 시간을 배치 (Outlook / Google Cal 의 week view)
+(없음 — 모든 결정 항목이 §0.1 표 또는 [ADR-009](../architecture/ADR-009-timeline-timestamps-allday-workcalendar.md) 에 박힘)
 
-추천: **(a)**. mora-knode 의 task 는 시각 단위 데이터가 아니라 일자 범위 (L1/L2/L3) 라서 시간대 grid 는 데이터에 없는 정보를 가짜로 만들어야 함. (a) 면 Month 와 코드 공유 가능.
-
-> 다른 §0.1 항목들 (다크 모드, 컬러, my-work 진입 등) 은 추천 그대로 진행. 추후 dogfooding 결과 보고 재검토.
+> 다른 §0.1 항목들 (다크 모드, 컬러, my-work 진입 등) 은 추천 그대로 진행. dogfooding 결과 보고 M2 이후 재검토.
 
 ## 9. 다음 단계
 1. ysh 가 §8 결정

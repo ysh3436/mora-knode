@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/providers.dart';
+import 'all_work_calendar.dart';
 import 'all_work_filters.dart';
 import 'all_work_gantt.dart';
 import 'all_work_list.dart';
@@ -47,7 +48,7 @@ class AllWorkSection extends ConsumerWidget {
           child: switch (sub) {
             AllWorkSubview.list => const AllWorkList(),
             AllWorkSubview.gantt => const AllWorkGantt(),
-            AllWorkSubview.calendar => const _Stub(label: 'Calendar — coming next'),
+            AllWorkSubview.calendar => const AllWorkCalendar(),
           },
         ),
       ],
@@ -55,16 +56,3 @@ class AllWorkSection extends ConsumerWidget {
   }
 }
 
-class _Stub extends StatelessWidget {
-  final String label;
-  const _Stub({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Text(label,
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline)),
-    );
-  }
-}

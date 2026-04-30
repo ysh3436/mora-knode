@@ -122,6 +122,17 @@ final allWorkSubviewProvider = StateProvider<AllWorkSubview>((_) => AllWorkSubvi
 /// Gantt zoom level. Persists across re-entries to the gantt subview.
 final ganttZoomProvider = StateProvider<int>((_) => 0); // 0=day, 1=week, 2=month
 
+/// Calendar subview state.
+enum CalendarMode { month, week }
+final calendarModeProvider = StateProvider<CalendarMode>((_) => CalendarMode.month);
+
+/// Anchor date for the calendar — first of the month for Month mode, the
+/// Monday of the displayed week for Week mode. Default = today.
+final calendarAnchorProvider = StateProvider<DateTime>((_) {
+  final now = DateTime.now().toUtc();
+  return DateTime.utc(now.year, now.month, now.day);
+});
+
 class MatrixRange {
   final DateTime from;
   final DateTime to;

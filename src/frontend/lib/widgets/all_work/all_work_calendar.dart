@@ -1,0 +1,733 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart' show DateFormat;
+
+import '../../models/assignment.dart';
+import '../../models/milestone.dart';
+import '../../models/resource.dart';
+import '../../models/task_item.dart';
+import '../../state/providers.dart';
+
+/// Calendar view (wireframes §4.4). Two modes:
+/// - Month: 6×7 grid, all-day tasks render as full-day chips, timed tasks
+///   show with a clock icon.
+/// - Week: 7-column grid with an all-day band on top + an hourly time-slot
+///   grid below (option b from §8.1). Hour range follows WorkCalendar
+///   ±1 hour, with weekend columns dimmed.
+class AllWorkCalendar extends ConsumerWidget {
+  const AllWorkCalendar({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final mode = ref.watch(calendarModeProvider);
+    final anchor = ref.watch(calendarAnchorProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          child: Row(
+            children: [
+              SegmentedButton<CalendarMode>(
+                style: const ButtonStyle(visualDensity: VisualDensity.compact),
+                segments: const [
+                  ButtonSegment(value: CalendarMode.month, label: Text('Month')),
+                  ButtonSegment(value: CalendarMode.week, label: Text('Week')),
+                ],
+                selected: {mode},
+                onSelectionChanged: (s) => ref.read(calendarModeProvider.notifier).state = s.first,
+              ),
+              const SizedBox(width: 16),
+              IconButton(
+                tooltip: 'Previous',
+                icon: const Icon(Icons.chevron_left),
+                onPressed: () => _shift(ref, mode, -1),
+              ),
+              TextButton(
+                onPressed: () {
+                  final now = DateTime.now().toUtc();
+                  ref.read(calendarAnchorProvider.notifier).state =
+                      DateTime.utc(now.year, now.month, now.day);
+                },
+                child: const Text('today'),
+              ),
+              IconButton(
+                tooltip: 'Next',
+                icon: const Icon(Icons.chevron_right),
+                onPressed: () => _shift(ref, mode, 1),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                mode == CalendarMode.month
+                    ? DateFormat.yMMMM().format(anchor.toLocal())
+                    : 'Week of ${DateFormat.yMMMd().format(_mondayOf(anchor).toLocal())}',
+                style: theme.textTheme.titleSmall,
+              ),
+            ],
+          ),
+        ),
+        Divider(height: 1, color: theme.dividerColor),
+        Expanded(
+          child: mode == CalendarMode.month
+              ? const _MonthView()
+              : const _WeekView(),
+        ),
+      ],
+    );
+  }
+
+  void _shift(WidgetRef ref, CalendarMode mode, int direction) {
+    final cur = ref.read(calendarAnchorProvider);
+    DateTime next;
+    if (mode == CalendarMode.month) {
+      next = DateTime.utc(cur.year, cur.month + direction, 1);
+    } else {
+      next = cur.add(Duration(days: 7 * direction));
+    }
+    ref.read(calendarAnchorProvider.notifier).state = next;
+  }
+
+  static DateTime _mondayOf(DateTime d) =>
+      d.subtract(Duration(days: d.weekday - DateTime.monday));
+}
+
+// ============================================================================
+// Month view
+// ============================================================================
+
+class _MonthView extends ConsumerWidget {
+  const _MonthView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final agg = ref.watch(allHierarchyByProjectProvider);
+    final assignments = ref.watch(allAssignmentsProvider);
+    final resources = ref.watch(resourcesProvider);
+    final anchor = ref.watch(calendarAnchorProvider);
+    final filters = _Filters.from(ref);
+
+    if (agg.isLoading || assignments.isLoading || resources.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+
+    final ctx = _CalendarContext.from(
+      groups: agg.value ?? const <ProjectHierarchy>[],
+      allAssignments: assignments.value ?? const <Assignment>[],
+      resources: resources.value ?? const <Resource>[],
+      filters: filters,
+    );
+
+    final firstOfMonth = DateTime.utc(anchor.year, anchor.month, 1);
+    final gridStart = firstOfMonth.subtract(Duration(days: firstOfMonth.weekday - DateTime.monday));
+    final today = _todayUtc();
+
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Column(
+        children: [
+          Row(
+            children: List.generate(7, (i) {
+              final d = gridStart.add(Duration(days: i));
+              final label = DateFormat.E().format(d.toLocal());
+              return Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      label,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.outline,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          Expanded(
+            child: Column(
+              children: List.generate(6, (week) {
+                return Expanded(
+                  child: Row(
+                    children: List.generate(7, (dow) {
+                      final day = gridStart.add(Duration(days: week * 7 + dow));
+                      final inMonth = day.month == anchor.month;
+                      return Expanded(
+                        child: _MonthCell(
+                          day: day,
+                          isToday: _sameDay(day, today),
+                          inMonth: inMonth,
+                          tasks: ctx.tasksOn(day),
+                          milestones: ctx.milestonesOn(day),
+                          onPick: (taskId) {
+                            ref.read(inspectionProvider.notifier).state = TaskInspection(taskId);
+                            ref.read(inspectorOpenProvider.notifier).state = true;
+                          },
+                        ),
+                      );
+                    }),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MonthCell extends StatelessWidget {
+  final DateTime day;
+  final bool isToday;
+  final bool inMonth;
+  final List<_DayTask> tasks;
+  final List<Milestone> milestones;
+  final void Function(String taskId) onPick;
+
+  const _MonthCell({
+    required this.day,
+    required this.isToday,
+    required this.inMonth,
+    required this.tasks,
+    required this.milestones,
+    required this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dayLabel = day.day.toString();
+    const maxRows = 4;
+    final shown = tasks.take(maxRows).toList();
+    final overflow = tasks.length - shown.length;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
+        color: inMonth ? null : theme.colorScheme.surfaceContainerLowest.withValues(alpha: 0.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(4, 2, 4, 2),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: isToday
+                      ? BoxDecoration(
+                          color: theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(10),
+                        )
+                      : null,
+                  child: Text(
+                    dayLabel,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: isToday
+                          ? theme.colorScheme.onPrimary
+                          : (inMonth ? theme.colorScheme.onSurface : theme.colorScheme.outline),
+                      fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                const Spacer(),
+                ...milestones.take(2).map((m) => Padding(
+                      padding: const EdgeInsets.only(left: 2),
+                      child: Tooltip(
+                        message: m.title,
+                        child: Icon(Icons.flag,
+                            size: 11,
+                            color: m.status == MilestoneStatus.Missed
+                                ? theme.colorScheme.error
+                                : theme.colorScheme.tertiary),
+                      ),
+                    )),
+              ],
+            ),
+            const SizedBox(height: 2),
+            ...shown.map((t) => _TaskChip(task: t, onTap: () => onPick(t.id))),
+            if (overflow > 0)
+              Padding(
+                padding: const EdgeInsets.only(top: 1),
+                child: Text(
+                  '+$overflow more',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontSize: 10,
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TaskChip extends StatelessWidget {
+  final _DayTask task;
+  final VoidCallback onTap;
+  const _TaskChip({required this.task, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = task.isAllDay
+        ? theme.colorScheme.primary.withValues(alpha: 0.18)
+        : theme.colorScheme.tertiary.withValues(alpha: 0.20);
+    return Padding(
+      padding: const EdgeInsets.only(top: 1),
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Row(
+            children: [
+              if (!task.isAllDay) ...[
+                Icon(Icons.access_time, size: 9, color: theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 3),
+                Text(
+                  task.timeLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: theme.colorScheme.onSurfaceVariant),
+                ),
+                const SizedBox(width: 3),
+              ],
+              Expanded(
+                child: Text(
+                  task.title,
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Week view — option b: time-slot grid with all-day band on top
+// ============================================================================
+
+class _WeekView extends ConsumerWidget {
+  const _WeekView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final agg = ref.watch(allHierarchyByProjectProvider);
+    final assignments = ref.watch(allAssignmentsProvider);
+    final resources = ref.watch(resourcesProvider);
+    final matrix = ref.watch(matrixLoadProvider(_weekRange(ref.watch(calendarAnchorProvider))));
+    final anchor = ref.watch(calendarAnchorProvider);
+    final filters = _Filters.from(ref);
+
+    if (agg.isLoading || assignments.isLoading || resources.isLoading || matrix.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+
+    final monday = anchor.subtract(Duration(days: anchor.weekday - DateTime.monday));
+    final today = _todayUtc();
+
+    final ctx = _CalendarContext.from(
+      groups: agg.value ?? const <ProjectHierarchy>[],
+      allAssignments: assignments.value ?? const <Assignment>[],
+      resources: resources.value ?? const <Resource>[],
+      filters: filters,
+    );
+
+    // Hour range from WorkCalendar (DailyStart-1h .. DailyEnd+1h), with sane fallback.
+    int dailyStart = 8 * 60;
+    int dailyEnd = 19 * 60;
+    final cal = matrix.asData?.value.workCalendar;
+    if (cal != null) {
+      dailyStart = (cal.dailyStartMinutes - 60).clamp(0, 23 * 60);
+      dailyEnd = (cal.dailyEndMinutes + 60).clamp(60, 24 * 60);
+    }
+    final startHour = dailyStart ~/ 60;
+    final endHour = (dailyEnd / 60).ceil();
+    final hourCount = endHour - startHour;
+    const rowHeight = 28.0;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // header row
+            Row(
+              children: [
+                const SizedBox(width: 56),
+                ...List.generate(7, (i) {
+                  final d = monday.add(Duration(days: i));
+                  final isToday = _sameDay(d, today);
+                  final isWorkDay = !(d.weekday == DateTime.saturday || d.weekday == DateTime.sunday);
+                  return Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isWorkDay ? null : theme.colorScheme.surfaceContainerLow,
+                        border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
+                      ),
+                      child: Column(
+                        children: [
+                          Text(DateFormat.E().format(d.toLocal()),
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                          Text(
+                            d.day.toString(),
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                              color: isToday ? theme.colorScheme.primary : null,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+            // all-day band
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  width: 56,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    child: Text(
+                      'all-day',
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                    ),
+                  ),
+                ),
+                ...List.generate(7, (i) {
+                  final d = monday.add(Duration(days: i));
+                  final tasks = ctx.tasksOn(d).where((t) => t.isAllDay).toList();
+                  return Expanded(
+                    child: Container(
+                      constraints: const BoxConstraints(minHeight: 28),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: Column(
+                        children: tasks
+                            .take(2)
+                            .map((t) => _TaskChip(
+                                  task: t,
+                                  onTap: () {
+                                    ref.read(inspectionProvider.notifier).state = TaskInspection(t.id);
+                                    ref.read(inspectorOpenProvider.notifier).state = true;
+                                  },
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+            // hour grid
+            Stack(
+              children: [
+                Column(
+                  children: List.generate(hourCount, (h) {
+                    final hour = startHour + h;
+                    final atWorkBoundary = cal != null &&
+                        ((hour * 60) == cal.dailyStartMinutes || (hour * 60) == cal.dailyEndMinutes);
+                    return SizedBox(
+                      height: rowHeight,
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 56,
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                              child: Text(
+                                _hourLabel(hour),
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 10,
+                                  color: theme.colorScheme.outline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          ...List.generate(7, (i) {
+                            final d = monday.add(Duration(days: i));
+                            final isWorkDay =
+                                !(d.weekday == DateTime.saturday || d.weekday == DateTime.sunday);
+                            return Expanded(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isWorkDay
+                                      ? null
+                                      : theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.3),
+                                  border: Border(
+                                    left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3)),
+                                    top: BorderSide(
+                                      color: atWorkBoundary
+                                          ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                                          : theme.dividerColor.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+                // Timed task overlays — positioned absolutely.
+                Positioned.fill(
+                  left: 56,
+                  child: LayoutBuilder(
+                    builder: (ctx2, constraints) {
+                      final colWidth = constraints.maxWidth / 7;
+                      final pixelsPerMinute = rowHeight / 60.0;
+                      final children = <Widget>[];
+
+                      for (var i = 0; i < 7; i++) {
+                        final d = monday.add(Duration(days: i));
+                        final tasks = ctx.tasksOn(d).where((t) => !t.isAllDay).toList();
+                        for (final t in tasks) {
+                          final top = ((t.startMinutesOfDay ?? 0) - startHour * 60) * pixelsPerMinute;
+                          final endMin = (t.endMinutesOfDay ?? (24 * 60));
+                          final height = ((endMin - (t.startMinutesOfDay ?? 0)) * pixelsPerMinute)
+                              .clamp(14.0, double.infinity);
+                          if (top + height < 0 || top > rowHeight * hourCount) continue;
+                          children.add(Positioned(
+                            left: i * colWidth + 1,
+                            top: top.clamp(0, rowHeight * hourCount),
+                            width: colWidth - 2,
+                            height: height,
+                            child: _TimedTaskBox(
+                              task: t,
+                              onTap: () {
+                                ref.read(inspectionProvider.notifier).state = TaskInspection(t.id);
+                                ref.read(inspectorOpenProvider.notifier).state = true;
+                              },
+                            ),
+                          ));
+                        }
+                      }
+                      return Stack(children: children);
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static MatrixRange _weekRange(DateTime anchor) {
+    final monday = anchor.subtract(Duration(days: anchor.weekday - DateTime.monday));
+    return MatrixRange(monday, monday.add(const Duration(days: 7)));
+  }
+
+  static String _hourLabel(int h) {
+    final hh = h % 24;
+    if (hh == 0) return '12 AM';
+    if (hh == 12) return '12 PM';
+    if (hh < 12) return '$hh AM';
+    return '${hh - 12} PM';
+  }
+}
+
+class _TimedTaskBox extends StatelessWidget {
+  final _DayTask task;
+  final VoidCallback onTap;
+  const _TimedTaskBox({required this.task, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.tertiaryContainer,
+      borderRadius: BorderRadius.circular(4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.all(3),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(task.timeLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: theme.colorScheme.onTertiaryContainer)),
+              Text(
+                task.title,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: theme.colorScheme.onTertiaryContainer,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Shared filtering + per-day task computation
+// ============================================================================
+
+class _Filters {
+  final Set<String> projectFilter;
+  final Set<String> assigneeFilter;
+  final Set<TaskStatus> statusFilter;
+  final String search;
+
+  _Filters({
+    required this.projectFilter,
+    required this.assigneeFilter,
+    required this.statusFilter,
+    required this.search,
+  });
+
+  factory _Filters.from(WidgetRef ref) => _Filters(
+        projectFilter: ref.watch(projectFilterProvider),
+        assigneeFilter: ref.watch(assigneeFilterProvider),
+        statusFilter: ref.watch(statusFilterProvider),
+        search: ref.watch(searchQueryProvider).toLowerCase().trim(),
+      );
+}
+
+class _DayTask {
+  final String id;
+  final String title;
+  final bool isAllDay;
+  final int? startMinutesOfDay;
+  final int? endMinutesOfDay;
+  final String timeLabel;
+
+  _DayTask({
+    required this.id,
+    required this.title,
+    required this.isAllDay,
+    required this.startMinutesOfDay,
+    required this.endMinutesOfDay,
+    required this.timeLabel,
+  });
+}
+
+class _CalendarContext {
+  final Map<DateTime, List<_DayTask>> tasksByDay;
+  final Map<DateTime, List<Milestone>> milestonesByDay;
+
+  _CalendarContext({required this.tasksByDay, required this.milestonesByDay});
+
+  factory _CalendarContext.from({
+    required List<ProjectHierarchy> groups,
+    required List<Assignment> allAssignments,
+    required List<Resource> resources,
+    required _Filters filters,
+  }) {
+    final assignmentsByTask = <String, List<Assignment>>{};
+    for (final a in allAssignments) {
+      assignmentsByTask.putIfAbsent(a.taskId, () => []).add(a);
+    }
+    final resourceById = {for (final r in resources) r.id!: r};
+
+    final tasksByDay = <DateTime, List<_DayTask>>{};
+
+    for (final g in groups) {
+      if (filters.projectFilter.isNotEmpty && !filters.projectFilter.contains(g.project.id)) continue;
+      for (final node in g.nodes) {
+        if (node.hasChildren) continue; // leaf only
+        if (filters.search.isNotEmpty && !node.title.toLowerCase().contains(filters.search)) continue;
+        if (filters.statusFilter.isNotEmpty && !filters.statusFilter.contains(node.status)) continue;
+        if (filters.assigneeFilter.isNotEmpty) {
+          final assigns = assignmentsByTask[node.id] ?? const <Assignment>[];
+          final names = assigns
+              .map((a) => resourceById[a.resourceId]?.name.trim())
+              .whereType<String>()
+              .toSet();
+          if (names.intersection(filters.assigneeFilter).isEmpty) continue;
+        }
+
+        final t = node.currentTimeline;
+        if (t.isEmpty || t.start == null || t.end == null) continue;
+        final isAllDay = t.isAllDay;
+
+        // Walk every day the task touches.
+        final fromDay = DateTime.utc(t.start!.year, t.start!.month, t.start!.day);
+        final toDay = DateTime.utc(t.end!.year, t.end!.month, t.end!.day);
+
+        final timeLabel = isAllDay ? '' : DateFormat.Hm().format(t.start!.toLocal());
+
+        for (var day = fromDay; !day.isAfter(toDay); day = day.add(const Duration(days: 1))) {
+          int? startMin;
+          int? endMin;
+          if (!isAllDay) {
+            // For each day in span, clamp the task's [start, end] to the day's window.
+            final dayStart = day;
+            final dayEnd = day.add(const Duration(days: 1));
+            final s = t.start!.isAfter(dayStart) ? t.start! : dayStart;
+            final e = t.end!.isBefore(dayEnd) ? t.end! : dayEnd;
+            startMin = s.toUtc().difference(day.toUtc()).inMinutes;
+            endMin = e.toUtc().difference(day.toUtc()).inMinutes;
+            if (endMin <= startMin) continue;
+          }
+
+          final dayTask = _DayTask(
+            id: node.id,
+            title: node.title,
+            isAllDay: isAllDay,
+            startMinutesOfDay: startMin,
+            endMinutesOfDay: endMin,
+            timeLabel: timeLabel,
+          );
+          tasksByDay.putIfAbsent(day, () => []).add(dayTask);
+        }
+      }
+    }
+
+    return _CalendarContext(
+      tasksByDay: tasksByDay,
+      milestonesByDay: const {}, // milestones land in a follow-up
+    );
+  }
+
+  List<_DayTask> tasksOn(DateTime day) {
+    final key = DateTime.utc(day.year, day.month, day.day);
+    return tasksByDay[key] ?? const [];
+  }
+
+  List<Milestone> milestonesOn(DateTime day) {
+    final key = DateTime.utc(day.year, day.month, day.day);
+    return milestonesByDay[key] ?? const [];
+  }
+}
+
+DateTime _todayUtc() {
+  final n = DateTime.now().toUtc();
+  return DateTime.utc(n.year, n.month, n.day);
+}
+
+bool _sameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;

@@ -1,8 +1,20 @@
 # mora-knode UI 와이어프레임 (데스크톱)
 
 - 작성일: 2026-04-30
-- 상태: draft (레이아웃 후보 비교 → ysh 결정 대기)
+- 상태: 후보 A 확정 (2026-04-30) — §0.1 결정 사항 반영
 - 연관: [PRD](../prd.md), [ADR-008 Flutter Web 데스크톱 only](../architecture/ADR-008-flutter-web-desktop-only.md), [planning/TODO.md](../planning/TODO.md)
+
+## 0.1 결정 사항 (2026-04-30)
+| 항목 | 결정 |
+| --- | --- |
+| 레이아웃 | **후보 A** (3-pane: sidebar + main + inspector) |
+| Sidebar | 기본 **열림**, 토글 가능 (`[`) |
+| Inspector | 기본 **닫힘**, 토글 가능 (`]`) |
+| My work 진입 뷰 | 채택 (기본 진입) |
+| 메인 탭 | **List · Board · Gantt · Calendar** (모두 4탭) |
+| 간트 시간 단위 | **Day / Week / Month** 토글 |
+| 다크 모드 | M3 까지 미룸 (Material 3 기본 라이트 팔레트) |
+| 컬러 토큰 | Material 3 기본 (브랜드 팔레트는 M3 공개 즈음 재검토) |
 
 ## 0. 목적
 M1~M2 의 데스크톱 전용 화면 구성을 결정한다. 현재 Flutter 코드 (`feat/desktop-redesign` 브랜치 베이스라인) 의 단일 컬럼 / 모달 위주 UX 를 데스크톱 multi-pane 구조로 전환한다.
@@ -157,8 +169,8 @@ Jira 와 Plane 의 일부 뷰가 이 패턴. 메인 뷰가 항상 풀폭이라 �
 
 ### 4.3 All work — gantt mode
 ```
-[Header] All work   [List | Board | Gantt | Calendar]
-[Filter row]
+[Header] All work   [List | Board | Gantt | Calendar]            [zoom: Day · Week · Month]
+[Filter row]                                                     [< prev] [today] [next >]
 +----------------------------+-----------------------------------------------+
 | 📁 mora-knode              | Apr 24  25  26  27  28  29  30  May 1  2  3  |
 |  ├─ Design MVP schema      | ▓▓▓▓▓▓▓▓▓▓▓░                                  |
@@ -175,7 +187,45 @@ Jira 와 Plane 의 일부 뷰가 이 패턴. 메인 뷰가 항상 풀폭이라 �
 - 우측 = 가로 스크롤 가능한 일자 grid
 - 막대 = L2 Current, 얇은 라인 = L1 Origin, 점선 = L3 Real (현재 색 체계 유지)
 
-### 4.4 Resource matrix
+#### 4.3.1 줌 단위 정의
+| 단위 | 한 칸 | 헤더 2단 표기 | 권장 표시 범위 |
+| --- | --- | --- | --- |
+| **Day** | 1일 (현재 dayWidth) | 월 + 일 (`Apr / 24 25 26…`) | ~6주 |
+| **Week** | 1주 (월요일 기준) | 월 + 주차 (`Apr / W18 W19…`) | ~6개월 |
+| **Month** | 1개월 | 분기 + 월 (`Q2 / Apr May Jun…`) | ~2년 |
+
+- 단위 변경 시 막대는 동일 일자 기준으로 픽셀 폭만 재계산
+- Week / Month 에서는 sub-단위 막대도 최소 4px 폭 보장 (사라지지 않도록)
+- 헤더 1단 (분기 / 월) 이 두께 24px, 2단 (주 / 일) 이 두께 16px
+
+### 4.4 All work — calendar mode
+> 월 grid 가 기본. 태스크 = L2 Current 기간을 가로 막대로 그 주의 셀에 걸침. 마일스톤 = 단일 일자 아이콘.
+
+```
+[Header] All work   [List | Board | Gantt | Calendar]   [Month · Week]   [< prev] [today] [next >]
+[Filter row]
++--------+--------+--------+--------+--------+--------+--------+
+| Mon 27 | Tue 28 | Wed 29 | Thu 30 | Fri  1 | Sat  2 | Sun  3 |
++--------+--------+--------+--------+--------+--------+--------+
+|        | ◆ MVP  |        |        | ◆ Demo |        |        |
+| ▓▓▓ Resource model rewrite ▓▓▓▓▓▓▓ |        |        |        |
+|        |   ▒▒ Migration script ▒▒  |        |        |        |
+|        |        | ▒▒▒ Plan gate API ▒▒▒▒▒▒▒ |        |        |
++--------+--------+--------+--------+--------+--------+--------+
+| Mon  4 | Tue  5 | Wed  6 | Thu  7 | Fri  8 | Sat  9 | Sun 10 |
++--------+--------+--------+--------+--------+--------+--------+
+| ▓▓ Plan gate API (cont.) ▓▓ |        |        |        |        |
+|        |        |        |        |        | ◆ MVP  |        |
++--------+--------+--------+--------+--------+--------+--------+
+... (월말까지 유사)
+```
+
+- 막대 색 = 현재 간트와 동일 (L2 Current 기준). 행 부족 시 "+N more" 칩
+- ◆ = 마일스톤 (점 이벤트). 클릭 → 인스펙터 열림
+- 일주일 단위로 새 행. 토요일 끝→일요일은 동일 행에 표시 (PM 컨벤션 따라 월요일 시작)
+- **Week 모드** (옵션): 한 주만 확대해서 시간대 grid 없이 일자별 컬럼만. 데스크톱에서 굳이 day/hour 까지 안 가도록 — Calendar 의 본질은 "월/주의 흐름 파악"
+
+### 4.5 Resource matrix
 ```
 [Header] Matrix load   week of Apr 27 — May 3   [< prev] [next >]
 +--------------+------+------+------+------+------+------+------+
@@ -193,7 +243,7 @@ Heatmap: 0–60% green · 60–100% yellow · >100% red ⚠
 Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목록
 ```
 
-### 4.5 Project detail (단일 프로젝트 진입)
+### 4.6 Project detail (단일 프로젝트 진입)
 좌측 nav 에서 프로젝트 클릭 시:
 ```
 [Header] mora-knode                            [Tasks | Gantt | Milestones | Plans]
@@ -204,7 +254,7 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 - 메인 헤더가 `mora-knode` 로 바뀌고 sub-tabs 만 프로젝트 스코프
 - 좌측 sidebar / 우측 inspector 는 동일 패턴 유지
 
-### 4.6 Inspector — task selected
+### 4.7 Inspector — task selected
 ```
 +------------------------------------+
 | Resource model rewrite       [✕]  |
@@ -231,7 +281,7 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 +------------------------------------+
 ```
 
-### 4.7 Inspector — plan review (M2)
+### 4.8 Inspector — plan review (M2)
 ```
 +------------------------------------+
 | Plan v2 · "Refactor matrix calc"   |
@@ -282,13 +332,16 @@ Click cell → 우측 인스펙터: 그날 그 사람에게 할당된 task 목�
 | 데이터 밀도 | ★★★ | ★★★ | ★★ |
 | 모바일 확장성 (M5+) | ★ | ★★ | ★★ |
 
-## 8. 미결 (ysh 결정 항목)
-1. **레이아웃 후보 확정**: A / B / C
-2. **인스펙터 기본 상태**: 기본 열림 vs 기본 닫힘 (단축키로 토글)
-3. **My work 진입 뷰 채택**: yes/no (no 면 All work 가 진입 화면)
-4. **다크 모드**: M1 에 포함? 아니면 M3 까지 미룸?
-5. **컬러 토큰**: Material 3 기본 vs 커스텀 팔레트 (mora-knode 브랜드 컬러)
-6. **간트 시간 단위**: day grid 만 (현재) vs day/week/month 토글
+## 8. 미결 — 지금 결정 필요한 항목
+
+### 8.1 캘린더 Week 모드 깊이
+§4.4 의 Week 모드를 어디까지 만들지:
+- (a) **단순 7일 컬럼** — 하루 안의 시간대 grid 없이, 일자별 막대만 확대 (Month 모드의 단일 주 확대 버전)
+- (b) **시간대 grid** — 8AM~8PM 같은 시간 슬롯에 task 시간을 배치 (Outlook / Google Cal 의 week view)
+
+추천: **(a)**. mora-knode 의 task 는 시각 단위 데이터가 아니라 일자 범위 (L1/L2/L3) 라서 시간대 grid 는 데이터에 없는 정보를 가짜로 만들어야 함. (a) 면 Month 와 코드 공유 가능.
+
+> 다른 §0.1 항목들 (다크 모드, 컬러, my-work 진입 등) 은 추천 그대로 진행. 추후 dogfooding 결과 보고 재검토.
 
 ## 9. 다음 단계
 1. ysh 가 §8 결정

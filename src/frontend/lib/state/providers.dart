@@ -111,6 +111,13 @@ final allAssignmentsProvider = FutureProvider<List<Assignment>>((ref) async {
 
 final projectFilterProvider = StateProvider<Set<String>>((_) => <String>{});
 final assigneeFilterProvider = StateProvider<Set<String>>((_) => <String>{});
+final statusFilterProvider = StateProvider<Set<TaskStatus>>((_) => <TaskStatus>{});
+final searchQueryProvider = StateProvider<String>((_) => '');
+
+/// All work has multiple subviews (List / Gantt / Calendar). They are kept as
+/// separate widget trees but share the filter state above.
+enum AllWorkSubview { list, gantt, calendar }
+final allWorkSubviewProvider = StateProvider<AllWorkSubview>((_) => AllWorkSubview.list);
 
 class MatrixRange {
   final DateTime from;

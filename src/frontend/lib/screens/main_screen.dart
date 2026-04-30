@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/providers.dart';
+import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
 
 /// Top-level screen: the AppShell wraps a section view chosen by
@@ -18,7 +19,7 @@ class MainScreen extends ConsumerWidget {
       AppSection.myWork =>
         (_HeaderTitle('My work', subtitle: 'this week'), _Coming(label: 'My work')),
       AppSection.allWork =>
-        (_HeaderTitle('All work', subtitle: 'List · Board · Gantt · Calendar'), _Coming(label: 'All work')),
+        (_HeaderTitle('All work'), const AllWorkSection()),
       AppSection.projects =>
         (_HeaderTitle('Projects'), _Coming(label: 'Projects directory')),
       AppSection.resources =>

@@ -6,6 +6,10 @@ import '../models/timeline.dart';
 enum GanttZoom { day, week, month }
 
 class GanttRow {
+  /// Identifies the underlying entity (e.g., task id) so callers can wire row
+  /// clicks to selection. null for purely visual rows like project group
+  /// headers — those receive no click affordance.
+  final String? id;
   final String title;
   final int depth;
   final bool hasChildren;
@@ -14,6 +18,7 @@ class GanttRow {
   final Timeline real;
 
   const GanttRow({
+    this.id,
     required this.title,
     required this.depth,
     required this.hasChildren,
@@ -32,6 +37,8 @@ class GanttChart extends StatelessWidget {
   final DateTime? from;
   final DateTime? to;
   final GanttZoom zoom;
+  final String? selectedId;
+  final void Function(String id)? onRowTap;
 
   static const double rowHeight = 32;
   static const double headerTopHeight = 22;
@@ -44,6 +51,8 @@ class GanttChart extends StatelessWidget {
     this.from,
     this.to,
     this.zoom = GanttZoom.day,
+    this.selectedId,
+    this.onRowTap,
   });
 
   double get _cellWidth => switch (zoom) {
@@ -100,7 +109,12 @@ class GanttChart extends StatelessWidget {
             children: [
               SizedBox(
                 width: labelWidth,
-                child: _LabelGutter(rows: rows, headerHeight: headerHeight),
+                child: _LabelGutter(
+                  rows: rows,
+                  headerHeight: headerHeight,
+                  selectedId: selectedId,
+                  onRowTap: onRowTap,
+                ),
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -138,7 +152,14 @@ class GanttChart extends StatelessWidget {
 class _LabelGutter extends StatelessWidget {
   final List<GanttRow> rows;
   final double headerHeight;
-  const _LabelGutter({required this.rows, required this.headerHeight});
+  final String? selectedId;
+  final void Function(String id)? onRowTap;
+  const _LabelGutter({
+    required this.rows,
+    required this.headerHeight,
+    this.selectedId,
+    this.onRowTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -155,35 +176,44 @@ class _LabelGutter extends StatelessWidget {
           ),
           child: const Text('Task', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
         ),
-        ...rows.map((r) => Container(
-              height: GanttChart.rowHeight,
-              padding: EdgeInsets.only(left: 12 + r.depth * 16.0, right: 12),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3))),
-              ),
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  Icon(
-                    r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
-                    size: 14,
-                    color: r.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
-                  ),
-                  const SizedBox(width: 4),
-                  Flexible(
-                    child: Text(
-                      r.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: r.hasChildren ? FontWeight.w600 : FontWeight.w400,
-                      ),
+        ...rows.map((r) {
+          final clickable = r.id != null && onRowTap != null;
+          final isSelected = r.id != null && r.id == selectedId;
+          final inner = Container(
+            height: GanttChart.rowHeight,
+            padding: EdgeInsets.only(left: 12 + r.depth * 16.0, right: 12),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.6)
+                  : null,
+              border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3))),
+            ),
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                Icon(
+                  r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
+                  size: 14,
+                  color: r.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+                ),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    r.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: r.hasChildren ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
-                ],
-              ),
-            )),
+                ),
+              ],
+            ),
+          );
+          if (!clickable) return inner;
+          return InkWell(onTap: () => onRowTap!(r.id!), child: inner);
+        }),
       ],
     );
   }

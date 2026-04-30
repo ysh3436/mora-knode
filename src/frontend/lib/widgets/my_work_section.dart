@@ -8,9 +8,10 @@ import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
 import '../state/providers.dart';
 
-/// Entry-view per wireframes §4.1: lanes per assignee for the current week,
-/// plus an Overdue lane. Compact cards lead to the inspector. Plans / Done
-/// lanes will land alongside M2.
+/// Entry-view per wireframes §4.1: "what does the current user have on
+/// their plate." Filters strictly to the active dev-mode user (or
+/// shows everyone when anonymous, since that's the only way an admin
+/// without a chosen identity can see something useful here).
 class MyWorkSection extends ConsumerWidget {
   const MyWorkSection({super.key});
 
@@ -20,6 +21,7 @@ class MyWorkSection extends ConsumerWidget {
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
+    final currentUser = ref.watch(currentUserProvider);
     final selected = ref.watch(inspectionProvider);
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
@@ -32,7 +34,6 @@ class MyWorkSection extends ConsumerWidget {
     final allResources = resources.value ?? const <Resource>[];
     final resourceById = {for (final r in allResources) r.id!: r};
 
-    // Index nodes by id for quick lookup, and gather (resource, task) pairs.
     final nodeById = <String, ({TaskHierarchyNode node, String projectName})>{};
     for (final g in groups) {
       for (final n in g.nodes) {
@@ -40,24 +41,29 @@ class MyWorkSection extends ConsumerWidget {
       }
     }
 
-    final now = DateTime.now().toUtc();
-    final today = DateTime.utc(now.year, now.month, now.day);
-    final monday = today.subtract(Duration(days: today.weekday - 1));
+    // Local-time week boundaries so "this week" matches the user's clock.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final monday = today.subtract(Duration(days: today.weekday - DateTime.monday));
     final nextMonday = monday.add(const Duration(days: 7));
+    final weekAfter = nextMonday.add(const Duration(days: 7));
 
-    final due = <_AssignmentRow>[];
+    final thisWeek = <_AssignmentRow>[];
+    final nextWeek = <_AssignmentRow>[];
     final overdue = <_AssignmentRow>[];
 
     for (final a in allAssigns) {
+      // Filter to the current user (when one is selected). Anonymous shows
+      // everyone — admins without a chosen identity still get a usable view.
+      if (currentUser != null && a.resourceId != currentUser.id) continue;
+
       final lookup = nodeById[a.taskId];
       if (lookup == null) continue;
       final node = lookup.node;
-
-      // Skip parent rollups (matrix excludes them too).
       if (node.hasChildren) continue;
 
       final l2 = node.currentTimeline;
-      if (l2.isEmpty) continue;
+      if (l2.isEmpty || l2.start == null || l2.end == null) continue;
 
       final row = _AssignmentRow(
         node: node,
@@ -66,44 +72,84 @@ class MyWorkSection extends ConsumerWidget {
         allocation: a.allocationPercent,
       );
 
-      if (node.status == TaskStatus.InProgress &&
-          l2.end != null &&
-          l2.end!.isBefore(today)) {
+      if (node.status == TaskStatus.InProgress && l2.end!.isBefore(today)) {
         overdue.add(row);
         continue;
       }
 
-      // Within current week (Mon..nextMon, exclusive end)?
-      if (l2.start != null && l2.end != null) {
-        final overlaps = l2.start!.isBefore(nextMonday) && l2.end!.isAfter(monday);
-        if (overlaps) due.add(row);
+      // Bucket by week using all-day-aware date math: an all-day task's UTC
+      // y/m/d is the displayed date, so compare against y/m/d directly.
+      final startKey = l2.isAllDay
+          ? DateTime(l2.start!.year, l2.start!.month, l2.start!.day)
+          : DateTime(l2.start!.toLocal().year, l2.start!.toLocal().month, l2.start!.toLocal().day);
+      final endKey = l2.isAllDay
+          ? DateTime(l2.end!.year, l2.end!.month, l2.end!.day)
+          : DateTime(l2.end!.toLocal().year, l2.end!.toLocal().month, l2.end!.toLocal().day);
+
+      if (startKey.isBefore(nextMonday) && !endKey.isBefore(monday)) {
+        thisWeek.add(row);
+      } else if (startKey.isBefore(weekAfter) && !endKey.isBefore(nextMonday)) {
+        nextWeek.add(row);
       }
     }
 
     final df = DateFormat.yMMMd();
-    final weekLabel =
-        '${df.format(monday.toLocal())} — ${df.format(nextMonday.subtract(const Duration(days: 1)).toLocal())}';
+    String rangeLabel(DateTime from, DateTime to) =>
+        '${df.format(from)} — ${df.format(to.subtract(const Duration(days: 1)))}';
 
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       children: [
+        if (currentUser == null)
+          Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 16, color: theme.colorScheme.outline),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'No user selected — showing every assignment. Pick a user from the sidebar bottom to see only their work.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
         Text(
-          'Due this week  ·  $weekLabel',
+          'This week  ·  ${rangeLabel(monday, nextMonday)}',
           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
-        if (due.isEmpty)
+        if (thisWeek.isEmpty)
           _emptyLane(theme, 'Nothing scheduled this week.')
         else
-          ..._byAssignee(due).entries.map((e) => _Lane(
-                title: e.key,
-                rows: e.value,
-                selected: selected,
-                onTap: (id) {
-                  ref.read(inspectionProvider.notifier).state = TaskInspection(id);
-                  ref.read(inspectorOpenProvider.notifier).state = true;
-                },
-              )),
+          _Lane(
+            title: '',
+            rows: thisWeek,
+            selected: selected,
+            onTap: (id) => _open(ref, id),
+          ),
+        const SizedBox(height: 24),
+        Text(
+          'Next week  ·  ${rangeLabel(nextMonday, weekAfter)}',
+          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 8),
+        if (nextWeek.isEmpty)
+          _emptyLane(theme, 'Next week is open.')
+        else
+          _Lane(
+            title: '',
+            rows: nextWeek,
+            selected: selected,
+            onTap: (id) => _open(ref, id),
+          ),
         const SizedBox(height: 24),
         Row(
           children: [
@@ -126,14 +172,16 @@ class MyWorkSection extends ConsumerWidget {
             title: '',
             rows: overdue,
             selected: selected,
-            onTap: (id) {
-              ref.read(inspectionProvider.notifier).state = TaskInspection(id);
-              ref.read(inspectorOpenProvider.notifier).state = true;
-            },
+            onTap: (id) => _open(ref, id),
             isOverdue: true,
           ),
       ],
     );
+  }
+
+  void _open(WidgetRef ref, String id) {
+    ref.read(inspectionProvider.notifier).state = TaskInspection(id);
+    ref.read(inspectorOpenProvider.notifier).state = true;
   }
 
   Widget _emptyLane(ThemeData theme, String text) => Container(
@@ -144,16 +192,6 @@ class MyWorkSection extends ConsumerWidget {
         ),
         child: Text(text, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
       );
-
-  Map<String, List<_AssignmentRow>> _byAssignee(List<_AssignmentRow> rows) {
-    final groups = <String, List<_AssignmentRow>>{};
-    for (final r in rows) {
-      final key = r.assignee?.name ?? '(unassigned)';
-      groups.putIfAbsent(key, () => []).add(r);
-    }
-    final keys = groups.keys.toList()..sort();
-    return {for (final k in keys) k: groups[k]!};
-  }
 }
 
 class _AssignmentRow {

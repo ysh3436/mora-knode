@@ -67,10 +67,25 @@ public class Seeder
             if (existing > 0) return new SeedSummary(0, 0, 0, 0, 0, 0, false);
         }
 
-        var today = DateTime.UtcNow.Date;
-        DateTime dayUtc(int offset) => DateTime.SpecifyKind(today.AddDays(offset), DateTimeKind.Utc);
-        DateTime atUtc(int offset, int hour, int minute) =>
-            DateTime.SpecifyKind(today.AddDays(offset).AddHours(hour).AddMinutes(minute), DateTimeKind.Utc);
+        // ADR-009 / display rule: all-day tasks store UTC y/m/d that the
+        // frontend uses verbatim as the displayed date. Timed tasks store
+        // local-time-converted-to-UTC so toLocal() in the browser gets back
+        // the intended hh:mm. Seeder uses the local server date as "today";
+        // the localhost dev setup keeps server and browser in the same TZ.
+        var localToday = DateTime.Today;
+
+        DateTime dayUtc(int offset)
+        {
+            var d = localToday.AddDays(offset);
+            return DateTime.SpecifyKind(new DateTime(d.Year, d.Month, d.Day, 0, 0, 0, 0), DateTimeKind.Utc);
+        }
+
+        DateTime atUtc(int offset, int hour, int minute)
+        {
+            var d = localToday.AddDays(offset);
+            var local = DateTime.SpecifyKind(new DateTime(d.Year, d.Month, d.Day, hour, minute, 0), DateTimeKind.Local);
+            return local.ToUniversalTime();
+        }
 
         // 1. WorkCalendar
         await _calendar.UpsertAsync(new WorkCalendar

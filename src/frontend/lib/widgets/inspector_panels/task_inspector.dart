@@ -66,10 +66,9 @@ class TaskInspectorPanel extends ConsumerWidget {
                 _StatusPill(node: node),
               ]),
               const SizedBox(height: 16),
-              if ((node.description ?? '').isNotEmpty) ...[
-                Text(node.description!, style: theme.textTheme.bodySmall),
-                const SizedBox(height: 16),
-              ],
+              _SectionHeader('Notes'),
+              _DescriptionEditor(node: node),
+              const SizedBox(height: 20),
               _SectionHeader('Timelines'),
               _TimelineRow(label: 'L1 Origin', timeline: _resolveOrigin(node)),
               _TimelineRow(label: 'L2 Current', timeline: _resolveCurrent(node)),
@@ -314,6 +313,170 @@ class _ChildrenList extends StatelessWidget {
                 ),
               ))
           .toList(),
+    );
+  }
+}
+
+/// Notion-like notes / description editor. Displays the saved description
+/// when not focused; on tap the field expands into a multiline TextField that
+/// PUTs the task on blur or with Cmd/Ctrl+Enter.
+class _DescriptionEditor extends ConsumerStatefulWidget {
+  final TaskHierarchyNode node;
+  const _DescriptionEditor({required this.node});
+
+  @override
+  ConsumerState<_DescriptionEditor> createState() => _DescriptionEditorState();
+}
+
+class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
+  late final TextEditingController _controller;
+  late final FocusNode _focusNode;
+  bool _editing = false;
+  String _savedValue = '';
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _savedValue = widget.node.description ?? '';
+    _controller = TextEditingController(text: _savedValue);
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _editing) _commit();
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _DescriptionEditor old) {
+    super.didUpdateWidget(old);
+    // If the inspector is reopened on a different task, refresh the buffer.
+    if (old.node.id != widget.node.id) {
+      _savedValue = widget.node.description ?? '';
+      _controller.text = _savedValue;
+      _editing = false;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _commit() async {
+    final next = _controller.text;
+    if (next == _savedValue) {
+      setState(() => _editing = false);
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final node = widget.node;
+      final updated = TaskItem(
+        id: node.id,
+        projectId: node.projectId,
+        parentTaskId: node.parentTaskId,
+        title: node.title,
+        description: next.isEmpty ? null : next,
+        status: node.status,
+        originTimeline: node.originTimeline,
+        currentTimeline: node.currentTimeline,
+        realTimeline: node.realTimeline,
+        createdAt: node.createdAt,
+        updatedAt: node.updatedAt,
+      );
+      await ref.read(apiClientProvider).updateTask(node.id, updated);
+      _savedValue = next;
+      ref.invalidate(allHierarchyByProjectProvider);
+      ref.invalidate(taskHierarchyProvider(node.projectId));
+      ref.invalidate(taskChangeLogsProvider(node.id));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _editing = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (!_editing) {
+      final text = _savedValue.trim();
+      return InkWell(
+        onTap: () {
+          setState(() => _editing = true);
+          WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
+        },
+        borderRadius: BorderRadius.circular(4),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLowest,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: theme.dividerColor.withValues(alpha: 0.4)),
+          ),
+          child: text.isEmpty
+              ? Text(
+                  'Click to add notes…',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontStyle: FontStyle.italic,
+                  ),
+                )
+              : Text(text, style: theme.textTheme.bodyMedium),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          maxLines: null,
+          minLines: 4,
+          decoration: InputDecoration(
+            isDense: true,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
+            hintText: 'Markdown-friendly notes about this task',
+            contentPadding: const EdgeInsets.all(10),
+          ),
+          style: theme.textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            if (_saving)
+              const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
+            else
+              Text(
+                'Click outside or press Esc to save',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              ),
+            const Spacer(),
+            TextButton(
+              onPressed: _saving
+                  ? null
+                  : () {
+                      _controller.text = _savedValue;
+                      setState(() => _editing = false);
+                    },
+              child: const Text('Cancel'),
+            ),
+            FilledButton.tonal(
+              onPressed: _saving ? null : _commit,
+              child: const Text('Save'),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

@@ -48,9 +48,9 @@ class AllWorkCalendar extends ConsumerWidget {
               ),
               TextButton(
                 onPressed: () {
-                  final now = DateTime.now().toUtc();
+                  final now = DateTime.now();
                   ref.read(calendarAnchorProvider.notifier).state =
-                      DateTime.utc(now.year, now.month, now.day);
+                      DateTime(now.year, now.month, now.day);
                 },
                 child: const Text('today'),
               ),
@@ -62,8 +62,8 @@ class AllWorkCalendar extends ConsumerWidget {
               const SizedBox(width: 12),
               Text(
                 mode == CalendarMode.month
-                    ? DateFormat.yMMMM().format(anchor.toLocal())
-                    : 'Week of ${DateFormat.yMMMd().format(_mondayOf(anchor).toLocal())}',
+                    ? DateFormat.yMMMM().format(anchor)
+                    : 'Week of ${DateFormat.yMMMd().format(_mondayOf(anchor))}',
                 style: theme.textTheme.titleSmall,
               ),
             ],
@@ -83,7 +83,7 @@ class AllWorkCalendar extends ConsumerWidget {
     final cur = ref.read(calendarAnchorProvider);
     DateTime next;
     if (mode == CalendarMode.month) {
-      next = DateTime.utc(cur.year, cur.month + direction, 1);
+      next = DateTime(cur.year, cur.month + direction, 1);
     } else {
       next = cur.add(Duration(days: 7 * direction));
     }
@@ -122,9 +122,9 @@ class _MonthView extends ConsumerWidget {
       filters: filters,
     );
 
-    final firstOfMonth = DateTime.utc(anchor.year, anchor.month, 1);
+    final firstOfMonth = DateTime(anchor.year, anchor.month, 1);
     final gridStart = firstOfMonth.subtract(Duration(days: firstOfMonth.weekday - DateTime.monday));
-    final today = _todayUtc();
+    final today = _todayLocal();
 
     return Padding(
       padding: const EdgeInsets.all(8),
@@ -346,8 +346,11 @@ class _WeekView extends ConsumerWidget {
     }
     if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
 
-    final monday = anchor.subtract(Duration(days: anchor.weekday - DateTime.monday));
-    final today = _todayUtc();
+    // Anchor → local-Monday-of-that-week (drop UTC kind so it composes with
+    // local-keyed task buckets and the user's local "today").
+    final localAnchor = DateTime(anchor.year, anchor.month, anchor.day);
+    final monday = localAnchor.subtract(Duration(days: localAnchor.weekday - DateTime.monday));
+    final today = _todayLocal();
 
     final ctx = _CalendarContext.from(
       groups: agg.value ?? const <ProjectHierarchy>[],
@@ -739,6 +742,8 @@ class _DayTask {
 }
 
 class _CalendarContext {
+  // Keys are local-time DateTime(y, m, d) (kind=Unspecified). Both all-day and
+  // timed tasks land here under the *displayed* day in the user's local zone.
   final Map<DateTime, List<_DayTask>> tasksByDay;
   final Map<DateTime, List<Milestone>> milestonesByDay;
 
@@ -777,59 +782,78 @@ class _CalendarContext {
         if (t.isEmpty || t.start == null || t.end == null) continue;
         final isAllDay = t.isAllDay;
 
-        // Walk every day the task touches.
-        final fromDay = DateTime.utc(t.start!.year, t.start!.month, t.start!.day);
-        final toDay = DateTime.utc(t.end!.year, t.end!.month, t.end!.day);
+        if (isAllDay) {
+          // ADR-009: all-day tasks store as 00:00:00..23:59:59.999 UTC of the
+          // user-entered date. The UTC y/m/d IS the displayed date (don't
+          // convert to local — that would shift by the UTC offset and split
+          // the task across two local days).
+          final fromKey = DateTime(t.start!.year, t.start!.month, t.start!.day);
+          final toKey = DateTime(t.end!.year, t.end!.month, t.end!.day);
+          for (var day = fromKey; !day.isAfter(toKey); day = day.add(const Duration(days: 1))) {
+            tasksByDay.putIfAbsent(day, () => []).add(_DayTask(
+                  id: node.id,
+                  title: node.title,
+                  isAllDay: true,
+                  startMinutesOfDay: null,
+                  endMinutesOfDay: null,
+                  timeLabel: '',
+                ));
+          }
+        } else {
+          // Timed: convert to user's local zone, then bucket and compute
+          // minutes-of-day in local time so the hour grid lines up with the
+          // user's clock.
+          final localStart = t.start!.toLocal();
+          final localEnd = t.end!.toLocal();
+          final fromKey = DateTime(localStart.year, localStart.month, localStart.day);
+          final toKey = DateTime(localEnd.year, localEnd.month, localEnd.day);
+          final timeLabel = DateFormat.Hm().format(localStart);
 
-        final timeLabel = isAllDay ? '' : DateFormat.Hm().format(t.start!.toLocal());
-
-        for (var day = fromDay; !day.isAfter(toDay); day = day.add(const Duration(days: 1))) {
-          int? startMin;
-          int? endMin;
-          if (!isAllDay) {
-            // For each day in span, clamp the task's [start, end] to the day's window.
+          for (var day = fromKey; !day.isAfter(toKey); day = day.add(const Duration(days: 1))) {
             final dayStart = day;
             final dayEnd = day.add(const Duration(days: 1));
-            final s = t.start!.isAfter(dayStart) ? t.start! : dayStart;
-            final e = t.end!.isBefore(dayEnd) ? t.end! : dayEnd;
-            startMin = s.toUtc().difference(day.toUtc()).inMinutes;
-            endMin = e.toUtc().difference(day.toUtc()).inMinutes;
+            final s = localStart.isAfter(dayStart) ? localStart : dayStart;
+            final e = localEnd.isBefore(dayEnd) ? localEnd : dayEnd;
+            final startMin = s.difference(day).inMinutes;
+            final endMin = e.difference(day).inMinutes;
             if (endMin <= startMin) continue;
-          }
 
-          final dayTask = _DayTask(
-            id: node.id,
-            title: node.title,
-            isAllDay: isAllDay,
-            startMinutesOfDay: startMin,
-            endMinutesOfDay: endMin,
-            timeLabel: timeLabel,
-          );
-          tasksByDay.putIfAbsent(day, () => []).add(dayTask);
+            tasksByDay.putIfAbsent(day, () => []).add(_DayTask(
+                  id: node.id,
+                  title: node.title,
+                  isAllDay: false,
+                  startMinutesOfDay: startMin,
+                  endMinutesOfDay: endMin,
+                  timeLabel: timeLabel,
+                ));
+          }
         }
       }
     }
 
     return _CalendarContext(
       tasksByDay: tasksByDay,
-      milestonesByDay: const {}, // milestones land in a follow-up
+      milestonesByDay: const {},
     );
   }
 
   List<_DayTask> tasksOn(DateTime day) {
-    final key = DateTime.utc(day.year, day.month, day.day);
+    final key = DateTime(day.year, day.month, day.day);
     return tasksByDay[key] ?? const [];
   }
 
   List<Milestone> milestonesOn(DateTime day) {
-    final key = DateTime.utc(day.year, day.month, day.day);
+    final key = DateTime(day.year, day.month, day.day);
     return milestonesByDay[key] ?? const [];
   }
 }
 
-DateTime _todayUtc() {
-  final n = DateTime.now().toUtc();
-  return DateTime.utc(n.year, n.month, n.day);
+/// Local-time midnight for "today" — used as the anchor for "is today" cells
+/// and for week-of-anchor math. Always non-UTC so it composes with task day
+/// keys (also local DateTime).
+DateTime _todayLocal() {
+  final n = DateTime.now();
+  return DateTime(n.year, n.month, n.day);
 }
 
 bool _sameDay(DateTime a, DateTime b) =>

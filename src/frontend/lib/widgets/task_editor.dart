@@ -294,16 +294,19 @@ class _TimelineEditor extends StatelessWidget {
                 Text(label, style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
                 const Spacer(),
                 if (!readOnly)
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('all-day', style: theme.textTheme.bodySmall),
-                      Switch(
-                        value: timeline.isAllDay,
-                        onChanged: (v) => onChanged(timeline.copyWith(isAllDay: v)),
-                      ),
+                  SegmentedButton<bool>(
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    segments: const [
+                      ButtonSegment(value: true, label: Text('All-day'), icon: Icon(Icons.today, size: 14)),
+                      ButtonSegment(value: false, label: Text('Timed'), icon: Icon(Icons.schedule, size: 14)),
                     ],
+                    selected: {timeline.isAllDay},
+                    onSelectionChanged: (s) => onChanged(timeline.copyWith(isAllDay: s.first)),
                   ),
+                const SizedBox(width: 8),
                 if (timeline.isEmpty)
                   TextButton.icon(
                     icon: const Icon(Icons.add, size: 16),

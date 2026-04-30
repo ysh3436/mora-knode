@@ -155,16 +155,17 @@ enum CalendarMode { month, week }
 final calendarModeProvider = StateProvider<CalendarMode>((_) => CalendarMode.month);
 
 /// Anchor date for the calendar — first of the month for Month mode, the
-/// Monday of the displayed week for Week mode. Default = today.
+/// Monday of the displayed week for Week mode. Stored as a local-zone
+/// DateTime so it composes with task day buckets that key on local y/m/d.
 final calendarAnchorProvider = StateProvider<DateTime>((_) {
-  final now = DateTime.now().toUtc();
-  return DateTime.utc(now.year, now.month, now.day);
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
 });
 
 /// Matrix view's anchor (snapped to a Monday inside the displayed week).
 final matrixAnchorProvider = StateProvider<DateTime>((_) {
-  final now = DateTime.now().toUtc();
-  final today = DateTime.utc(now.year, now.month, now.day);
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
   return today.subtract(Duration(days: today.weekday - DateTime.monday));
 });
 

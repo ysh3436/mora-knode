@@ -45,7 +45,7 @@ class AppShell extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (inspectorOpen) const SizedBox(width: 380, child: Inspector()),
+              if (inspectorOpen) const SizedBox(width: 520, child: Inspector()),
             ],
           ),
         ),

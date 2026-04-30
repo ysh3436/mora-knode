@@ -66,6 +66,7 @@ class AllWorkGantt extends ConsumerWidget {
       for (final entry in flattenHierarchy(filtered)) {
         final node = entry.$1;
         rows.add(GanttRow(
+          id: node.id,
           title: node.title,
           depth: entry.$2 + 1,
           hasChildren: node.hasChildren,
@@ -89,6 +90,8 @@ class AllWorkGantt extends ConsumerWidget {
     }
 
     final zoom = switch (zoomIdx) { 1 => GanttZoom.week, 2 => GanttZoom.month, _ => GanttZoom.day };
+    final selected = ref.watch(inspectionProvider);
+    final selectedTaskId = selected is TaskInspection ? selected.taskId : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,7 +126,15 @@ class AllWorkGantt extends ConsumerWidget {
         Divider(height: 1, color: theme.dividerColor),
         Expanded(
           child: SingleChildScrollView(
-            child: GanttChart(rows: rows, zoom: zoom),
+            child: GanttChart(
+              rows: rows,
+              zoom: zoom,
+              selectedId: selectedTaskId,
+              onRowTap: (id) {
+                ref.read(inspectionProvider.notifier).state = TaskInspection(id);
+                ref.read(inspectorOpenProvider.notifier).state = true;
+              },
+            ),
           ),
         ),
       ],

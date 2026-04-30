@@ -1,3 +1,4 @@
+using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
 
@@ -15,6 +16,8 @@ public static class MatrixEndpoints
         // each assignment's contribution scales with how much of its [Start, End]
         // window overlaps the day's work-hours band. Marks buckets as overloaded
         // when the resulting load exceeds the resource's CapacityPercent.
+        // For non-admin callers, only the caller's own row is returned
+        // (seed-scenarios.md §3.4 #3).
         group.MapGet("/load", async (
             DateTime from,
             DateTime to,
@@ -22,6 +25,7 @@ public static class MatrixEndpoints
             AssignmentRepository assignments,
             TaskRepository taskRepo,
             WorkCalendarRepository calendarRepo,
+            UserContext userContext,
             CancellationToken ct) =>
         {
             if (to <= from)
@@ -34,6 +38,14 @@ public static class MatrixEndpoints
 
             var (calendar, isFallback) = await calendarRepo.GetOrFallbackAsync(ct);
             var resourceList = await resources.ListAsync(ct);
+
+            // Non-admin → only the caller's own row.
+            if (!userContext.IsAdmin && userContext.CurrentUser is not null)
+            {
+                var meId = userContext.CurrentUser.Id;
+                resourceList = resourceList.Where(r => r.Id == meId).ToList();
+            }
+
             var overlapping = await assignments.ListOverlappingAsync(fromDate, toDate, ct);
 
             // Leaf-only rule: skip assignments whose owning task has any child.

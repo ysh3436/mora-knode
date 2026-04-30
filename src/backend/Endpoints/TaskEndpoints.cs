@@ -1,3 +1,4 @@
+using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
 
@@ -10,9 +11,14 @@ public static class TaskEndpoints
         app.MapGet("/api/projects/{projectId}/tasks", async (
             string projectId,
             TaskRepository repo,
+            ScopeService scope,
             CancellationToken ct) =>
-            Results.Ok(await repo.ListByProjectAsync(projectId, ct)))
-            .WithTags("Tasks");
+        {
+            if (!await scope.CanSeeProjectAsync(projectId, ct)) return Results.NotFound();
+            var all = await repo.ListByProjectAsync(projectId, ct);
+            var allowed = await scope.AccessibleTaskIdsAsync(ct);
+            return Results.Ok(allowed is null ? all : all.Where(t => allowed.Contains(t.Id)).ToList());
+        }).WithTags("Tasks");
 
         app.MapPost("/api/projects/{projectId}/tasks", async (
             string projectId,

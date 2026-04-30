@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using MoraKnode.Auth;
 using MoraKnode.Endpoints;
 using MoraKnode.Infrastructure;
 using MoraKnode.Seeders;
@@ -23,6 +24,11 @@ builder.Services.AddSingleton<MilestoneRepository>();
 builder.Services.AddSingleton<WorkCalendarRepository>();
 builder.Services.AddSingleton<Seeder>();
 
+// Per-request user context (populated by UserContextMiddleware) and scope
+// service that resolves what the caller is allowed to see.
+builder.Services.AddScoped<UserContext>();
+builder.Services.AddScoped<ScopeService>();
+
 // Development-only open CORS so the Flutter web client (dart server) can call the API.
 builder.Services.AddCors(options =>
 {
@@ -40,6 +46,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseCors();
 }
+
+app.UseMiddleware<UserContextMiddleware>();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 

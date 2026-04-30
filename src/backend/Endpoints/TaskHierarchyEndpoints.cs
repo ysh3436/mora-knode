@@ -1,3 +1,4 @@
+using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
 
@@ -11,9 +12,16 @@ public static class TaskHierarchyEndpoints
             string projectId,
             TaskRepository tasks,
             AssignmentRepository assignments,
+            ScopeService scope,
             CancellationToken ct) =>
         {
+            if (!await scope.CanSeeProjectAsync(projectId, ct)) return Results.NotFound();
             var list = await tasks.ListByProjectAsync(projectId, ct);
+            var allowed = await scope.AccessibleTaskIdsAsync(ct);
+            if (allowed is not null)
+            {
+                list = list.Where(t => allowed.Contains(t.Id)).ToList();
+            }
             if (list.Count == 0)
                 return Results.Ok(Array.Empty<TaskHierarchyNode>());
 

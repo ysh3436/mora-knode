@@ -1,3 +1,4 @@
+using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
 
@@ -9,11 +10,16 @@ public static class ProjectEndpoints
     {
         var group = app.MapGroup("/api/projects").WithTags("Projects");
 
-        group.MapGet("/", async (ProjectRepository repo, CancellationToken ct) =>
-            Results.Ok(await repo.ListAsync(ct)));
-
-        group.MapGet("/{id}", async (string id, ProjectRepository repo, CancellationToken ct) =>
+        group.MapGet("/", async (ProjectRepository repo, ScopeService scope, CancellationToken ct) =>
         {
+            var all = await repo.ListAsync(ct);
+            var allowed = await scope.AccessibleProjectIdsAsync(ct);
+            return Results.Ok(allowed is null ? all : all.Where(p => allowed.Contains(p.Id)).ToList());
+        });
+
+        group.MapGet("/{id}", async (string id, ProjectRepository repo, ScopeService scope, CancellationToken ct) =>
+        {
+            if (!await scope.CanSeeProjectAsync(id, ct)) return Results.NotFound();
             var project = await repo.GetAsync(id, ct);
             return project is null ? Results.NotFound() : Results.Ok(project);
         });

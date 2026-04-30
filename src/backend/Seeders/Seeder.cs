@@ -268,13 +268,16 @@ public class Seeder
             End = dayUtc(to)
         };
 
-        // ysh — overload around today (~today..+3) at 110%+ across multiple tasks
+        // ysh — overload around today (~today..+3) at >100% across multiple
+        // leaf tasks. t3 is a parent (excluded by leaf-only matrix rule), so
+        // overload comes from t9, t12, t15, t17 stacking on the same days.
         assigns.Add(A(ysh, t1, 100, -7, -3));
-        assigns.Add(A(ysh, t2, 60, -5, 0));
-        assigns.Add(A(ysh, t3, 60, -3, 5));         // ongoing
-        assigns.Add(A(ysh, t12, 40, -2, 0));         // overlap with t3
-        assigns.Add(A(ysh, t15, 30, -3, 2));         // overlap with t3
-        assigns.Add(A(ysh, t8, 30, 3, 5));           // recovery week
+        assigns.Add(A(ysh, t2, 60, -5, 1));
+        assigns.Add(A(ysh, t9, 70, -1, 3));          // pushes today/+1/+2 up
+        assigns.Add(A(ysh, t12, 40, -2, 1));
+        assigns.Add(A(ysh, t15, 50, -3, 3));         // overlaps with t9
+        assigns.Add(A(ysh, t17, 30, 13, 14));        // future commitment
+        assigns.Add(A(ysh, t8, 50, 3, 8));           // bleeds into next week
 
         // dohyun — moderate, no overlap on assigned dates
         assigns.Add(A(dohyun, t9, 60, -1, 2));

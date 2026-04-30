@@ -9,15 +9,19 @@ public static class MatrixEndpoints
     {
         var group = app.MapGroup("/api/matrix").WithTags("Matrix");
 
-        // Integrated load view: for each resource, the daily total allocation across all tasks
-        // within the requested [from, to) date window. Used by the Matrix Resource Manager.
-        // Marks buckets as overloaded when daily load > resource CapacityPercent.
+        // Integrated load view: for each resource, the daily load across all tasks
+        // within the requested [from, to) date window. Daily load is computed against
+        // the configured WorkCalendar (ADR-009): non-work days return load=0, and
+        // each assignment's contribution scales with how much of its [Start, End]
+        // window overlaps the day's work-hours band. Marks buckets as overloaded
+        // when the resulting load exceeds the resource's CapacityPercent.
         group.MapGet("/load", async (
             DateTime from,
             DateTime to,
             ResourceRepository resources,
             AssignmentRepository assignments,
             TaskRepository taskRepo,
+            WorkCalendarRepository calendarRepo,
             CancellationToken ct) =>
         {
             if (to <= from)
@@ -28,10 +32,11 @@ public static class MatrixEndpoints
             var fromDate = DateTime.SpecifyKind(from.Date, DateTimeKind.Utc);
             var toDate = DateTime.SpecifyKind(to.Date, DateTimeKind.Utc);
 
+            var (calendar, isFallback) = await calendarRepo.GetOrFallbackAsync(ct);
             var resourceList = await resources.ListAsync(ct);
             var overlapping = await assignments.ListOverlappingAsync(fromDate, toDate, ct);
 
-            // Leaf-only rule: skip assignments whose owning task has any child (i.e. became a parent).
+            // Leaf-only rule: skip assignments whose owning task has any child.
             if (overlapping.Count > 0)
             {
                 var affectedTaskIds = overlapping.Select(a => a.TaskId).Distinct();
@@ -40,23 +45,40 @@ public static class MatrixEndpoints
                     overlapping = overlapping.Where(a => !nonLeafIds.Contains(a.TaskId)).ToList();
             }
 
-            // Pre-bucket assignments per resource and per day.
-            var buckets = new Dictionary<string, Dictionary<DateTime, int>>();
+            // Pre-bucket per resource and per day, summing fractional contributions.
+            var buckets = new Dictionary<string, Dictionary<DateTime, double>>();
+            var dailyWork = Math.Max(1, calendar.DailyWorkMinutes); // guard div-by-zero on misconfig
+
             foreach (var a in overlapping)
             {
                 if (!buckets.TryGetValue(a.ResourceId, out var perDay))
                 {
-                    perDay = new Dictionary<DateTime, int>();
+                    perDay = new Dictionary<DateTime, double>();
                     buckets[a.ResourceId] = perDay;
                 }
 
-                var segStart = a.Start.Date < fromDate ? fromDate : a.Start.Date;
-                var segEnd = a.End.Date > toDate ? toDate : a.End.Date;
+                var segStart = a.Start < fromDate ? fromDate : a.Start;
+                var segEnd = a.End > toDate.AddDays(1) ? toDate.AddDays(1) : a.End;
 
-                for (var day = segStart; day < segEnd; day = day.AddDays(1))
+                // Walk each calendar day the assignment touches.
+                for (var day = DateTime.SpecifyKind(segStart.Date, DateTimeKind.Utc);
+                     day < segEnd && day < toDate;
+                     day = day.AddDays(1))
                 {
+                    if (!calendar.IsWorkDay(day.DayOfWeek)) continue;
+
+                    var workStart = day.AddMinutes(calendar.DailyStartMinutes);
+                    var workEnd = day.AddMinutes(calendar.DailyEndMinutes);
+
+                    var aDayStart = a.Start > workStart ? a.Start : workStart;
+                    var aDayEnd = a.End < workEnd ? a.End : workEnd;
+
+                    var overlapMin = (aDayEnd - aDayStart).TotalMinutes;
+                    if (overlapMin <= 0) continue;
+
+                    var contribution = (overlapMin / dailyWork) * a.AllocationPercent;
                     perDay.TryGetValue(day, out var cur);
-                    perDay[day] = cur + a.AllocationPercent;
+                    perDay[day] = cur + contribution;
                 }
             }
 
@@ -66,20 +88,34 @@ public static class MatrixEndpoints
                 var days = new List<ResourceLoadBucket>();
                 for (var day = fromDate; day < toDate; day = day.AddDays(1))
                 {
-                    var load = perDay is not null && perDay.TryGetValue(day, out var v) ? v : 0;
-                    days.Add(new ResourceLoadBucket(day, load, load > r.CapacityPercent));
+                    var isWork = calendar.IsWorkDay(day.DayOfWeek);
+                    var load = isWork && perDay is not null && perDay.TryGetValue(day, out var v)
+                        ? (int)Math.Round(v)
+                        : 0;
+                    days.Add(new ResourceLoadBucket(day, load, isWork && load > r.CapacityPercent, isWork));
                 }
                 return new ResourceLoad(r.Id, r.Name, r.Role, r.CapacityPercent, days);
             }).ToList();
 
-            return Results.Ok(result);
+            return Results.Ok(new
+            {
+                isFallbackCalendar = isFallback,
+                workCalendar = new
+                {
+                    calendar.WorkDays,
+                    calendar.DailyStartMinutes,
+                    calendar.DailyEndMinutes,
+                    calendar.Timezone
+                },
+                rows = result
+            });
         });
 
         return app;
     }
 }
 
-public record ResourceLoadBucket(DateTime Date, int LoadPercent, bool Overloaded);
+public record ResourceLoadBucket(DateTime Date, int LoadPercent, bool Overloaded, bool IsWorkDay);
 public record ResourceLoad(
     string ResourceId,
     string ResourceName,

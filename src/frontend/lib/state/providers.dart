@@ -1,0 +1,85 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../api/api_client.dart';
+import '../models/assignment.dart';
+import '../models/milestone.dart';
+import '../models/project.dart';
+import '../models/resource.dart';
+import '../models/resource_load.dart';
+import '../models/task_hierarchy.dart';
+import '../models/task_item.dart';
+
+final apiClientProvider = Provider<ApiClient>((ref) => ApiClient());
+
+final projectsProvider = FutureProvider<List<Project>>((ref) async {
+  return ref.watch(apiClientProvider).listProjects();
+});
+
+final selectedProjectIdProvider = StateProvider<String?>((_) => null);
+
+final tasksProvider = FutureProvider.family<List<TaskItem>, String>((ref, projectId) async {
+  return ref.watch(apiClientProvider).listTasks(projectId);
+});
+
+final taskHierarchyProvider = FutureProvider.family<List<TaskHierarchyNode>, String>((ref, projectId) async {
+  return ref.watch(apiClientProvider).listTaskHierarchy(projectId);
+});
+
+final milestonesProvider = FutureProvider.family<List<Milestone>, String>((ref, projectId) async {
+  return ref.watch(apiClientProvider).listMilestones(projectId);
+});
+
+final resourcesProvider = FutureProvider<List<Resource>>((ref) async {
+  return ref.watch(apiClientProvider).listResources();
+});
+
+final assignmentsByTaskProvider = FutureProvider.family<List<Assignment>, String>((ref, taskId) async {
+  return ref.watch(apiClientProvider).listAssignments(taskId: taskId);
+});
+
+// --- Aggregated cross-project views ---
+
+typedef ProjectHierarchy = ({Project project, List<TaskHierarchyNode> nodes});
+
+/// All projects with their hierarchy nodes (fan-out fetch — fine for MVP scale).
+final allHierarchyByProjectProvider = FutureProvider<List<ProjectHierarchy>>((ref) async {
+  final projects = await ref.watch(projectsProvider.future);
+  final api = ref.watch(apiClientProvider);
+  final out = <ProjectHierarchy>[];
+  for (final p in projects) {
+    if (p.id == null) continue;
+    final nodes = await api.listTaskHierarchy(p.id!);
+    out.add((project: p, nodes: nodes));
+  }
+  return out;
+});
+
+/// All assignments across the system. Used by All Tasks / All Gantt to filter
+/// by assignee and to show assignee chips in expanded task detail.
+final allAssignmentsProvider = FutureProvider<List<Assignment>>((ref) async {
+  return ref.watch(apiClientProvider).listAssignments();
+});
+
+// --- Shared filter state for the home tabs ---
+// Empty set = no filter (show all).
+
+final projectFilterProvider = StateProvider<Set<String>>((_) => <String>{});
+final assigneeFilterProvider = StateProvider<Set<String>>((_) => <String>{});
+
+class MatrixRange {
+  final DateTime from;
+  final DateTime to;
+  const MatrixRange(this.from, this.to);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is MatrixRange && other.from == from && other.to == to);
+
+  @override
+  int get hashCode => Object.hash(from, to);
+}
+
+final matrixLoadProvider = FutureProvider.family<List<ResourceLoad>, MatrixRange>((ref, range) async {
+  return ref.watch(apiClientProvider).matrixLoad(from: range.from, to: range.to);
+});

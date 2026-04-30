@@ -1,0 +1,189 @@
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../models/assignment.dart';
+import '../models/change_log.dart';
+import '../models/milestone.dart';
+import '../models/project.dart';
+import '../models/resource.dart';
+import '../models/resource_load.dart';
+import '../models/task_hierarchy.dart';
+import '../models/task_item.dart';
+import 'api_config.dart';
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+  ApiException(this.statusCode, this.message);
+  @override
+  String toString() => 'ApiException($statusCode): $message';
+}
+
+class ApiClient {
+  final http.Client _http;
+  final String _base;
+
+  ApiClient({http.Client? client, String? baseUrl})
+      : _http = client ?? http.Client(),
+        _base = baseUrl ?? ApiConfig.baseUrl;
+
+  Uri _uri(String path, [Map<String, String>? query]) =>
+      Uri.parse('$_base$path').replace(queryParameters: query);
+
+  Future<dynamic> _decode(http.Response r) async {
+    if (r.statusCode >= 200 && r.statusCode < 300) {
+      if (r.body.isEmpty) return null;
+      return jsonDecode(utf8.decode(r.bodyBytes));
+    }
+    throw ApiException(r.statusCode, r.body);
+  }
+
+  // --- Projects ---
+  Future<List<Project>> listProjects() async {
+    final data = await _decode(await _http.get(_uri('/api/projects')));
+    return (data as List).cast<Map<String, dynamic>>().map(Project.fromJson).toList();
+  }
+
+  Future<Project> createProject(Project p) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/projects'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(p.toJson()),
+    ));
+    return Project.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<Project> updateProject(String id, Project p) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/projects/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(p.toJson()),
+    ));
+    return Project.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteProject(String id) async {
+    await _decode(await _http.delete(_uri('/api/projects/$id')));
+  }
+
+  // --- Tasks ---
+  Future<List<TaskItem>> listTasks(String projectId) async {
+    final data = await _decode(await _http.get(_uri('/api/projects/$projectId/tasks')));
+    return (data as List).cast<Map<String, dynamic>>().map(TaskItem.fromJson).toList();
+  }
+
+  Future<List<TaskHierarchyNode>> listTaskHierarchy(String projectId) async {
+    final data = await _decode(await _http.get(_uri('/api/projects/$projectId/tasks/hierarchy')));
+    return (data as List).cast<Map<String, dynamic>>().map(TaskHierarchyNode.fromJson).toList();
+  }
+
+  Future<TaskItem> createTask(String projectId, TaskItem t) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/projects/$projectId/tasks'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(t.toJson()),
+    ));
+    return TaskItem.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<TaskItem> updateTask(String id, TaskItem t) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/tasks/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(t.toJson()),
+    ));
+    return TaskItem.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteTask(String id) async {
+    await _decode(await _http.delete(_uri('/api/tasks/$id')));
+  }
+
+  // --- Resources ---
+  Future<List<Resource>> listResources() async {
+    final data = await _decode(await _http.get(_uri('/api/resources')));
+    return (data as List).cast<Map<String, dynamic>>().map(Resource.fromJson).toList();
+  }
+
+  Future<Resource> createResource(Resource r) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/resources'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(r.toJson()),
+    ));
+    return Resource.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<Resource> updateResource(String id, Resource r) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/resources/$id'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(r.toJson()),
+    ));
+    return Resource.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteResource(String id) async {
+    await _decode(await _http.delete(_uri('/api/resources/$id')));
+  }
+
+  // --- Assignments ---
+  Future<List<Assignment>> listAssignments({String? resourceId, String? taskId}) async {
+    final query = <String, String>{};
+    if (resourceId != null) query['resourceId'] = resourceId;
+    if (taskId != null) query['taskId'] = taskId;
+    final data = await _decode(await _http.get(_uri('/api/assignments', query.isEmpty ? null : query)));
+    return (data as List).cast<Map<String, dynamic>>().map(Assignment.fromJson).toList();
+  }
+
+  Future<Assignment> createAssignment(Assignment a) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/assignments'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(a.toJson()),
+    ));
+    return Assignment.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteAssignment(String id) async {
+    await _decode(await _http.delete(_uri('/api/assignments/$id')));
+  }
+
+  // --- Matrix ---
+  Future<List<ResourceLoad>> matrixLoad({required DateTime from, required DateTime to}) async {
+    final data = await _decode(await _http.get(_uri('/api/matrix/load', {
+      'from': from.toUtc().toIso8601String(),
+      'to': to.toUtc().toIso8601String(),
+    })));
+    return (data as List).cast<Map<String, dynamic>>().map(ResourceLoad.fromJson).toList();
+  }
+
+  // --- Milestones ---
+  Future<List<Milestone>> listMilestones(String projectId) async {
+    final data = await _decode(await _http.get(_uri('/api/projects/$projectId/milestones')));
+    return (data as List).cast<Map<String, dynamic>>().map(Milestone.fromJson).toList();
+  }
+
+  Future<Milestone> createMilestone(String projectId, Milestone m) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/projects/$projectId/milestones'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(m.toJson()),
+    ));
+    return Milestone.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteMilestone(String id) async {
+    await _decode(await _http.delete(_uri('/api/milestones/$id')));
+  }
+
+  // --- Change Logs ---
+  Future<List<ChangeLog>> listChangeLogs({ChangeEntityType? entityType, String? entityId, int limit = 100}) async {
+    final query = <String, String>{'limit': '$limit'};
+    if (entityType != null) query['entityType'] = entityType.name;
+    if (entityId != null) query['entityId'] = entityId;
+    final data = await _decode(await _http.get(_uri('/api/change-logs', query)));
+    return (data as List).cast<Map<String, dynamic>>().map(ChangeLog.fromJson).toList();
+  }
+}

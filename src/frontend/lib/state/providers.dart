@@ -22,6 +22,9 @@ final currentUserIdProvider = StateProvider<String?>((_) => null);
 final sidebarOpenProvider = StateProvider<bool>((_) => true);
 final inspectorOpenProvider = StateProvider<bool>((_) => false);
 
+/// User-resizable inspector pane width. Min/max enforced at the resize-handle.
+final inspectorWidthProvider = StateProvider<double>((_) => 520);
+
 enum AppSection { myWork, allWork, projects, resources, matrix, plans, audit, agents, settings }
 
 final appSectionProvider = StateProvider<AppSection>((_) => AppSection.myWork);
@@ -149,6 +152,12 @@ final allWorkSubviewProvider = StateProvider<AllWorkSubview>((_) => AllWorkSubvi
 
 /// Gantt zoom level. Persists across re-entries to the gantt subview.
 final ganttZoomProvider = StateProvider<int>((_) => 0); // 0=day, 1=week, 2=month
+
+/// IDs whose children should be hidden in tree-style views (List + Gantt).
+/// Keyed by entity id: a task id collapses that task's subtree;
+/// `proj:<id>` collapses an entire project group. Shared so toggling
+/// in one view persists into the other.
+final collapsedNodesProvider = StateProvider<Set<String>>((_) => const <String>{});
 
 /// Calendar subview state.
 enum CalendarMode { month, week }

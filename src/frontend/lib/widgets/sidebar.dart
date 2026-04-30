@@ -201,6 +201,7 @@ class _ExpandableProjectsState extends ConsumerState<_ExpandableProjects> {
     final theme = Theme.of(context);
     final list = widget.projects.asData?.value as List<dynamic>? ?? const [];
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
@@ -255,15 +256,21 @@ class _ExpandableProjectsState extends ConsumerState<_ExpandableProjects> {
             final name = (p).name as String;
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 6),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(6),
-                onTap: id == null ? null : () => widget.onPick(id),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(38, 4, 10, 4),
-                  child: Text(
-                    name,
-                    style: theme.textTheme.bodySmall,
-                    overflow: TextOverflow.ellipsis,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(6),
+                  onTap: id == null ? null : () => widget.onPick(id),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(38, 4, 10, 4),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        name,
+                        style: theme.textTheme.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
                 ),
               ),

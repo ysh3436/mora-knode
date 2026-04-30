@@ -25,6 +25,7 @@ class AllWorkGantt extends ConsumerWidget {
     final statusFilter = ref.watch(statusFilterProvider);
     final search = ref.watch(searchQueryProvider).toLowerCase().trim();
     final zoomIdx = ref.watch(ganttZoomProvider);
+    final collapsed = ref.watch(collapsedNodesProvider);
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -53,18 +54,34 @@ class AllWorkGantt extends ConsumerWidget {
       );
       if (filtered.isEmpty) continue;
 
-      // Project group header row spanning the union timeline.
+      // Project group header row spanning the union timeline. Use a synthetic
+      // id so the chevron in the gutter can toggle the project's children.
+      final pkey = 'proj:${g.project.id}';
+      final projCollapsed = collapsed.contains(pkey);
       final span = _projectSpan(filtered);
       rows.add(GanttRow(
+        id: pkey,
         title: '📁 ${g.project.name}',
         depth: 0,
         hasChildren: true,
         origin: const Timeline(),
         current: span,
         real: const Timeline(),
+        isStickyHeader: true,
       ));
+      if (projCollapsed) continue;
+
+      // Track collapsed-ancestor task ids so we hide their descendants.
+      final hiddenAncestor = <String>{};
       for (final entry in flattenHierarchy(filtered)) {
         final node = entry.$1;
+        if (node.parentTaskId != null && hiddenAncestor.contains(node.parentTaskId)) {
+          if (node.hasChildren) hiddenAncestor.add(node.id);
+          continue;
+        }
+        if (node.hasChildren && collapsed.contains(node.id)) {
+          hiddenAncestor.add(node.id);
+        }
         rows.add(GanttRow(
           id: node.id,
           title: node.title,
@@ -73,6 +90,9 @@ class AllWorkGantt extends ConsumerWidget {
           origin: node.hasChildren ? node.computedOriginTimeline : node.originTimeline,
           current: node.hasChildren ? node.computedCurrentTimeline : node.currentTimeline,
           real: node.hasChildren ? node.computedRealTimeline : node.realTimeline,
+          // Any parent task pins as a section header so the user always sees
+          // which subtree the visible leaves belong to.
+          isStickyHeader: node.hasChildren,
         ));
       }
     }
@@ -125,16 +145,24 @@ class AllWorkGantt extends ConsumerWidget {
         ),
         Divider(height: 1, color: theme.dividerColor),
         Expanded(
-          child: SingleChildScrollView(
-            child: GanttChart(
-              rows: rows,
-              zoom: zoom,
-              selectedId: selectedTaskId,
-              onRowTap: (id) {
-                ref.read(inspectionProvider.notifier).state = TaskInspection(id);
-                ref.read(inspectorOpenProvider.notifier).state = true;
-              },
-            ),
+          child: GanttChart(
+            rows: rows,
+            zoom: zoom,
+            selectedId: selectedTaskId,
+            onRowTap: (id) {
+              // Project group rows use synthetic ids; ignore them for selection.
+              if (id.startsWith('proj:')) return;
+              ref.read(inspectionProvider.notifier).state = TaskInspection(id);
+              ref.read(inspectorOpenProvider.notifier).state = true;
+            },
+            collapsed: collapsed,
+            onToggleCollapse: (id) {
+              final notifier = ref.read(collapsedNodesProvider.notifier);
+              final cur = ref.read(collapsedNodesProvider);
+              final next = {...cur};
+              if (!next.remove(id)) next.add(id);
+              notifier.state = next;
+            },
           ),
         ),
       ],

@@ -8,6 +8,9 @@
 | 항목 | 결정 |
 | --- | --- |
 | 레이아웃 | **후보 A** (3-pane: sidebar + main + inspector) |
+| 권한 모델 | ADR-004 5 프리셋 그대로 (Manager / Reviewer / Developer / QA / Human). UI 어포던스 + 데이터 가시 범위 둘 다 RBAC 에 따라 분기 — 자세한 표는 [seed-scenarios.md §3.3 / §3.4](seed-scenarios.md) |
+| Dev 사용자 스위처 | 좌측 sidebar 하단에 현재 사용자 표시 + 드롭다운으로 전환 (M2 token auth 전까지 전용) |
+| 데이터 가시 범위 | Manager/Reviewer/Human = 전체. Developer/QA = 본인 할당된 프로젝트 / 본인 task + 조상 / 본인 매트릭스 행만 |
 | Sidebar | 기본 **열림**, 토글 가능 (`[`) |
 | Inspector | 기본 **닫힘**, 토글 가능 (`]`) |
 | My work 진입 뷰 | 채택 (기본 진입) |
@@ -53,10 +56,18 @@ Linear / Notion / GitHub Issues 의 표준 패턴. 매트릭스 PM 의 "선택 �
 | ▸ Plans    | |                                          | |    (collapsed) |
 | ▸ Audit    | |                                          | |  - Edit / Del  |
 | ▸ Agents   | |                                          | |                |
+| ▸ Settings | |                                          | |                |
 |            | +------------------------------------------+ |                |
 | [+ New]    | [Footer status: count, sync time, errors]    |                |
-+------------+----------------------------------------------+----------------+
++------------+                                              +----------------+
+| 👤 ysh ▾   |   ← dev-mode 사용자 스위처                   |
+|   Manager  |     (현재 사용자 + RBAC 표시, 클릭=드롭다운) |
++------------+
 ```
+
+좌측 sidebar 의 Projects 트리 / Resources / Matrix / Settings 항목은 **현재 사용자 RBAC 에 따라 자동 필터** ([seed-scenarios.md §3.4](seed-scenarios.md)):
+- Manager / Reviewer / Human → 전체
+- Developer / QA → 본인 할당된 프로젝트 / 본인 행만 / Settings 숨김
 
 장점:
 - 선택 한 번으로 우측에 상세 즉시 (모달 없음 = 데스크톱답다)

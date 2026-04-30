@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/providers.dart';
+import '../task_editor.dart';
 import 'all_work_calendar.dart';
 import 'all_work_filters.dart';
 import 'all_work_gantt.dart';
@@ -38,6 +39,12 @@ class AllWorkSection extends ConsumerWidget {
                 ],
                 selected: {sub},
                 onSelectionChanged: (s) => ref.read(allWorkSubviewProvider.notifier).state = s.first,
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                icon: const Icon(Icons.add, size: 16),
+                label: const Text('New task'),
+                onPressed: () => showTaskEditor(context, ref),
               ),
             ],
           ),

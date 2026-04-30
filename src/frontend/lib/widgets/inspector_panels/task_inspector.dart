@@ -8,6 +8,7 @@ import '../../models/task_hierarchy.dart';
 import '../../models/task_item.dart';
 import '../../models/timeline.dart';
 import '../../state/providers.dart';
+import '../task_editor.dart';
 
 /// Detail panel for a TaskInspection. Pulls from already-cached aggregated
 /// providers so opening the inspector does not trigger extra fetches.
@@ -84,6 +85,13 @@ class TaskInspectorPanel extends ConsumerWidget {
               ],
               _SectionHeader('Recent changes'),
               _ChangeLogList(taskId: taskId),
+              const SizedBox(height: 16),
+              _ActionRow(
+                node: node,
+                siblings: groups
+                    .firstWhere((g) => g.nodes.any((n) => n.id == taskId))
+                    .nodes,
+              ),
             ],
           ),
         );
@@ -307,6 +315,65 @@ class _ChildrenList extends StatelessWidget {
               ))
           .toList(),
     );
+  }
+}
+
+class _ActionRow extends ConsumerWidget {
+  final TaskHierarchyNode node;
+  final List<TaskHierarchyNode> siblings;
+  const _ActionRow({required this.node, required this.siblings});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Row(
+      children: [
+        FilledButton.tonalIcon(
+          icon: const Icon(Icons.edit, size: 16),
+          label: const Text('Edit'),
+          onPressed: () => showTaskEditor(
+            context,
+            ref,
+            projectId: node.projectId,
+            existing: node.toTaskItem(),
+            siblings: siblings,
+          ),
+        ),
+        const SizedBox(width: 8),
+        TextButton.icon(
+          icon: const Icon(Icons.delete_outline, size: 16),
+          label: const Text('Delete'),
+          onPressed: () async {
+            final ok = await _confirmDelete(context, node.title);
+            if (!ok) return;
+            await ref.read(apiClientProvider).deleteTask(node.id);
+            ref.invalidate(allHierarchyByProjectProvider);
+            ref.invalidate(allAssignmentsProvider);
+            ref.invalidate(taskHierarchyProvider(node.projectId));
+            ref.invalidate(tasksProvider(node.projectId));
+            ref.read(inspectionProvider.notifier).state = null;
+          },
+        ),
+      ],
+    );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, String title) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete task?'),
+        content: Text('"$title" will be removed permanently.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 }
 

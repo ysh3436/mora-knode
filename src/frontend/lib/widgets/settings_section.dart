@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
+import '../l10n/labels.dart';
 import '../models/work_calendar.dart';
 import '../state/providers.dart';
 
@@ -15,30 +17,90 @@ class SettingsSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isAdmin = ref.watch(isAdminProvider);
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
 
-    if (!isAdmin) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(48),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.lock_outline, size: 32, color: theme.colorScheme.outline),
-              const SizedBox(height: 12),
-              Text('Settings are visible to admin roles only.', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 6),
-              Text(
-                'Switch to the ysh user from the sidebar to edit WorkCalendar and other org-level settings.',
-                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                textAlign: TextAlign.center,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const _LanguageCard(),
+          if (!isAdmin) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                border: Border.all(color: theme.dividerColor),
+                borderRadius: BorderRadius.circular(8),
               ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.lock_outline, size: 32, color: theme.colorScheme.outline),
+                  const SizedBox(height: 12),
+                  Text(l.settingsAdminOnlyTitle, style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(
+                    l.settingsAdminOnlyHint,
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 24),
+            const _WorkCalendarEditor(),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageCard extends ConsumerWidget {
+  const _LanguageCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l = AppL10n.of(context);
+    final locale = ref.watch(localeProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.dividerColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.translate, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(l.settingsLanguage, style: theme.textTheme.titleMedium),
             ],
           ),
-        ),
-      );
-    }
-
-    return const _WorkCalendarEditor();
+          const SizedBox(height: 4),
+          Text(
+            l.settingsLanguageHint,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<String>(
+            segments: [
+              ButtonSegment(value: 'ko', label: Text(l.languageKorean)),
+              ButtonSegment(value: 'en', label: Text(l.languageEnglish)),
+            ],
+            selected: {locale.languageCode},
+            onSelectionChanged: (s) =>
+                ref.read(localeProvider.notifier).state = Locale(s.first),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -59,9 +121,10 @@ class _WorkCalendarEditorState extends ConsumerState<_WorkCalendarEditor> {
     final theme = Theme.of(context);
     final loaded = ref.watch(workCalendarProvider);
 
+    final l = AppL10n.of(context);
     return loaded.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text('Error: $e')),
+      error: (e, _) => Center(child: Text(l.errorPrefix(e.toString()))),
       data: (resp) {
         // Initialize the draft on first paint, or after a save.
         _draft ??= resp.calendar;
@@ -87,29 +150,28 @@ class _WorkCalendarEditorState extends ConsumerState<_WorkCalendarEditor> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'No WorkCalendar configured yet. Showing the 24/7 fallback. '
-                          'Saving will create the document and start scoping matrix load to work hours.',
+                          l.settingsWorkCalendarFallback,
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
                     ],
                   ),
                 ),
-              Text('Work Calendar', style: theme.textTheme.titleMedium),
+              Text(l.settingsWorkCalendar, style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),
               Text(
-                'Drives matrix load calculation, calendar week-mode hour grid, and gantt overlays.',
+                l.settingsWorkCalendarHint,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
               ),
               const SizedBox(height: 24),
-              _section(theme, 'Work days'),
+              _section(theme, l.settingsWorkDays),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 8,
                 children: WorkDays.ordered.map((entry) {
                   final selected = (draft.workDays & entry.$2) != 0;
                   return FilterChip(
-                    label: Text(entry.$1),
+                    label: Text(workDayLabel(context, entry.$1)),
                     selected: selected,
                     onSelected: (s) {
                       setState(() {
@@ -122,33 +184,33 @@ class _WorkCalendarEditorState extends ConsumerState<_WorkCalendarEditor> {
                 }).toList(),
               ),
               const SizedBox(height: 24),
-              _section(theme, 'Daily hours (local)'),
+              _section(theme, l.settingsDailyHoursLocal),
               const SizedBox(height: 8),
               Row(
                 children: [
                   _TimeField(
-                    label: 'Start',
+                    label: l.settingsTimeStart,
                     minutes: draft.dailyStartMinutes,
                     onPick: (m) => setState(() => _draft = draft.copyWith(dailyStartMinutes: m)),
                   ),
                   const SizedBox(width: 24),
                   _TimeField(
-                    label: 'End',
+                    label: l.settingsTimeEnd,
                     minutes: draft.dailyEndMinutes,
                     onPick: (m) => setState(() => _draft = draft.copyWith(dailyEndMinutes: m)),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              _section(theme, 'Timezone'),
+              _section(theme, l.settingsTimezone),
               const SizedBox(height: 8),
               SizedBox(
                 width: 280,
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     isDense: true,
-                    border: OutlineInputBorder(),
-                    hintText: 'e.g. Asia/Seoul',
+                    border: const OutlineInputBorder(),
+                    hintText: l.settingsTimezoneHint,
                   ),
                   controller: TextEditingController(text: draft.timezone)
                     ..selection = TextSelection.collapsed(offset: draft.timezone.length),
@@ -164,17 +226,17 @@ class _WorkCalendarEditorState extends ConsumerState<_WorkCalendarEditor> {
                 children: [
                   FilledButton(
                     onPressed: _saving || !_isValid(draft) ? null : () => _save(),
-                    child: _saving ? const Text('Saving…') : const Text('Save'),
+                    child: Text(_saving ? l.actionSaving : l.actionSave),
                   ),
                   const SizedBox(width: 12),
                   TextButton(
                     onPressed: _saving ? null : () => setState(() => _draft = resp.calendar),
-                    child: const Text('Reset'),
+                    child: Text(l.actionReset),
                   ),
                   const Spacer(),
                   if (_isDirty(resp.calendar))
                     Text(
-                      'Unsaved changes',
+                      l.stateUnsavedChanges,
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                     ),
                 ],

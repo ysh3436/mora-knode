@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
 import '../task_editor.dart';
 import 'all_work_calendar.dart';
@@ -17,6 +18,7 @@ class AllWorkSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = ref.watch(allWorkSubviewProvider);
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -29,13 +31,13 @@ class AllWorkSection extends ConsumerWidget {
                 style: const ButtonStyle(
                   visualDensity: VisualDensity.compact,
                 ),
-                segments: const [
-                  ButtonSegment(value: AllWorkSubview.list, label: Text('List'), icon: Icon(Icons.list, size: 16)),
-                  ButtonSegment(value: AllWorkSubview.gantt, label: Text('Gantt'), icon: Icon(Icons.view_timeline, size: 16)),
+                segments: [
+                  ButtonSegment(value: AllWorkSubview.list, label: Text(l.tabList), icon: const Icon(Icons.list, size: 16)),
+                  ButtonSegment(value: AllWorkSubview.gantt, label: Text(l.tabGantt), icon: const Icon(Icons.view_timeline, size: 16)),
                   ButtonSegment(
                       value: AllWorkSubview.calendar,
-                      label: Text('Calendar'),
-                      icon: Icon(Icons.calendar_view_month, size: 16)),
+                      label: Text(l.tabCalendar),
+                      icon: const Icon(Icons.calendar_view_month, size: 16)),
                 ],
                 selected: {sub},
                 onSelectionChanged: (s) => ref.read(allWorkSubviewProvider.notifier).state = s.first,
@@ -43,7 +45,7 @@ class AllWorkSection extends ConsumerWidget {
               const Spacer(),
               FilledButton.icon(
                 icon: const Icon(Icons.add, size: 16),
-                label: const Text('New task'),
+                label: Text(l.newTask),
                 onPressed: () => showTaskEditor(context, ref),
               ),
             ],

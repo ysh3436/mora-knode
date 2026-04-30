@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
@@ -24,6 +25,11 @@ final inspectorOpenProvider = StateProvider<bool>((_) => false);
 
 /// User-resizable inspector pane width. Min/max enforced at the resize-handle.
 final inspectorWidthProvider = StateProvider<double>((_) => 520);
+
+/// Active UI locale. Defaults to Korean for the dogfooding audience; the
+/// settings panel exposes a switcher. null would let MaterialApp fall back to
+/// the platform locale, which we intentionally avoid here.
+final localeProvider = StateProvider<Locale>((_) => const Locale('ko'));
 
 enum AppSection { myWork, allWork, projects, resources, matrix, plans, audit, agents, settings }
 

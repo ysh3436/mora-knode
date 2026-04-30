@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
 import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
@@ -16,27 +17,28 @@ class MainScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppL10n.of(context);
     final section = ref.watch(appSectionProvider);
 
     final (header, body) = switch (section) {
       AppSection.myWork =>
-        (_HeaderTitle('My work', subtitle: 'this week'), const MyWorkSection()),
+        (_HeaderTitle(l.headerMyWork, subtitle: l.headerMyWorkSub), const MyWorkSection()),
       AppSection.allWork =>
-        (_HeaderTitle('All work'), const AllWorkSection()),
+        (_HeaderTitle(l.headerAllWork), const AllWorkSection()),
       AppSection.projects =>
-        (_HeaderTitle('Projects'), _Coming(label: 'Projects directory')),
+        (_HeaderTitle(l.headerProjects), _Coming(label: l.comingProjectsDirectory)),
       AppSection.resources =>
-        (_HeaderTitle('Resources'), _Coming(label: 'Resources')),
+        (_HeaderTitle(l.headerResources), _Coming(label: l.comingResources)),
       AppSection.matrix =>
-        (_HeaderTitle('Matrix load'), const MatrixSection()),
+        (_HeaderTitle(l.headerMatrixLoad), const MatrixSection()),
       AppSection.plans =>
-        (_HeaderTitle('Plans', subtitle: 'M2'), _Coming(label: 'Plan review queue (M2)')),
+        (_HeaderTitle(l.headerPlans, subtitle: l.badgeM2), _Coming(label: l.comingPlanReviewQueue)),
       AppSection.audit =>
-        (_HeaderTitle('Audit'), _Coming(label: 'Change log')),
+        (_HeaderTitle(l.headerAudit), _Coming(label: l.comingChangeLog)),
       AppSection.agents =>
-        (_HeaderTitle('Agents', subtitle: 'M2'), _Coming(label: 'Agent identity & RBAC (M2)')),
+        (_HeaderTitle(l.headerAgents, subtitle: l.badgeM2), _Coming(label: l.comingAgentRbac)),
       AppSection.settings =>
-        (_HeaderTitle('Settings'), const SettingsSection()),
+        (_HeaderTitle(l.headerSettings), const SettingsSection()),
     };
 
     return AppShell(header: header, child: body);
@@ -73,6 +75,7 @@ class _Coming extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(48),
@@ -84,7 +87,7 @@ class _Coming extends StatelessWidget {
             Text(label, style: theme.textTheme.titleMedium),
             const SizedBox(height: 6),
             Text(
-              'Coming in the next stage of the redesign.',
+              l.comingSoon,
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
             ),
           ],

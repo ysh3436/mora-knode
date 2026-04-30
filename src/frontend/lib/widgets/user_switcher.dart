@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../models/resource.dart';
 import '../state/providers.dart';
 
@@ -14,6 +15,7 @@ class UserSwitcher extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final resources = ref.watch(resourcesProvider);
     final currentId = ref.watch(currentUserIdProvider);
 
@@ -22,29 +24,30 @@ class UserSwitcher extends ConsumerWidget {
         border: Border(top: BorderSide(color: theme.dividerColor)),
       ),
       child: resources.when(
-        loading: () => const Padding(
-          padding: EdgeInsets.all(12),
-          child: Text('Loading users…', style: TextStyle(fontSize: 12)),
+        loading: () => Padding(
+          padding: const EdgeInsets.all(12),
+          child: Text(l.userSwitcherLoading, style: const TextStyle(fontSize: 12)),
         ),
         error: (e, _) => Padding(
           padding: const EdgeInsets.all(12),
-          child: Text('Users: $e', style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
+          child: Text(l.errorPrefix(e.toString()),
+              style: const TextStyle(fontSize: 12, color: Colors.redAccent)),
         ),
         data: (all) {
           final humans = all.where((r) => r.kind == ResourceKindFE.human).toList();
           final current = humans.firstWhere(
             (r) => r.id == currentId,
-            orElse: () => const Resource(name: 'anonymous', kind: ResourceKindFE.human),
+            orElse: () => Resource(name: l.userSwitcherAnonymous, kind: ResourceKindFE.human),
           );
           return PopupMenuButton<String?>(
-            tooltip: 'Switch user (dev only)',
+            tooltip: l.userSwitcherTooltip,
             position: PopupMenuPosition.over,
             onSelected: (id) => ref.read(currentUserIdProvider.notifier).state = id,
             itemBuilder: (ctx) => [
               CheckedPopupMenuItem<String?>(
                 value: null,
                 checked: currentId == null,
-                child: const Text('anonymous (admin)'),
+                child: Text(l.userSwitcherAnonymousAdmin),
               ),
               const PopupMenuDivider(),
               ...humans.map((r) => CheckedPopupMenuItem<String?>(
@@ -75,12 +78,12 @@ class UserSwitcher extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          currentId == null ? 'anonymous' : current.name,
+                          currentId == null ? l.userSwitcherAnonymous : current.name,
                           style: theme.textTheme.bodyMedium,
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
-                          currentId == null ? 'admin (no header)' : current.rbac.label,
+                          currentId == null ? l.userSwitcherAdminCaption : current.rbac.label,
                           style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                         ),
                       ],

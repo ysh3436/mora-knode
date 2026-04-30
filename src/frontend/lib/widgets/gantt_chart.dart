@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart' show DateFormat;
+import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
+import '../l10n/app_localizations.dart';
 import '../models/timeline.dart';
 
 enum GanttZoom { day, week, month }
@@ -140,10 +141,11 @@ class _GanttChartState extends State<GanttChart> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.rows.isEmpty) return const Center(child: Text('No tasks yet.'));
+    final l = AppL10n.of(context);
+    if (widget.rows.isEmpty) return Center(child: Text(l.ganttNoTasks));
     final range = _resolveRange();
     if (range == null) {
-      return const Center(child: Text('No timeline data yet. Add Current timeline to tasks.'));
+      return Center(child: Text(l.ganttNoTimeline));
     }
 
     final theme = Theme.of(context);
@@ -179,9 +181,9 @@ class _GanttChartState extends State<GanttChart> {
                     ),
                     alignment: Alignment.centerLeft,
                     padding: const EdgeInsets.symmetric(horizontal: 12),
-                    child: const Text(
-                      'Task',
-                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
+                    child: Text(
+                      l.ganttColTask,
+                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                     ),
                   ),
                   Expanded(
@@ -201,6 +203,7 @@ class _GanttChartState extends State<GanttChart> {
                             headerTopHeight: GanttChart.headerTopHeight,
                             headerBottomHeight: GanttChart.headerBottomHeight,
                             palette: palette,
+                            locale: Localizations.localeOf(context).toLanguageTag(),
                           ),
                         ),
                       ),
@@ -584,6 +587,7 @@ class _GanttHeaderPainter extends CustomPainter {
   final double headerTopHeight;
   final double headerBottomHeight;
   final _Palette palette;
+  final String locale;
 
   _GanttHeaderPainter({
     required this.from,
@@ -594,6 +598,7 @@ class _GanttHeaderPainter extends CustomPainter {
     required this.headerTopHeight,
     required this.headerBottomHeight,
     required this.palette,
+    required this.locale,
   });
 
   @override
@@ -624,8 +629,15 @@ class _GanttHeaderPainter extends CustomPainter {
   }
 
   void _drawDay(Canvas canvas, Size size, Paint gridPaint) {
-    final dfDay = DateFormat('d');
-    final dfMonth = DateFormat('MMM');
+    // intl treats single-char pattern 'd' as a *skeleton*, which CLDR expands
+    // with the locale's day-unit (Korean: "1일"). For a calendar grid the
+    // column position already implies "this is a day", so we want the bare
+    // numeral in every locale. NumberFormat.decimalPattern is what Flutter's
+    // own CalendarDatePicker uses (via MaterialLocalizations.formatDecimal):
+    // gives ASCII digits in ko/en/ja/zh and the locale's native digits in
+    // Arabic/Persian/Hindi without the day-unit getting glued on.
+    final dfMonth = DateFormat('MMM', locale);
+    final dayFmt = NumberFormat.decimalPattern(locale);
     final spanDays = to.difference(from).inDays;
 
     DateTime? lastMonthDrawn;
@@ -642,14 +654,14 @@ class _GanttHeaderPainter extends CustomPainter {
         final dayColor = (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday)
             ? palette.textMuted
             : palette.text;
-        _text(canvas, dfDay.format(date.toLocal()), x + 4, headerTopHeight + 4,
+        _text(canvas, dayFmt.format(date.toLocal().day), x + 4, headerTopHeight + 4,
             fontSize: 11, color: dayColor);
       }
     }
   }
 
   void _drawWeek(Canvas canvas, Size size, Paint gridPaint) {
-    final dfMonth = DateFormat('MMM');
+    final dfMonth = DateFormat('MMM', locale);
     final spanDays = to.difference(from).inDays;
     final cellCount = (spanDays / cellDays).ceil();
 
@@ -671,7 +683,7 @@ class _GanttHeaderPainter extends CustomPainter {
   }
 
   void _drawMonth(Canvas canvas, Size size, Paint gridPaint) {
-    final dfMonthShort = DateFormat('MMM');
+    final dfMonthShort = DateFormat('MMM', locale);
     final spanDays = to.difference(from).inDays;
     final cellCount = (spanDays / cellDays).ceil();
 
@@ -732,7 +744,8 @@ class _GanttHeaderPainter extends CustomPainter {
       old.from != from ||
       old.to != to ||
       old.zoom != zoom ||
-      old.cellWidth != cellWidth;
+      old.cellWidth != cellWidth ||
+      old.locale != locale;
 }
 
 class _GanttBodyPainter extends CustomPainter {

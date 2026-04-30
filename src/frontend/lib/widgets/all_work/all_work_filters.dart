@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/labels.dart';
 import '../../models/project.dart';
 import '../../models/resource.dart';
 import '../../models/task_item.dart';
@@ -16,6 +18,7 @@ class AllWorkFilters extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final projects = ref.watch(projectsProvider).asData?.value ?? const <Project>[];
     final resources = ref.watch(resourcesProvider).asData?.value ?? const <Resource>[];
 
@@ -41,7 +44,7 @@ class AllWorkFilters extends ConsumerWidget {
             children: [
               _MultiChip(
                 icon: Icons.folder_outlined,
-                label: 'Project',
+                label: l.filterProject,
                 selected: projectFilter,
                 options: projects
                     .where((p) => p.id != null)
@@ -52,7 +55,7 @@ class AllWorkFilters extends ConsumerWidget {
               const SizedBox(width: 8),
               _MultiChip(
                 icon: Icons.person_outline,
-                label: 'Assignee',
+                label: l.filterAssignee,
                 selected: assigneeFilter,
                 options: humanNames.map((n) => (id: n, label: n)).toList(),
                 onChanged: (s) => ref.read(assigneeFilterProvider.notifier).state = s,
@@ -60,9 +63,11 @@ class AllWorkFilters extends ConsumerWidget {
               const SizedBox(width: 8),
               _MultiChip(
                 icon: Icons.flag_outlined,
-                label: 'Status',
+                label: l.filterStatus,
                 selected: statusFilter.map((e) => e.name).toSet(),
-                options: TaskStatus.values.map((s) => (id: s.name, label: s.name)).toList(),
+                options: TaskStatus.values
+                    .map((s) => (id: s.name, label: taskStatusLabel(context, s)))
+                    .toList(),
                 onChanged: (raw) {
                   final values = raw
                       .map((n) => TaskStatus.values.where((s) => s.name == n).cast<TaskStatus?>().firstOrNull)
@@ -77,13 +82,13 @@ class AllWorkFilters extends ConsumerWidget {
                 child: TextField(
                   decoration: InputDecoration(
                     isDense: true,
-                    hintText: 'Search title…',
+                    hintText: l.filterSearchHint,
                     prefixIcon: const Icon(Icons.search, size: 16),
                     suffixIcon: search.isEmpty
                         ? null
                         : IconButton(
                             iconSize: 14,
-                            tooltip: 'Clear search',
+                            tooltip: l.filterClearSearch,
                             icon: const Icon(Icons.close),
                             onPressed: () => ref.read(searchQueryProvider.notifier).state = '',
                           ),
@@ -99,7 +104,7 @@ class AllWorkFilters extends ConsumerWidget {
               if (hasAny)
                 TextButton.icon(
                   icon: const Icon(Icons.clear_all, size: 16),
-                  label: const Text('Clear all'),
+                  label: Text(l.filterClearAll),
                   onPressed: () {
                     ref.read(projectFilterProvider.notifier).state = <String>{};
                     ref.read(assigneeFilterProvider.notifier).state = <String>{};
@@ -109,7 +114,7 @@ class AllWorkFilters extends ConsumerWidget {
                 ),
               const Spacer(),
               Text(
-                '${projects.length} projects · ${resources.length} resources',
+                l.filterCounter(projects.length, resources.length),
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
               ),
             ],
@@ -167,15 +172,16 @@ class _MultiChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppL10n.of(context);
     final empty = selected.isEmpty;
     return PopupMenuButton<String>(
-      tooltip: 'Filter by $label',
+      tooltip: l.filterByLabel(label),
       itemBuilder: (ctx) => [
         // "Show all" entry — selects nothing (clears the filter for this column).
         CheckedPopupMenuItem<String>(
           value: _allSentinel,
           checked: empty,
-          child: const Text('Show all'),
+          child: Text(l.filterShowAll),
         ),
         const PopupMenuDivider(),
         ...options.map((o) => CheckedPopupMenuItem<String>(
@@ -199,7 +205,7 @@ class _MultiChip extends StatelessWidget {
       },
       child: InputChip(
         avatar: Icon(icon, size: 14),
-        label: Text(empty ? '$label: all' : '$label (${selected.length})'),
+        label: Text(empty ? l.filterAllSuffix(label) : l.filterCountSuffix(label, selected.length)),
       ),
     );
   }
@@ -245,7 +251,7 @@ class _ActivePills extends StatelessWidget {
         for (final n in assigneeFilter)
           _Pill(icon: Icons.person_outline, label: n, onRemove: () => onRemoveAssignee(n)),
         for (final s in statusFilter)
-          _Pill(icon: Icons.flag_outlined, label: s.name, onRemove: () => onRemoveStatus(s)),
+          _Pill(icon: Icons.flag_outlined, label: taskStatusLabel(context, s), onRemove: () => onRemoveStatus(s)),
         if (search.isNotEmpty)
           _Pill(icon: Icons.search, label: '"$search"', onRemove: onClearSearch),
       ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/labels.dart';
 import '../../models/project.dart';
 import '../../state/providers.dart';
 
@@ -13,16 +15,17 @@ class ProjectInspectorPanel extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final projects = ref.watch(projectsProvider);
     final hierarchy = ref.watch(taskHierarchyProvider(projectId));
     final milestones = ref.watch(milestonesProvider(projectId));
 
     return projects.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => _err(theme, '$e'),
+      error: (e, _) => _err(theme, l.errorPrefix(e.toString())),
       data: (list) {
         final p = list.where((p) => p.id == projectId).cast<Project?>().firstOrNull;
-        if (p == null) return _err(theme, 'Project not found (or hidden by view scope).');
+        if (p == null) return _err(theme, l.projectInspectorNotFound);
 
         final hierarchyData = hierarchy.asData?.value ?? const [];
         final leafCount = hierarchyData.where((n) => !n.hasChildren).length;
@@ -52,18 +55,18 @@ class ProjectInspectorPanel extends ConsumerWidget {
                 Text(p.description!, style: theme.textTheme.bodySmall),
                 const SizedBox(height: 16),
               ],
-              _sectionHeader(theme, 'Stats'),
+              _sectionHeader(theme, l.inspectorSectionStats),
               Text(
-                '$leafCount leaf tasks · $parentCount group tasks',
+                l.projectStats(leafCount, parentCount),
                 style: theme.textTheme.bodySmall,
               ),
               if (p.createdAt != null)
                 Text(
-                  'created ${DateFormat.yMMMd().format(p.createdAt!.toLocal())}',
+                  l.projectCreated(DateFormat.yMMMd(dateLocale(context)).format(p.createdAt!.toLocal())),
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                 ),
               const SizedBox(height: 16),
-              _sectionHeader(theme, 'Milestones'),
+              _sectionHeader(theme, l.inspectorSectionMilestones),
               milestones.when(
                 loading: () => const SizedBox(
                     height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
@@ -83,7 +86,7 @@ class ProjectInspectorPanel extends ConsumerWidget {
                                   child: Text(m.title, style: theme.textTheme.bodySmall, overflow: TextOverflow.ellipsis),
                                 ),
                                 Text(
-                                  '${DateFormat.yMMMd().format(m.date.toLocal())} · ${m.status.name}',
+                                  '${DateFormat.yMMMd(dateLocale(context)).format(m.date.toLocal())} · ${m.status.name}',
                                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                                 ),
                               ],
@@ -93,7 +96,7 @@ class ProjectInspectorPanel extends ConsumerWidget {
                       ),
               ),
               const SizedBox(height: 16),
-              _sectionHeader(theme, 'Top-level tasks'),
+              _sectionHeader(theme, l.inspectorSectionTopLevel),
               if (hierarchy.isLoading)
                 const SizedBox(
                   height: 16,
@@ -125,7 +128,7 @@ class ProjectInspectorPanel extends ConsumerWidget {
                                     child: Text(n.title, style: theme.textTheme.bodySmall, overflow: TextOverflow.ellipsis),
                                   ),
                                   Text(
-                                    (n.hasChildren ? n.computedStatus : n.status).name,
+                                    taskStatusLabel(context, n.hasChildren ? n.computedStatus : n.status),
                                     style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                                   ),
                                 ],

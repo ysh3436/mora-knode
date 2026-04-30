@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/labels.dart';
 import '../../models/assignment.dart';
 import '../../models/resource.dart';
 import '../../models/task_hierarchy.dart';
@@ -22,6 +24,7 @@ class TaskInspectorPanel extends ConsumerWidget {
     final assignments = ref.watch(assignmentsByTaskProvider(taskId));
     final resources = ref.watch(resourcesProvider);
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
 
     return agg.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -37,7 +40,7 @@ class TaskInspectorPanel extends ConsumerWidget {
             break;
           }
         }
-        if (node == null) return _Error('Task not found (or hidden by view scope).');
+        if (node == null) return _Error(l.taskInspectorNotFound);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
@@ -66,23 +69,23 @@ class TaskInspectorPanel extends ConsumerWidget {
                 _StatusPill(node: node),
               ]),
               const SizedBox(height: 16),
-              _SectionHeader('Notes'),
+              _SectionHeader(l.inspectorSectionNotes),
               _DescriptionEditor(node: node),
               const SizedBox(height: 20),
-              _SectionHeader('Timelines'),
-              _TimelineRow(label: 'L1 Origin', timeline: _resolveOrigin(node)),
-              _TimelineRow(label: 'L2 Current', timeline: _resolveCurrent(node)),
-              _TimelineRow(label: 'L3 Real', timeline: _resolveReal(node), highlightTimed: true),
+              _SectionHeader(l.inspectorSectionTimelines),
+              _TimelineRow(label: l.timelineL1Origin, timeline: _resolveOrigin(node)),
+              _TimelineRow(label: l.timelineL2Current, timeline: _resolveCurrent(node)),
+              _TimelineRow(label: l.timelineL3Real, timeline: _resolveReal(node), highlightTimed: true),
               const SizedBox(height: 16),
-              _SectionHeader('Assignees'),
+              _SectionHeader(l.inspectorSectionAssignees),
               _AssigneeList(assignments: assignments, resources: resources),
               const SizedBox(height: 16),
               if (node.hasChildren) ...[
-                _SectionHeader('Children'),
+                _SectionHeader(l.inspectorSectionChildren),
                 _ChildrenList(parentId: node.id, allGroups: groups),
                 const SizedBox(height: 16),
               ],
-              _SectionHeader('Recent changes'),
+              _SectionHeader(l.inspectorSectionRecentChanges),
               _ChangeLogList(taskId: taskId),
               const SizedBox(height: 16),
               _ActionRow(
@@ -180,7 +183,7 @@ class _StatusPill extends StatelessWidget {
       TaskStatus.Done => theme.colorScheme.tertiaryContainer,
     };
     return _Pill(
-      label: node.hasChildren ? '${s.name} (agg.)' : s.name,
+      label: taskStatusDisplay(context, s, aggregated: node.hasChildren),
       icon: Icons.circle,
       color: color,
     );
@@ -196,8 +199,9 @@ class _TimelineRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dfDate = DateFormat.yMMMd();
-    final dfTime = DateFormat.Hm();
+    final locale = dateLocale(context);
+    final dfDate = DateFormat.yMMMd(locale);
+    final dfTime = DateFormat.Hm(locale);
 
     String fmt(DateTime? t) {
       if (t == null) return '?';
@@ -206,8 +210,9 @@ class _TimelineRow extends StatelessWidget {
       return '${dfDate.format(local)} ${dfTime.format(local)}';
     }
 
+    final l = AppL10n.of(context);
     final body = timeline.isEmpty ? '—' : '${fmt(timeline.start)}  →  ${fmt(timeline.end)}';
-    final tag = timeline.isEmpty ? null : (timeline.isAllDay ? 'all-day' : 'timed');
+    final tag = timeline.isEmpty ? null : (timeline.isAllDay ? l.timelineAllDayBadge : l.timelineTimedBadge);
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
@@ -234,7 +239,7 @@ class _TimelineRow extends StatelessWidget {
                     tag,
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontSize: 10,
-                      color: highlightTimed && tag == 'timed'
+                      color: highlightTimed && !timeline.isAllDay
                           ? theme.colorScheme.primary
                           : theme.colorScheme.outline,
                     ),
@@ -306,7 +311,7 @@ class _ChildrenList extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(child: Text(c.title, style: theme.textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
                     Text(
-                      (c.hasChildren ? c.computedStatus : c.status).name,
+                      taskStatusLabel(context, c.hasChildren ? c.computedStatus : c.status),
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                     ),
                   ],
@@ -423,7 +428,7 @@ class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
           ),
           child: text.isEmpty
               ? Text(
-                  'Click to add notes…',
+                  AppL10n.of(context).notesPlaceholderEmpty,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.outline,
                     fontStyle: FontStyle.italic,
@@ -434,6 +439,7 @@ class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
       );
     }
 
+    final l = AppL10n.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -445,7 +451,7 @@ class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
           decoration: InputDecoration(
             isDense: true,
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(4)),
-            hintText: 'Markdown-friendly notes about this task',
+            hintText: l.notesHint,
             contentPadding: const EdgeInsets.all(10),
           ),
           style: theme.textTheme.bodyMedium,
@@ -457,7 +463,7 @@ class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
               const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2))
             else
               Text(
-                'Click outside or press Esc to save',
+                l.notesSaveHint,
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
               ),
             const Spacer(),
@@ -468,11 +474,11 @@ class _DescriptionEditorState extends ConsumerState<_DescriptionEditor> {
                       _controller.text = _savedValue;
                       setState(() => _editing = false);
                     },
-              child: const Text('Cancel'),
+              child: Text(l.actionCancel),
             ),
             FilledButton.tonal(
               onPressed: _saving ? null : _commit,
-              child: const Text('Save'),
+              child: Text(l.actionSave),
             ),
           ],
         ),
@@ -488,11 +494,12 @@ class _ActionRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppL10n.of(context);
     return Row(
       children: [
         FilledButton.tonalIcon(
           icon: const Icon(Icons.edit, size: 16),
-          label: const Text('Edit'),
+          label: Text(l.actionEdit),
           onPressed: () => showTaskEditor(
             context,
             ref,
@@ -504,7 +511,7 @@ class _ActionRow extends ConsumerWidget {
         const SizedBox(width: 8),
         TextButton.icon(
           icon: const Icon(Icons.delete_outline, size: 16),
-          label: const Text('Delete'),
+          label: Text(l.actionDelete),
           onPressed: () async {
             final ok = await _confirmDelete(context, node.title);
             if (!ok) return;
@@ -521,17 +528,18 @@ class _ActionRow extends ConsumerWidget {
   }
 
   Future<bool> _confirmDelete(BuildContext context, String title) async {
+    final l = AppL10n.of(context);
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete task?'),
-        content: Text('"$title" will be removed permanently.'),
+        title: Text(l.deleteTaskTitle),
+        content: Text(l.deleteTaskBody(title)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l.actionCancel)),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: Text(l.actionDelete),
           ),
         ],
       ),
@@ -548,12 +556,12 @@ class _ChangeLogList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final logs = ref.watch(taskChangeLogsProvider(taskId));
-    final df = DateFormat('M/d HH:mm');
+    final df = DateFormat('M/d HH:mm', dateLocale(context));
     return logs.when(
       loading: () => const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2)),
       error: (e, _) => Text('$e', style: TextStyle(color: theme.colorScheme.error, fontSize: 12)),
       data: (list) {
-        if (list.isEmpty) return Text('No changes yet.', style: theme.textTheme.bodySmall);
+        if (list.isEmpty) return Text(AppL10n.of(context).notesNoChanges, style: theme.textTheme.bodySmall);
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: list.take(8).map((c) => Padding(

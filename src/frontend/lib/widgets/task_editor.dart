@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../l10n/app_localizations.dart';
+import '../l10n/labels.dart';
 import '../models/project.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
@@ -48,6 +50,7 @@ Future<bool> showTaskEditor(
     builder: (ctx) {
       return Consumer(builder: (ctx, innerRef, _) {
         return StatefulBuilder(builder: (ctx, setState) {
+          final l = AppL10n.of(ctx);
           // Refresh siblings when project changes (new-task path)
           if (!isEdit && activeProjectId != null && activeSiblings.isEmpty) {
             final aggValue =
@@ -66,7 +69,7 @@ Future<bool> showTaskEditor(
           final canSave = titleC.text.trim().isNotEmpty && activeProjectId != null;
 
           return AlertDialog(
-            title: Text(isEdit ? 'Edit task' : 'New task'),
+            title: Text(isEdit ? l.taskEditorTitleEdit : l.taskEditorTitleNew),
             content: SizedBox(
               width: 560,
               child: SingleChildScrollView(
@@ -87,30 +90,30 @@ Future<bool> showTaskEditor(
                     ),
                     TextField(
                       controller: titleC,
-                      decoration: const InputDecoration(labelText: 'Title *'),
+                      decoration: InputDecoration(labelText: l.taskEditorFieldTitle),
                       autofocus: !isEdit,
                       onChanged: (_) => setState(() {}),
                     ),
                     TextField(
                       controller: descC,
-                      decoration: const InputDecoration(labelText: 'Description'),
+                      decoration: InputDecoration(labelText: l.taskEditorFieldDescription),
                       maxLines: 2,
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<TaskStatus>(
                       initialValue: status,
-                      decoration: const InputDecoration(labelText: 'Status'),
+                      decoration: InputDecoration(labelText: l.taskEditorFieldStatus),
                       items: TaskStatus.values
-                          .map((s) => DropdownMenuItem(value: s, child: Text(s.name)))
+                          .map((s) => DropdownMenuItem(value: s, child: Text(taskStatusLabel(context, s))))
                           .toList(),
                       onChanged: (v) => setState(() => status = v ?? status),
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String?>(
                       initialValue: parentId,
-                      decoration: const InputDecoration(labelText: 'Parent (optional)'),
+                      decoration: InputDecoration(labelText: l.taskEditorFieldParent),
                       items: [
-                        const DropdownMenuItem<String?>(value: null, child: Text('— Top level —')),
+                        DropdownMenuItem<String?>(value: null, child: Text(l.taskEditorParentTopLevel)),
                         ...parentCandidates.map((n) => DropdownMenuItem<String?>(
                               value: n.id,
                               child: Text(n.title, overflow: TextOverflow.ellipsis),
@@ -121,18 +124,18 @@ Future<bool> showTaskEditor(
                     const SizedBox(height: 16),
                     if (isEdit)
                       _TimelineEditor(
-                        label: 'L1 Origin (baseline)',
+                        label: l.timelineL1Origin,
                         timeline: origin,
                         readOnly: true,
                         onChanged: (t) => setState(() => origin = t),
                       ),
                     _TimelineEditor(
-                      label: 'L2 Current (plan)',
+                      label: l.timelineL2Current,
                       timeline: current,
                       onChanged: (t) => setState(() => current = t),
                     ),
                     _TimelineEditor(
-                      label: 'L3 Real (actual)',
+                      label: l.timelineL3Real,
                       timeline: real,
                       onChanged: (t) => setState(() => real = t),
                     ),
@@ -140,11 +143,11 @@ Future<bool> showTaskEditor(
                     if (isEdit) ...[
                       TextField(
                         controller: reasonC,
-                        decoration: const InputDecoration(labelText: 'Change reason (logged)'),
+                        decoration: InputDecoration(labelText: l.taskEditorChangeReason),
                       ),
                       TextField(
                         controller: changedByC,
-                        decoration: const InputDecoration(labelText: 'Changed by'),
+                        decoration: InputDecoration(labelText: l.taskEditorChangedBy),
                       ),
                     ],
                   ],
@@ -154,7 +157,7 @@ Future<bool> showTaskEditor(
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel'),
+                child: Text(l.actionCancel),
               ),
               FilledButton(
                 onPressed: !canSave
@@ -194,7 +197,7 @@ Future<bool> showTaskEditor(
                         }
                         if (ctx.mounted) Navigator.pop(ctx, true);
                       },
-                child: Text(isEdit ? 'Save' : 'Create'),
+                child: Text(isEdit ? l.actionSave : l.actionCreate),
               ),
             ],
           );
@@ -245,12 +248,13 @@ class _ProjectPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppL10n.of(context);
     final projects = ref.watch(projectsProvider).asData?.value ?? const <Project>[];
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: DropdownButtonFormField<String?>(
         initialValue: selected,
-        decoration: const InputDecoration(labelText: 'Project *'),
+        decoration: InputDecoration(labelText: l.taskEditorFieldProject),
         items: projects
             .where((p) => p.id != null)
             .map((p) => DropdownMenuItem<String?>(value: p.id, child: Text(p.name)))
@@ -299,9 +303,9 @@ class _TimelineEditor extends StatelessWidget {
                       visualDensity: VisualDensity.compact,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    segments: const [
-                      ButtonSegment(value: true, label: Text('All-day'), icon: Icon(Icons.today, size: 14)),
-                      ButtonSegment(value: false, label: Text('Timed'), icon: Icon(Icons.schedule, size: 14)),
+                    segments: [
+                      ButtonSegment(value: true, label: Text(AppL10n.of(context).taskEditorAllDay), icon: const Icon(Icons.today, size: 14)),
+                      ButtonSegment(value: false, label: Text(AppL10n.of(context).taskEditorTimed), icon: const Icon(Icons.schedule, size: 14)),
                     ],
                     selected: {timeline.isAllDay},
                     onSelectionChanged: (s) => onChanged(timeline.copyWith(isAllDay: s.first)),
@@ -310,7 +314,7 @@ class _TimelineEditor extends StatelessWidget {
                 if (timeline.isEmpty)
                   TextButton.icon(
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add'),
+                    label: Text(AppL10n.of(context).actionAdd),
                     onPressed: readOnly
                         ? null
                         : () async {
@@ -320,7 +324,7 @@ class _TimelineEditor extends StatelessWidget {
                   )
                 else if (!readOnly)
                   IconButton(
-                    tooltip: 'Clear',
+                    tooltip: AppL10n.of(context).actionClear,
                     icon: const Icon(Icons.close, size: 16),
                     onPressed: () => onChanged(const Timeline()),
                   ),

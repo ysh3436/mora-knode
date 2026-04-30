@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
 import 'inspector_panels/project_inspector.dart';
 import 'inspector_panels/task_inspector.dart';
@@ -15,6 +16,7 @@ class Inspector extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final inspection = ref.watch(inspectionProvider);
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
 
     return Container(
       decoration: BoxDecoration(
@@ -32,10 +34,10 @@ class Inspector extends ConsumerWidget {
             ),
             child: Row(
               children: [
-                Text('Inspector', style: theme.textTheme.titleSmall),
+                Text(l.inspectorTitle, style: theme.textTheme.titleSmall),
                 const Spacer(),
                 IconButton(
-                  tooltip: 'Close inspector  ]',
+                  tooltip: l.topbarCloseInspector,
                   iconSize: 18,
                   icon: const Icon(Icons.close),
                   onPressed: () => ref.read(inspectorOpenProvider.notifier).state = false,
@@ -57,13 +59,14 @@ class _InspectorBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
 
     if (inspection == null) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Text(
-            'Select a task, project, or plan to see its detail here.',
+            l.inspectorEmpty,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
             textAlign: TextAlign.center,
           ),

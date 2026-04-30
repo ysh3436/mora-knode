@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
 import 'inspector.dart';
 import 'sidebar.dart';
@@ -113,6 +114,7 @@ class _TopBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final sidebarOpen = ref.watch(sidebarOpenProvider);
     final inspectorOpen = ref.watch(inspectorOpenProvider);
 
@@ -126,7 +128,7 @@ class _TopBar extends ConsumerWidget {
       child: Row(
         children: [
           IconButton(
-            tooltip: sidebarOpen ? 'Close sidebar  [' : 'Open sidebar  [',
+            tooltip: sidebarOpen ? l.topbarCloseSidebar : l.topbarOpenSidebar,
             iconSize: 18,
             icon: Icon(sidebarOpen ? Icons.menu_open : Icons.menu),
             onPressed: () => ref.read(sidebarOpenProvider.notifier).update((s) => !s),
@@ -134,7 +136,7 @@ class _TopBar extends ConsumerWidget {
           const SizedBox(width: 4),
           Expanded(child: header ?? const SizedBox.shrink()),
           IconButton(
-            tooltip: inspectorOpen ? 'Close inspector  ]' : 'Open inspector  ]',
+            tooltip: inspectorOpen ? l.topbarCloseInspector : l.topbarOpenInspector,
             iconSize: 18,
             icon: Icon(inspectorOpen ? Icons.vertical_split : Icons.view_sidebar_outlined),
             onPressed: () => ref.read(inspectorOpenProvider.notifier).update((s) => !s),

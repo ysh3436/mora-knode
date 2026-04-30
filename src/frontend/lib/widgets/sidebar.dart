@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
 import 'user_switcher.dart';
 
@@ -12,6 +13,7 @@ class Sidebar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final section = ref.watch(appSectionProvider);
     final projects = ref.watch(projectsProvider);
     final isAdmin = ref.watch(isAdminProvider);
@@ -31,7 +33,7 @@ class Sidebar extends ConsumerWidget {
               children: [
                 Icon(Icons.hub, size: 20, color: theme.colorScheme.primary),
                 const SizedBox(width: 8),
-                Text('mora-knode', style: theme.textTheme.titleMedium),
+                Text(l.appTitle, style: theme.textTheme.titleMedium),
               ],
             ),
           ),
@@ -42,17 +44,18 @@ class Sidebar extends ConsumerWidget {
               children: [
                 _NavItem(
                   icon: Icons.inbox,
-                  label: 'My work',
+                  label: l.navMyWork,
                   selected: section == AppSection.myWork,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.myWork,
                 ),
                 _NavItem(
                   icon: Icons.list_alt,
-                  label: 'All work',
+                  label: l.navAllWork,
                   selected: section == AppSection.allWork,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.allWork,
                 ),
                 _ExpandableProjects(
+                  label: l.navProjects,
                   selected: section == AppSection.projects,
                   onSectionTap: () => ref.read(appSectionProvider.notifier).state = AppSection.projects,
                   projects: projects,
@@ -64,41 +67,41 @@ class Sidebar extends ConsumerWidget {
                 ),
                 _NavItem(
                   icon: Icons.people,
-                  label: 'Resources',
+                  label: l.navResources,
                   selected: section == AppSection.resources,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.resources,
                 ),
                 _NavItem(
                   icon: Icons.grid_view,
-                  label: 'Matrix',
+                  label: l.navMatrix,
                   selected: section == AppSection.matrix,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.matrix,
                 ),
                 _NavItem(
                   icon: Icons.fact_check_outlined,
-                  label: 'Plans',
+                  label: l.navPlans,
                   selected: section == AppSection.plans,
-                  badge: 'M2',
+                  badge: l.badgeM2,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.plans,
                 ),
                 _NavItem(
                   icon: Icons.history,
-                  label: 'Audit',
+                  label: l.navAudit,
                   selected: section == AppSection.audit,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.audit,
                 ),
                 _NavItem(
                   icon: Icons.smart_toy_outlined,
-                  label: 'Agents',
+                  label: l.navAgents,
                   selected: section == AppSection.agents,
-                  badge: 'M2',
+                  badge: l.badgeM2,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.agents,
                 ),
                 if (isAdmin) ...[
                   const Divider(),
                   _NavItem(
                     icon: Icons.settings_outlined,
-                    label: 'Settings',
+                    label: l.navSettings,
                     selected: section == AppSection.settings,
                     onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.settings,
                   ),
@@ -106,7 +109,49 @@ class Sidebar extends ConsumerWidget {
               ],
             ),
           ),
+          // Temporary language quick-switcher for review. Final home is the
+          // Settings page; this row stays until the rest of the UI is migrated
+          // and we trust the toggle there.
+          const _LanguageQuickSwitch(),
           const UserSwitcher(),
+        ],
+      ),
+    );
+  }
+}
+
+class _LanguageQuickSwitch extends ConsumerWidget {
+  const _LanguageQuickSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final locale = ref.watch(localeProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+      child: Row(
+        children: [
+          Icon(Icons.translate, size: 14, color: theme.colorScheme.outline),
+          const SizedBox(width: 8),
+          Expanded(
+            child: DropdownButton<String>(
+              value: locale.languageCode,
+              isDense: true,
+              isExpanded: true,
+              underline: const SizedBox.shrink(),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+              items: const [
+                DropdownMenuItem(value: 'ko', child: Text('한국어')),
+                DropdownMenuItem(value: 'en', child: Text('English')),
+              ],
+              onChanged: (v) {
+                if (v == null) return;
+                ref.read(localeProvider.notifier).state = Locale(v);
+              },
+            ),
+          ),
         ],
       ),
     );
@@ -131,6 +176,9 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Fixed row height so the nav doesn't shift when locale changes — Korean
+    // font fallback is a few pixels taller than Roboto, which would otherwise
+    // accumulate over 9 nav items.
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       child: Material(
@@ -139,35 +187,39 @@ class _NavItem extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(6),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              children: [
-                Icon(icon, size: 18, color: selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                      color: selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                if (badge != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+          child: SizedBox(
+            height: 32,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Row(
+                children: [
+                  Icon(icon, size: 18, color: selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface),
+                  const SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      badge!,
-                      style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: theme.colorScheme.outline),
+                      label,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                        color: selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface,
+                        height: 1.2,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-              ],
+                  if (badge != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        badge!,
+                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: theme.colorScheme.outline, height: 1.2),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -177,12 +229,14 @@ class _NavItem extends StatelessWidget {
 }
 
 class _ExpandableProjects extends ConsumerStatefulWidget {
+  final String label;
   final bool selected;
   final VoidCallback onSectionTap;
   final AsyncValue<dynamic> projects;
   final void Function(String projectId) onPick;
 
   const _ExpandableProjects({
+    required this.label,
     required this.selected,
     required this.onSectionTap,
     required this.projects,
@@ -211,9 +265,11 @@ class _ExpandableProjectsState extends ConsumerState<_ExpandableProjects> {
             child: InkWell(
               borderRadius: BorderRadius.circular(6),
               onTap: widget.onSectionTap,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                child: Row(
+              child: SizedBox(
+                height: 32,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: Row(
                   children: [
                     InkWell(
                       onTap: () => setState(() => _expanded = !_expanded),
@@ -233,18 +289,20 @@ class _ExpandableProjectsState extends ConsumerState<_ExpandableProjects> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Projects',
+                        widget.label,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           fontWeight: widget.selected ? FontWeight.w600 : FontWeight.w400,
                           color: widget.selected ? theme.colorScheme.onSecondaryContainer : theme.colorScheme.onSurface,
+                          height: 1.2,
                         ),
                       ),
                     ),
                     Text(
                       '${list.length}',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline, height: 1.2),
                     ),
                   ],
+                  ),
                 ),
               ),
             ),
@@ -261,14 +319,17 @@ class _ExpandableProjectsState extends ConsumerState<_ExpandableProjects> {
                 child: InkWell(
                   borderRadius: BorderRadius.circular(6),
                   onTap: id == null ? null : () => widget.onPick(id),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(38, 4, 10, 4),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        name,
-                        style: theme.textTheme.bodySmall,
-                        overflow: TextOverflow.ellipsis,
+                  child: SizedBox(
+                    height: 28,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(38, 0, 10, 0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          name,
+                          style: theme.textTheme.bodySmall?.copyWith(height: 1.2),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../l10n/app_localizations.dart';
+import '../l10n/labels.dart';
 import '../models/resource_load.dart';
 import '../state/providers.dart';
 
@@ -43,7 +45,7 @@ class MatrixSection extends ConsumerWidget {
         Expanded(
           child: matrix.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text('Error: $e')),
+            error: (e, _) => Center(child: Text(AppL10n.of(context).errorPrefix(e.toString()))),
             data: (resp) {
               if (resp.rows.isEmpty) {
                 return Center(
@@ -84,10 +86,11 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final df = DateFormat('MMM d');
+    final l = AppL10n.of(context);
+    final df = DateFormat('MMM d', dateLocale(context));
     final sunday = monday.add(const Duration(days: 6));
     final calLabel = isFallback || calendar == null
-        ? '24/7 fallback'
+        ? l.matrixWorkCalendarFallback
         : '${calendar!.workDays} · '
             '${_hhmm(calendar!.dailyStartMinutes)}–${_hhmm(calendar!.dailyEndMinutes)}'
             ' · ${calendar!.timezone}';
@@ -96,12 +99,12 @@ class _Header extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
       child: Row(
         children: [
-          IconButton(tooltip: 'Previous week', icon: const Icon(Icons.chevron_left), onPressed: onPrev),
-          TextButton(onPressed: onToday, child: const Text('today')),
-          IconButton(tooltip: 'Next week', icon: const Icon(Icons.chevron_right), onPressed: onNext),
+          IconButton(tooltip: l.navPreviousWeek, icon: const Icon(Icons.chevron_left), onPressed: onPrev),
+          TextButton(onPressed: onToday, child: Text(l.actionToday)),
+          IconButton(tooltip: l.navNextWeek, icon: const Icon(Icons.chevron_right), onPressed: onNext),
           const SizedBox(width: 12),
           Text(
-            'Week of ${df.format(monday.toLocal())} — ${df.format(sunday.toLocal())}',
+            l.calendarWeekOf('${df.format(monday.toLocal())} — ${df.format(sunday.toLocal())}'),
             style: theme.textTheme.titleSmall,
           ),
           const SizedBox(width: 16),
@@ -114,13 +117,13 @@ class _Header extends StatelessWidget {
               borderRadius: BorderRadius.circular(6),
             ),
             child: Text(
-              'WorkCalendar: $calLabel',
+              l.matrixWorkCalendarLabel(calLabel),
               style: theme.textTheme.bodySmall,
             ),
           ),
           const Spacer(),
           IconButton(
-            tooltip: 'Edit calendar',
+            tooltip: l.matrixEditCalendar,
             icon: const Icon(Icons.settings_outlined, size: 18),
             onPressed: onSettings,
           ),
@@ -155,9 +158,9 @@ class _Grid extends StatelessWidget {
           TableRow(
             decoration: BoxDecoration(color: theme.colorScheme.surfaceContainerLow),
             children: [
-              const _HeaderCell(label: 'Resource', alignLeft: true),
+              _HeaderCell(label: AppL10n.of(context).matrixHeaderResource, alignLeft: true),
               for (var i = 0; i < 7; i++)
-                _HeaderCell(label: DateFormat('E\nM/d').format(monday.add(Duration(days: i)).toLocal())),
+                _HeaderCell(label: DateFormat('E\nM/d', dateLocale(context)).format(monday.add(Duration(days: i)).toLocal())),
             ],
           ),
           for (final row in response.rows)

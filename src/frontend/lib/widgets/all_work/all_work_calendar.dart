@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/labels.dart';
 import '../../models/assignment.dart';
 import '../../models/milestone.dart';
 import '../../models/resource.dart';
@@ -21,6 +23,7 @@ class AllWorkCalendar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final mode = ref.watch(calendarModeProvider);
     final anchor = ref.watch(calendarAnchorProvider);
 
@@ -33,16 +36,16 @@ class AllWorkCalendar extends ConsumerWidget {
             children: [
               SegmentedButton<CalendarMode>(
                 style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                segments: const [
-                  ButtonSegment(value: CalendarMode.month, label: Text('Month')),
-                  ButtonSegment(value: CalendarMode.week, label: Text('Week')),
+                segments: [
+                  ButtonSegment(value: CalendarMode.month, label: Text(l.calendarMonth)),
+                  ButtonSegment(value: CalendarMode.week, label: Text(l.calendarWeek)),
                 ],
                 selected: {mode},
                 onSelectionChanged: (s) => ref.read(calendarModeProvider.notifier).state = s.first,
               ),
               const SizedBox(width: 16),
               IconButton(
-                tooltip: 'Previous',
+                tooltip: l.navPrevious,
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () => _shift(ref, mode, -1),
               ),
@@ -52,18 +55,18 @@ class AllWorkCalendar extends ConsumerWidget {
                   ref.read(calendarAnchorProvider.notifier).state =
                       DateTime(now.year, now.month, now.day);
                 },
-                child: const Text('today'),
+                child: Text(l.actionToday),
               ),
               IconButton(
-                tooltip: 'Next',
+                tooltip: l.navNext,
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () => _shift(ref, mode, 1),
               ),
               const SizedBox(width: 12),
               Text(
                 mode == CalendarMode.month
-                    ? DateFormat.yMMMM().format(anchor)
-                    : 'Week of ${DateFormat.yMMMd().format(_mondayOf(anchor))}',
+                    ? DateFormat.yMMMM(dateLocale(context)).format(anchor)
+                    : l.calendarWeekOf(DateFormat.yMMMd(dateLocale(context)).format(_mondayOf(anchor))),
                 style: theme.textTheme.titleSmall,
               ),
             ],
@@ -113,7 +116,7 @@ class _MonthView extends ConsumerWidget {
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+    if (agg.hasError) return Center(child: Text(AppL10n.of(context).errorPrefix(agg.error.toString())));
 
     final ctx = _CalendarContext.from(
       groups: agg.value ?? const <ProjectHierarchy>[],
@@ -133,7 +136,7 @@ class _MonthView extends ConsumerWidget {
           Row(
             children: List.generate(7, (i) {
               final d = gridStart.add(Duration(days: i));
-              final label = DateFormat.E().format(d.toLocal());
+              final label = DateFormat.E(dateLocale(context)).format(d.toLocal());
               return Expanded(
                 child: Center(
                   child: Padding(
@@ -344,7 +347,7 @@ class _WeekView extends ConsumerWidget {
     if (agg.isLoading || assignments.isLoading || resources.isLoading || calendar.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+    if (agg.hasError) return Center(child: Text(AppL10n.of(context).errorPrefix(agg.error.toString())));
 
     // Anchor → local-Monday-of-that-week (drop UTC kind so it composes with
     // local-keyed task buckets and the user's local "today").
@@ -447,7 +450,7 @@ class _WeekHeaderRow extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(DateFormat.E().format(d.toLocal()),
+                    Text(DateFormat.E(dateLocale(context)).format(d.toLocal()),
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
                     Text(
                       d.day.toString(),

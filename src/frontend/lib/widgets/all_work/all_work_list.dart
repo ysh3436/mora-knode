@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../l10n/app_localizations.dart';
+import '../../l10n/labels.dart';
 import '../../models/assignment.dart';
 import '../../models/resource.dart';
 import '../../models/task_hierarchy.dart';
@@ -33,6 +35,7 @@ class _AllWorkListState extends ConsumerState<AllWorkList> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
@@ -46,7 +49,7 @@ class _AllWorkListState extends ConsumerState<AllWorkList> {
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+    if (agg.hasError) return Center(child: Text(l.errorPrefix(agg.error.toString())));
 
     final groups = agg.value ?? const <ProjectHierarchy>[];
     final assignmentsByTask = <String, List<Assignment>>{};
@@ -86,7 +89,7 @@ class _AllWorkListState extends ConsumerState<AllWorkList> {
         child: Padding(
           padding: const EdgeInsets.all(48),
           child: Text(
-            'No tasks match the current filters.',
+            l.filterNoMatch,
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
           ),
         ),
@@ -327,7 +330,7 @@ class _TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final node = row.node;
-    final df = DateFormat('M/d');
+    final df = DateFormat('M/d', dateLocale(context));
     final timeline = node.hasChildren ? node.computedCurrentTimeline : node.currentTimeline;
     final status = node.hasChildren ? node.computedStatus : node.status;
 
@@ -378,7 +381,7 @@ class _TaskRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(width: 100, child: _statusChip(theme, status, aggregated: node.hasChildren)),
+              SizedBox(width: 100, child: _statusChip(context, theme, status, aggregated: node.hasChildren)),
               SizedBox(width: 140, child: _assigneeStrip(theme, row.assignees)),
               SizedBox(width: 110, child: _timelineCell(theme, timeline, df)),
             ],
@@ -388,7 +391,7 @@ class _TaskRow extends StatelessWidget {
     );
   }
 
-  Widget _statusChip(ThemeData theme, TaskStatus status, {required bool aggregated}) {
+  Widget _statusChip(BuildContext context, ThemeData theme, TaskStatus status, {required bool aggregated}) {
     final color = switch (status) {
       TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
       TaskStatus.InProgress => theme.colorScheme.primaryContainer,
@@ -399,7 +402,7 @@ class _TaskRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
       child: Text(
-        aggregated ? '${status.name}*' : status.name,
+        taskStatusDisplay(context, status, aggregated: aggregated),
         style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
@@ -610,7 +613,7 @@ class _StickyTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final node = row.node;
-    final df = DateFormat('M/d');
+    final df = DateFormat('M/d', dateLocale(context));
     final timeline = node.hasChildren ? node.computedCurrentTimeline : node.currentTimeline;
     final status = node.hasChildren ? node.computedStatus : node.status;
 
@@ -651,7 +654,7 @@ class _StickyTaskRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(width: 100, child: _statusChip(theme, status)),
+              SizedBox(width: 100, child: _statusChip(context, theme, status)),
               const SizedBox(width: 140), // assignees space (kept blank to match column widths)
               SizedBox(width: 110, child: _timelineCell(theme, timeline, df)),
             ],
@@ -661,7 +664,7 @@ class _StickyTaskRow extends StatelessWidget {
     );
   }
 
-  Widget _statusChip(ThemeData theme, TaskStatus status) {
+  Widget _statusChip(BuildContext context, ThemeData theme, TaskStatus status) {
     final color = switch (status) {
       TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
       TaskStatus.InProgress => theme.colorScheme.primaryContainer,
@@ -672,7 +675,7 @@ class _StickyTaskRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
       child: Text(
-        '${status.name}*',
+        taskStatusDisplay(context, status, aggregated: true),
         style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,

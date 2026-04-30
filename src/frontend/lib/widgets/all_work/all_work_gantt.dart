@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../models/assignment.dart';
 import '../../models/resource.dart';
 import '../../models/task_hierarchy.dart';
@@ -17,6 +18,7 @@ class AllWorkGantt extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
@@ -30,7 +32,7 @@ class AllWorkGantt extends ConsumerWidget {
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+    if (agg.hasError) return Center(child: Text(l.errorPrefix(agg.error.toString())));
 
     final groups = agg.value ?? const <ProjectHierarchy>[];
     final assignmentsByTask = <String, List<Assignment>>{};
@@ -102,7 +104,7 @@ class AllWorkGantt extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.all(48),
           child: Text(
-            'No tasks match the current filters.',
+            l.filterNoMatch,
             style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.outline),
           ),
         ),
@@ -122,10 +124,10 @@ class AllWorkGantt extends ConsumerWidget {
             children: [
               SegmentedButton<int>(
                 style: const ButtonStyle(visualDensity: VisualDensity.compact),
-                segments: const [
-                  ButtonSegment(value: 0, label: Text('Day')),
-                  ButtonSegment(value: 1, label: Text('Week')),
-                  ButtonSegment(value: 2, label: Text('Month')),
+                segments: [
+                  ButtonSegment(value: 0, label: Text(l.ganttZoomDay)),
+                  ButtonSegment(value: 1, label: Text(l.ganttZoomWeek)),
+                  ButtonSegment(value: 2, label: Text(l.ganttZoomMonth)),
                 ],
                 selected: {zoomIdx},
                 onSelectionChanged: (s) => ref.read(ganttZoomProvider.notifier).state = s.first,
@@ -133,11 +135,11 @@ class AllWorkGantt extends ConsumerWidget {
               const SizedBox(width: 16),
               Wrap(
                 spacing: 12,
-                children: const [
-                  _LegendSwatch(label: 'L1 Origin', role: _SwatchRole.origin),
-                  _LegendSwatch(label: 'L2 Current', role: _SwatchRole.current),
-                  _LegendSwatch(label: 'L3 Real', role: _SwatchRole.real),
-                  _LegendSwatch(label: 'Group', role: _SwatchRole.summary),
+                children: [
+                  _LegendSwatch(label: l.timelineL1Origin, role: _SwatchRole.origin),
+                  _LegendSwatch(label: l.timelineL2Current, role: _SwatchRole.current),
+                  _LegendSwatch(label: l.timelineL3Real, role: _SwatchRole.real),
+                  _LegendSwatch(label: l.timelineSummaryGroup, role: _SwatchRole.summary),
                 ],
               ),
             ],

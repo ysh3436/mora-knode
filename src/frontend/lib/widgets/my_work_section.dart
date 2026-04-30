@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../l10n/app_localizations.dart';
+import '../l10n/labels.dart';
 import '../models/assignment.dart';
 import '../models/resource.dart';
 import '../models/task_hierarchy.dart';
@@ -18,6 +20,7 @@ class MyWorkSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l = AppL10n.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
@@ -27,7 +30,7 @@ class MyWorkSection extends ConsumerWidget {
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
+    if (agg.hasError) return Center(child: Text(l.errorPrefix(agg.error.toString())));
 
     final groups = agg.value ?? const <ProjectHierarchy>[];
     final allAssigns = assignments.value ?? const <Assignment>[];
@@ -93,7 +96,7 @@ class MyWorkSection extends ConsumerWidget {
       }
     }
 
-    final df = DateFormat.yMMMd();
+    final df = DateFormat.yMMMd(dateLocale(context));
     String rangeLabel(DateTime from, DateTime to) =>
         '${df.format(from)} — ${df.format(to.subtract(const Duration(days: 1)))}';
 
@@ -114,7 +117,7 @@ class MyWorkSection extends ConsumerWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'No user selected — showing every assignment. Pick a user from the sidebar bottom to see only their work.',
+                    l.myWorkBannerNoUser,
                     style: theme.textTheme.bodySmall,
                   ),
                 ),
@@ -122,12 +125,12 @@ class MyWorkSection extends ConsumerWidget {
             ),
           ),
         Text(
-          'This week  ·  ${rangeLabel(monday, nextMonday)}',
+          '${l.myWorkLaneThisWeek}  ·  ${rangeLabel(monday, nextMonday)}',
           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         if (thisWeek.isEmpty)
-          _emptyLane(theme, 'Nothing scheduled this week.')
+          _emptyLane(theme, l.myWorkEmptyThisWeek)
         else
           _Lane(
             title: '',
@@ -137,12 +140,12 @@ class MyWorkSection extends ConsumerWidget {
           ),
         const SizedBox(height: 24),
         Text(
-          'Next week  ·  ${rangeLabel(nextMonday, weekAfter)}',
+          '${l.myWorkLaneNextWeek}  ·  ${rangeLabel(nextMonday, weekAfter)}',
           style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         if (nextWeek.isEmpty)
-          _emptyLane(theme, 'Next week is open.')
+          _emptyLane(theme, l.myWorkEmptyNextWeek)
         else
           _Lane(
             title: '',
@@ -156,7 +159,7 @@ class MyWorkSection extends ConsumerWidget {
             Icon(Icons.warning_amber_rounded, size: 16, color: theme.colorScheme.error),
             const SizedBox(width: 6),
             Text(
-              'Overdue (${overdue.length})',
+              l.myWorkLaneOverdue(overdue.length),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.error,
@@ -166,7 +169,7 @@ class MyWorkSection extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         if (overdue.isEmpty)
-          _emptyLane(theme, 'No overdue tasks.')
+          _emptyLane(theme, l.myWorkEmptyOverdue)
         else
           _Lane(
             title: '',
@@ -285,7 +288,7 @@ class _Lane extends StatelessWidget {
                       style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                     ),
                     const SizedBox(width: 12),
-                    Text(_l2Range(r.node), style: theme.textTheme.bodySmall),
+                    Text(_l2Range(context, r.node), style: theme.textTheme.bodySmall),
                     const SizedBox(width: 8),
                     Text(
                       '${r.allocation}%',
@@ -315,8 +318,8 @@ class _Lane extends StatelessWidget {
         TaskStatus.Done => theme.colorScheme.tertiary,
       };
 
-  String _l2Range(TaskHierarchyNode n) {
-    final df = DateFormat('M/d');
+  String _l2Range(BuildContext context, TaskHierarchyNode n) {
+    final df = DateFormat('M/d', dateLocale(context));
     final s = n.currentTimeline.start != null ? df.format(n.currentTimeline.start!.toLocal()) : '?';
     final e = n.currentTimeline.end != null ? df.format(n.currentTimeline.end!.toLocal()) : '?';
     return 'L2 $s → $e';

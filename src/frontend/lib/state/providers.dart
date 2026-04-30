@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/assignment.dart';
+import '../models/change_log.dart';
 import '../models/milestone.dart';
 import '../models/project.dart';
 import '../models/resource.dart';
@@ -72,6 +73,14 @@ final resourcesProvider = FutureProvider<List<Resource>>((ref) async {
 
 final assignmentsByTaskProvider = FutureProvider.family<List<Assignment>, String>((ref, taskId) async {
   return ref.watch(apiClientProvider).listAssignments(taskId: taskId);
+});
+
+final taskChangeLogsProvider = FutureProvider.family<List<ChangeLog>, String>((ref, taskId) async {
+  return ref.watch(apiClientProvider).listChangeLogs(
+        entityType: ChangeEntityType.Task,
+        entityId: taskId,
+        limit: 50,
+      );
 });
 
 // --- Aggregated cross-project views ---

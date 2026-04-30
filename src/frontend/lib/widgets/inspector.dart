@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/providers.dart';
+import 'inspector_panels/project_inspector.dart';
+import 'inspector_panels/task_inspector.dart';
 
 /// Right pane that shows the detail of whatever the user has selected. Empty
 /// state when nothing is selected. Subsequent stages plug in real content for
@@ -70,33 +72,8 @@ class _InspectorBody extends StatelessWidget {
     }
 
     return switch (inspection!) {
-      TaskInspection(taskId: final id) => _Stub(label: 'Task inspector', detail: id),
-      ProjectInspection(projectId: final id) => _Stub(label: 'Project inspector', detail: id),
+      TaskInspection(taskId: final id) => TaskInspectorPanel(taskId: id),
+      ProjectInspection(projectId: final id) => ProjectInspectorPanel(projectId: id),
     };
-  }
-}
-
-class _Stub extends StatelessWidget {
-  final String label;
-  final String detail;
-  const _Stub({required this.label, required this.detail});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: theme.textTheme.titleMedium),
-          const SizedBox(height: 4),
-          Text(detail, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
-          const SizedBox(height: 12),
-          Text('Detail panels land in the next stage.',
-              style: theme.textTheme.bodySmall),
-        ],
-      ),
-    );
   }
 }

@@ -190,9 +190,31 @@ public class Seeder
         var t8 = await NewTask(pMora, "MCP scaffolding spike", TaskStatus.Blocked, l2: (3, 8),
             description: "Blocked on P0-1 decision");
 
-        // internal-tools (5 top + 2 children = 7)
+        // internal-tools (5 top + 2 children + extras = 9)
         var t9 = await NewTask(pInternal, "Slack hook design", TaskStatus.InProgress, l2: (-1, 2));
-        // Override for timed L2 9:30-11:00 — just leave as all-day for simplicity in seed
+        // Calendar Week view needs timed L2 to actually exercise the hour grid:
+        // these inserts make sure the user sees boxes in the current week.
+        await _tasks.CreateAsync(new TaskItem
+        {
+            ProjectId = pInternal.Id,
+            Title = "Daily standup",
+            Status = TaskStatus.InProgress,
+            CurrentTimeline = new Timeline { Start = atUtc(0, 9, 30), End = atUtc(0, 10, 0), IsAllDay = false }
+        }, ct);
+        await _tasks.CreateAsync(new TaskItem
+        {
+            ProjectId = pInternal.Id,
+            Title = "Pairing on rollout",
+            Status = TaskStatus.NotStarted,
+            CurrentTimeline = new Timeline { Start = atUtc(1, 14, 0), End = atUtc(1, 16, 30), IsAllDay = false }
+        }, ct);
+        await _tasks.CreateAsync(new TaskItem
+        {
+            ProjectId = pInternal.Id,
+            Title = "Customer demo",
+            Status = TaskStatus.NotStarted,
+            CurrentTimeline = new Timeline { Start = atUtc(2, 11, 0), End = atUtc(2, 12, 0), IsAllDay = false }
+        }, ct);
         await NewTask(pInternal, "CSV import script", TaskStatus.Done, l2: (-3, -1), l3: (-3, -1), l3Timed: true);
         await NewTask(pInternal, "Cron job migration", TaskStatus.Done, l2: (-10, -5), l3: (-10, -5));
         var t12 = await NewTask(pInternal, "Cron job rollback", TaskStatus.Done, l2: (-2, 0), l3: (-2, 0));

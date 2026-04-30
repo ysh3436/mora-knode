@@ -6,6 +6,7 @@ import '../../models/assignment.dart';
 import '../../models/milestone.dart';
 import '../../models/resource.dart';
 import '../../models/task_item.dart';
+import '../../models/work_calendar.dart';
 import '../../state/providers.dart';
 
 /// Calendar view (wireframes §4.4). Two modes:
@@ -326,17 +327,21 @@ class _TaskChip extends StatelessWidget {
 class _WeekView extends ConsumerWidget {
   const _WeekView();
 
+  static const double _gutterWidth = 64;
+  static const double _rowHeight = 36;
+  static const double _allDayMaxHeight = 84;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
-    final matrix = ref.watch(matrixLoadProvider(_weekRange(ref.watch(calendarAnchorProvider))));
+    final calendar = ref.watch(workCalendarProvider);
     final anchor = ref.watch(calendarAnchorProvider);
     final filters = _Filters.from(ref);
 
-    if (agg.isLoading || assignments.isLoading || resources.isLoading || matrix.isLoading) {
+    if (agg.isLoading || assignments.isLoading || resources.isLoading || calendar.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
     if (agg.hasError) return Center(child: Text('Error: ${agg.error}'));
@@ -351,199 +356,199 @@ class _WeekView extends ConsumerWidget {
       filters: filters,
     );
 
-    // Hour range from WorkCalendar (DailyStart-1h .. DailyEnd+1h), with sane fallback.
-    int dailyStart = 8 * 60;
-    int dailyEnd = 19 * 60;
-    final cal = matrix.asData?.value.workCalendar;
-    if (cal != null) {
-      dailyStart = (cal.dailyStartMinutes - 60).clamp(0, 23 * 60);
-      dailyEnd = (cal.dailyEndMinutes + 60).clamp(60, 24 * 60);
-    }
-    final startHour = dailyStart ~/ 60;
-    final endHour = (dailyEnd / 60).ceil();
+    final cal = calendar.asData?.value.calendar;
+    final startHour = cal == null ? 8 : ((cal.dailyStartMinutes - 60) ~/ 60).clamp(0, 22);
+    final endHour = cal == null ? 19 : (((cal.dailyEndMinutes + 60) / 60).ceil()).clamp(startHour + 1, 24);
     final hourCount = endHour - startHour;
-    const rowHeight = 28.0;
+    final gridHeight = _rowHeight * hourCount;
+    final pixelsPerMinute = _rowHeight / 60.0;
 
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // header row
-            Row(
-              children: [
-                const SizedBox(width: 56),
-                ...List.generate(7, (i) {
-                  final d = monday.add(Duration(days: i));
-                  final isToday = _sameDay(d, today);
-                  final isWorkDay = !(d.weekday == DateTime.saturday || d.weekday == DateTime.sunday);
-                  return Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      decoration: BoxDecoration(
-                        color: isWorkDay ? null : theme.colorScheme.surfaceContainerLow,
-                        border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(DateFormat.E().format(d.toLocal()),
-                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
-                          Text(
-                            d.day.toString(),
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                              color: isToday ? theme.colorScheme.primary : null,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-            // all-day band
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 56,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    child: Text(
-                      'all-day',
-                      style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
-                    ),
-                  ),
-                ),
-                ...List.generate(7, (i) {
-                  final d = monday.add(Duration(days: i));
-                  final tasks = ctx.tasksOn(d).where((t) => t.isAllDay).toList();
-                  return Expanded(
-                    child: Container(
-                      constraints: const BoxConstraints(minHeight: 28),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.3)),
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: Column(
-                        children: tasks
-                            .take(2)
-                            .map((t) => _TaskChip(
-                                  task: t,
-                                  onTap: () {
-                                    ref.read(inspectionProvider.notifier).state = TaskInspection(t.id);
-                                    ref.read(inspectorOpenProvider.notifier).state = true;
-                                  },
-                                ))
-                            .toList(),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-            // hour grid
-            Stack(
-              children: [
-                Column(
-                  children: List.generate(hourCount, (h) {
-                    final hour = startHour + h;
-                    final atWorkBoundary = cal != null &&
-                        ((hour * 60) == cal.dailyStartMinutes || (hour * 60) == cal.dailyEndMinutes);
-                    return SizedBox(
-                      height: rowHeight,
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 56,
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                              child: Text(
-                                _hourLabel(hour),
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  fontSize: 10,
-                                  color: theme.colorScheme.outline,
-                                ),
-                              ),
-                            ),
-                          ),
-                          ...List.generate(7, (i) {
-                            final d = monday.add(Duration(days: i));
-                            final isWorkDay =
-                                !(d.weekday == DateTime.saturday || d.weekday == DateTime.sunday);
-                            return Expanded(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: isWorkDay
-                                      ? null
-                                      : theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.3),
-                                  border: Border(
-                                    left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3)),
-                                    top: BorderSide(
-                                      color: atWorkBoundary
-                                          ? theme.colorScheme.primary.withValues(alpha: 0.4)
-                                          : theme.dividerColor.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            );
-                          }),
-                        ],
-                      ),
-                    );
-                  }),
-                ),
-                // Timed task overlays — positioned absolutely.
-                Positioned.fill(
-                  left: 56,
-                  child: LayoutBuilder(
-                    builder: (ctx2, constraints) {
-                      final colWidth = constraints.maxWidth / 7;
-                      final pixelsPerMinute = rowHeight / 60.0;
-                      final children = <Widget>[];
-
-                      for (var i = 0; i < 7; i++) {
-                        final d = monday.add(Duration(days: i));
-                        final tasks = ctx.tasksOn(d).where((t) => !t.isAllDay).toList();
-                        for (final t in tasks) {
-                          final top = ((t.startMinutesOfDay ?? 0) - startHour * 60) * pixelsPerMinute;
-                          final endMin = (t.endMinutesOfDay ?? (24 * 60));
-                          final height = ((endMin - (t.startMinutesOfDay ?? 0)) * pixelsPerMinute)
-                              .clamp(14.0, double.infinity);
-                          if (top + height < 0 || top > rowHeight * hourCount) continue;
-                          children.add(Positioned(
-                            left: i * colWidth + 1,
-                            top: top.clamp(0, rowHeight * hourCount),
-                            width: colWidth - 2,
-                            height: height,
-                            child: _TimedTaskBox(
-                              task: t,
-                              onTap: () {
-                                ref.read(inspectionProvider.notifier).state = TaskInspection(t.id);
-                                ref.read(inspectorOpenProvider.notifier).state = true;
-                              },
-                            ),
-                          ));
-                        }
-                      }
-                      return Stack(children: children);
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Header row
+        _WeekHeaderRow(monday: monday, today: today, gutterWidth: _gutterWidth),
+        Divider(height: 1, color: theme.dividerColor),
+        // All-day band
+        _AllDayBand(
+          monday: monday,
+          ctx: ctx,
+          gutterWidth: _gutterWidth,
+          maxHeight: _allDayMaxHeight,
+          onPick: (id) => _select(ref, id),
         ),
-      ),
+        Divider(height: 1, color: theme.dividerColor),
+        // Hour grid: gutter (time labels) + day stack
+        Expanded(
+          child: SingleChildScrollView(
+            child: SizedBox(
+              height: gridHeight,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: _gutterWidth,
+                    child: _HourGutter(startHour: startHour, hourCount: hourCount, rowHeight: _rowHeight),
+                  ),
+                  Expanded(
+                    child: _DayGrid(
+                      monday: monday,
+                      ctx: ctx,
+                      cal: cal,
+                      startHour: startHour,
+                      hourCount: hourCount,
+                      rowHeight: _rowHeight,
+                      pixelsPerMinute: pixelsPerMinute,
+                      onPick: (id) => _select(ref, id),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  static MatrixRange _weekRange(DateTime anchor) {
-    final monday = anchor.subtract(Duration(days: anchor.weekday - DateTime.monday));
-    return MatrixRange(monday, monday.add(const Duration(days: 7)));
+  void _select(WidgetRef ref, String id) {
+    ref.read(inspectionProvider.notifier).state = TaskInspection(id);
+    ref.read(inspectorOpenProvider.notifier).state = true;
+  }
+}
+
+class _WeekHeaderRow extends StatelessWidget {
+  final DateTime monday;
+  final DateTime today;
+  final double gutterWidth;
+  const _WeekHeaderRow({required this.monday, required this.today, required this.gutterWidth});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        SizedBox(width: gutterWidth),
+        for (var i = 0; i < 7; i++) ...[
+          Expanded(
+            child: () {
+              final d = monday.add(Duration(days: i));
+              final isToday = _sameDay(d, today);
+              final isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+              return Container(
+                padding: const EdgeInsets.symmetric(vertical: 6),
+                decoration: BoxDecoration(
+                  color: isWeekend ? theme.colorScheme.surfaceContainerLow : null,
+                  border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(DateFormat.E().format(d.toLocal()),
+                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                    Text(
+                      d.day.toString(),
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                        color: isToday ? theme.colorScheme.primary : null,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }(),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AllDayBand extends StatelessWidget {
+  final DateTime monday;
+  final _CalendarContext ctx;
+  final double gutterWidth;
+  final double maxHeight;
+  final void Function(String id) onPick;
+  const _AllDayBand({
+    required this.monday,
+    required this.ctx,
+    required this.gutterWidth,
+    required this.maxHeight,
+    required this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: gutterWidth,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+              child: Text(
+                'all-day',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
+              ),
+            ),
+          ),
+          for (var i = 0; i < 7; i++) ...[
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4))),
+                ),
+                padding: const EdgeInsets.all(2),
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    mainAxisSize: MainAxisSize.min,
+                    children: ctx
+                        .tasksOn(monday.add(Duration(days: i)))
+                        .where((t) => t.isAllDay)
+                        .map((t) => _TaskChip(task: t, onTap: () => onPick(t.id)))
+                        .toList(),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HourGutter extends StatelessWidget {
+  final int startHour;
+  final int hourCount;
+  final double rowHeight;
+  const _HourGutter({required this.startHour, required this.hourCount, required this.rowHeight});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: List.generate(hourCount, (h) {
+        return SizedBox(
+          height: rowHeight,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(6, 2, 4, 0),
+            child: Text(
+              _hourLabel(startHour + h),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontSize: 10,
+                color: theme.colorScheme.outline,
+              ),
+            ),
+          ),
+        );
+      }),
+    );
   }
 
   static String _hourLabel(int h) {
@@ -552,6 +557,104 @@ class _WeekView extends ConsumerWidget {
     if (hh == 12) return '12 PM';
     if (hh < 12) return '$hh AM';
     return '${hh - 12} PM';
+  }
+}
+
+class _DayGrid extends StatelessWidget {
+  final DateTime monday;
+  final _CalendarContext ctx;
+  final WorkCalendar? cal;
+  final int startHour;
+  final int hourCount;
+  final double rowHeight;
+  final double pixelsPerMinute;
+  final void Function(String id) onPick;
+
+  const _DayGrid({
+    required this.monday,
+    required this.ctx,
+    required this.cal,
+    required this.startHour,
+    required this.hourCount,
+    required this.rowHeight,
+    required this.pixelsPerMinute,
+    required this.onPick,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final gridHeight = rowHeight * hourCount;
+
+    return LayoutBuilder(
+      builder: (ctx2, constraints) {
+        final colWidth = constraints.maxWidth / 7;
+
+        // Build positioned timed task widgets.
+        final timedBoxes = <Widget>[];
+        for (var i = 0; i < 7; i++) {
+          final day = monday.add(Duration(days: i));
+          for (final t in ctx.tasksOn(day).where((t) => !t.isAllDay)) {
+            final start = (t.startMinutesOfDay ?? 0) - startHour * 60;
+            final end = (t.endMinutesOfDay ?? hourCount * 60) - startHour * 60;
+            // Clamp to visible band, recompute height from clamped values.
+            final visibleStart = start.clamp(0, hourCount * 60);
+            final visibleEnd = end.clamp(0, hourCount * 60);
+            if (visibleEnd - visibleStart < 1) continue;
+
+            timedBoxes.add(Positioned(
+              left: i * colWidth + 1,
+              top: visibleStart * pixelsPerMinute,
+              width: colWidth - 2,
+              height: ((visibleEnd - visibleStart) * pixelsPerMinute).clamp(16, gridHeight),
+              child: _TimedTaskBox(task: t, onTap: () => onPick(t.id)),
+            ));
+          }
+        }
+
+        return Stack(
+          children: [
+            // background grid: hour rows × 7 day cells
+            Column(
+              children: List.generate(hourCount, (h) {
+                final hour = startHour + h;
+                final atWorkBoundary = cal != null &&
+                    ((hour * 60) == cal!.dailyStartMinutes || (hour * 60) == cal!.dailyEndMinutes);
+                return SizedBox(
+                  height: rowHeight,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: List.generate(7, (i) {
+                      final d = monday.add(Duration(days: i));
+                      final isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+                      return Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: isWeekend
+                                ? theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.3)
+                                : null,
+                            border: Border(
+                              left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
+                              top: BorderSide(
+                                color: atWorkBoundary
+                                    ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                                    : theme.dividerColor.withValues(alpha: 0.2),
+                                width: atWorkBoundary ? 1.5 : 1.0,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                );
+              }),
+            ),
+            ...timedBoxes,
+          ],
+        );
+      },
+    );
   }
 }
 

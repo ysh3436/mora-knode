@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using MoraKnode.Endpoints;
 using MoraKnode.Infrastructure;
+using MoraKnode.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +21,7 @@ builder.Services.AddSingleton<ResourceRepository>();
 builder.Services.AddSingleton<AssignmentRepository>();
 builder.Services.AddSingleton<MilestoneRepository>();
 builder.Services.AddSingleton<WorkCalendarRepository>();
+builder.Services.AddSingleton<Seeder>();
 
 // Development-only open CORS so the Flutter web client (dart server) can call the API.
 builder.Services.AddCors(options =>
@@ -50,6 +52,11 @@ app.MapAssignmentEndpoints();
 app.MapMatrixEndpoints();
 app.MapMilestoneEndpoints();
 app.MapWorkCalendarEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapDevEndpoints();
+}
 
 using (var scope = app.Services.CreateScope())
 {

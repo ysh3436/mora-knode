@@ -15,6 +15,7 @@ obj/
 .pub-cache/
 .idea/
 .vscode/
+.vs/
 
 # OS
 .DS_Store

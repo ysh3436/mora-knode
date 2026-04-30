@@ -1,6 +1,170 @@
 @backend_HostAddress = http://localhost:5163
 
+### Health check
 GET {{backend_HostAddress}}/health
 Accept: application/json
 
+### --- Projects ---
+
+### Create project
+# @name createProject
+POST {{backend_HostAddress}}/api/projects
+Content-Type: application/json
+
+{
+  "name": "Sample Project",
+  "description": "Created via backend.http",
+  "status": "Active"
+}
+
 ###
+@projectId = {{createProject.response.body.id}}
+
+### List projects
+GET {{backend_HostAddress}}/api/projects
+
+### Get project
+GET {{backend_HostAddress}}/api/projects/{{projectId}}
+
+### --- Tasks ---
+
+### Create task with baseline timeline (L2 seeds L1)
+# @name createTask
+POST {{backend_HostAddress}}/api/projects/{{projectId}}/tasks
+Content-Type: application/json
+
+{
+  "title": "Design MVP schema",
+  "description": "Initial task",
+  "status": "NotStarted",
+  "currentTimeline": {
+    "start": "2026-04-24T00:00:00Z",
+    "end":   "2026-04-28T00:00:00Z"
+  }
+}
+
+###
+@taskId = {{createTask.response.body.id}}
+
+### List tasks by project
+GET {{backend_HostAddress}}/api/projects/{{projectId}}/tasks
+
+### Update task (shift CurrentTimeline → auto change log)
+PUT {{backend_HostAddress}}/api/tasks/{{taskId}}
+Content-Type: application/json
+
+{
+  "title": "Design MVP schema",
+  "status": "InProgress",
+  "currentTimeline": {
+    "start": "2026-04-25T00:00:00Z",
+    "end":   "2026-04-30T00:00:00Z"
+  },
+  "changeReason": "Scope expanded to include matrix load API",
+  "changedBy": "ysh"
+}
+
+### Mark real completion (L3) → auto change log
+PUT {{backend_HostAddress}}/api/tasks/{{taskId}}
+Content-Type: application/json
+
+{
+  "title": "Design MVP schema",
+  "status": "Done",
+  "currentTimeline": {
+    "start": "2026-04-25T00:00:00Z",
+    "end":   "2026-04-30T00:00:00Z"
+  },
+  "realTimeline": {
+    "start": "2026-04-25T00:00:00Z",
+    "end":   "2026-04-29T00:00:00Z"
+  },
+  "changeReason": "Finished one day earlier",
+  "changedBy": "ysh"
+}
+
+### --- Change logs ---
+
+### Full history for the task
+GET {{backend_HostAddress}}/api/change-logs?entityType=Task&entityId={{taskId}}&limit=50
+
+### --- Resources ---
+
+### Create resource (human)
+# @name createResource
+POST {{backend_HostAddress}}/api/resources
+Content-Type: application/json
+
+{
+  "name": "ysh",
+  "role": "Owner",
+  "capacityPercent": 100
+}
+
+###
+@resourceId = {{createResource.response.body.id}}
+
+### List resources
+GET {{backend_HostAddress}}/api/resources
+
+### --- Assignments ---
+
+### Create assignment
+# @name createAssignment
+POST {{backend_HostAddress}}/api/assignments
+Content-Type: application/json
+
+{
+  "resourceId": "{{resourceId}}",
+  "taskId": "{{taskId}}",
+  "allocationPercent": 60,
+  "start": "2026-04-25T00:00:00Z",
+  "end":   "2026-04-30T00:00:00Z"
+}
+
+###
+@assignmentId = {{createAssignment.response.body.id}}
+
+### List assignments for a resource
+GET {{backend_HostAddress}}/api/assignments?resourceId={{resourceId}}
+
+### --- Matrix load view ---
+
+### Integrated load view for a week
+GET {{backend_HostAddress}}/api/matrix/load?from=2026-04-24T00:00:00Z&to=2026-05-01T00:00:00Z
+
+### --- Milestones ---
+
+### Create milestone
+# @name createMilestone
+POST {{backend_HostAddress}}/api/projects/{{projectId}}/milestones
+Content-Type: application/json
+
+{
+  "title": "MVP ready",
+  "date": "2026-04-30T00:00:00Z",
+  "status": "Upcoming"
+}
+
+###
+@milestoneId = {{createMilestone.response.body.id}}
+
+### List milestones
+GET {{backend_HostAddress}}/api/projects/{{projectId}}/milestones
+
+### --- Cleanup (optional) ---
+
+### Delete assignment
+# DELETE {{backend_HostAddress}}/api/assignments/{{assignmentId}}
+
+### Delete milestone
+# DELETE {{backend_HostAddress}}/api/milestones/{{milestoneId}}
+
+### Delete task
+# DELETE {{backend_HostAddress}}/api/tasks/{{taskId}}
+
+### Delete resource
+# DELETE {{backend_HostAddress}}/api/resources/{{resourceId}}
+
+### Delete project (cascades tasks)
+# DELETE {{backend_HostAddress}}/api/projects/{{projectId}}

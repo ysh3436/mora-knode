@@ -25,4 +25,12 @@ public class TaskItem
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    // Transient fields: accepted from client on update requests to annotate the
+    // schedule change log. Not persisted on the task document itself.
+    [BsonIgnore]
+    public string? ChangeReason { get; set; }
+
+    [BsonIgnore]
+    public string? ChangedBy { get; set; }
 }

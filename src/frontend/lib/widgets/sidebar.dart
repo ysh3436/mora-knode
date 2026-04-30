@@ -14,6 +14,7 @@ class Sidebar extends ConsumerWidget {
     final theme = Theme.of(context);
     final section = ref.watch(appSectionProvider);
     final projects = ref.watch(projectsProvider);
+    final isAdmin = ref.watch(isAdminProvider);
 
     return Container(
       width: 220,
@@ -93,13 +94,15 @@ class Sidebar extends ConsumerWidget {
                   badge: 'M2',
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.agents,
                 ),
-                const Divider(),
-                _NavItem(
-                  icon: Icons.settings_outlined,
-                  label: 'Settings',
-                  selected: section == AppSection.settings,
-                  onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.settings,
-                ),
+                if (isAdmin) ...[
+                  const Divider(),
+                  _NavItem(
+                    icon: Icons.settings_outlined,
+                    label: 'Settings',
+                    selected: section == AppSection.settings,
+                    onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.settings,
+                  ),
+                ],
               ],
             ),
           ),

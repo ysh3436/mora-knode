@@ -6,6 +6,7 @@ import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/matrix_section.dart';
 import '../widgets/my_work_section.dart';
+import '../widgets/settings_section.dart';
 
 /// Top-level screen: the AppShell wraps a section view chosen by
 /// [appSectionProvider]. Each section is a placeholder for now and gets
@@ -35,7 +36,7 @@ class MainScreen extends ConsumerWidget {
       AppSection.agents =>
         (_HeaderTitle('Agents', subtitle: 'M2'), _Coming(label: 'Agent identity & RBAC (M2)')),
       AppSection.settings =>
-        (_HeaderTitle('Settings'), _Coming(label: 'WorkCalendar + preferences')),
+        (_HeaderTitle('Settings'), const SettingsSection()),
     };
 
     return AppShell(header: header, child: body);

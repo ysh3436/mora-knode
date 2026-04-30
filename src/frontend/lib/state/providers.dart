@@ -9,6 +9,7 @@ import '../models/resource.dart';
 import '../models/resource_load.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
+import '../models/work_calendar.dart';
 
 // --- UI / session state ---
 
@@ -104,6 +105,33 @@ final allHierarchyByProjectProvider = FutureProvider<List<ProjectHierarchy>>((re
 /// by assignee and to show assignee chips in expanded task detail.
 final allAssignmentsProvider = FutureProvider<List<Assignment>>((ref) async {
   return ref.watch(apiClientProvider).listAssignments();
+});
+
+/// Configured WorkCalendar (org-level singleton). Returns the wrapped
+/// {isFallback, calendar} response so the Settings UI can show "not yet
+/// configured" state.
+final workCalendarProvider = FutureProvider<WorkCalendarResponse>((ref) async {
+  return ref.watch(apiClientProvider).getWorkCalendar();
+});
+
+/// The currently selected user, resolved against resourcesProvider. Null
+/// when anonymous (admin-equivalent).
+final currentUserProvider = Provider<Resource?>((ref) {
+  final id = ref.watch(currentUserIdProvider);
+  if (id == null) return null;
+  final list = ref.watch(resourcesProvider).asData?.value ?? const <Resource>[];
+  for (final r in list) {
+    if (r.id == id) return r;
+  }
+  return null;
+});
+
+/// True when the caller has full permissions / view scope. Anonymous and
+/// Manager / Reviewer / Human all qualify (mirrors backend UserContext.IsAdmin).
+final isAdminProvider = Provider<bool>((ref) {
+  final user = ref.watch(currentUserProvider);
+  if (user == null) return true;
+  return user.rbac.isAdmin;
 });
 
 // --- Shared filter state for the home tabs ---

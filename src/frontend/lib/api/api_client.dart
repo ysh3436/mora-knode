@@ -10,6 +10,7 @@ import '../models/resource.dart';
 import '../models/resource_load.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
+import '../models/work_calendar.dart';
 import 'api_config.dart';
 
 class ApiException implements Exception {
@@ -196,6 +197,21 @@ class ApiClient {
 
   Future<void> deleteMilestone(String id) async {
     await _decode(await _http.delete(_uri('/api/milestones/$id'), headers: _headers()));
+  }
+
+  // --- Work Calendar ---
+  Future<WorkCalendarResponse> getWorkCalendar() async {
+    final data = await _decode(await _http.get(_uri('/api/work-calendar'), headers: _headers()));
+    return WorkCalendarResponse.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<WorkCalendar> updateWorkCalendar(WorkCalendar cal) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/work-calendar'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode(cal.toJson()),
+    ));
+    return WorkCalendar.fromJson(data as Map<String, dynamic>);
   }
 
   // --- Change Logs ---

@@ -119,6 +119,9 @@ final searchQueryProvider = StateProvider<String>((_) => '');
 enum AllWorkSubview { list, gantt, calendar }
 final allWorkSubviewProvider = StateProvider<AllWorkSubview>((_) => AllWorkSubview.list);
 
+/// Gantt zoom level. Persists across re-entries to the gantt subview.
+final ganttZoomProvider = StateProvider<int>((_) => 0); // 0=day, 1=week, 2=month
+
 class MatrixRange {
   final DateTime from;
   final DateTime to;

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../state/providers.dart';
 import 'all_work_filters.dart';
+import 'all_work_gantt.dart';
 import 'all_work_list.dart';
 
 /// Container for the All work section. Shared filter bar at the top, sub-tabs
@@ -45,7 +46,7 @@ class AllWorkSection extends ConsumerWidget {
         Expanded(
           child: switch (sub) {
             AllWorkSubview.list => const AllWorkList(),
-            AllWorkSubview.gantt => const _Stub(label: 'Gantt — coming next'),
+            AllWorkSubview.gantt => const AllWorkGantt(),
             AllWorkSubview.calendar => const _Stub(label: 'Calendar — coming next'),
           },
         ),

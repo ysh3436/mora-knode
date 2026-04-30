@@ -3,6 +3,8 @@ import 'package:intl/intl.dart' show DateFormat;
 
 import '../models/timeline.dart';
 
+enum GanttZoom { day, week, month }
+
 class GanttRow {
   final String title;
   final int depth;
@@ -21,16 +23,43 @@ class GanttRow {
   });
 }
 
+/// Gantt rendering with Day / Week / Month zoom levels per
+/// wireframes.md §4.3.1. Header has two tiers (top = coarse time band,
+/// bottom = unit label). Bars keep a minimum 4px width so sub-unit segments
+/// stay visible at coarser zooms.
 class GanttChart extends StatelessWidget {
   final List<GanttRow> rows;
   final DateTime? from;
   final DateTime? to;
-  static const double rowHeight = 40;
-  static const double headerHeight = 36;
-  static const double labelWidth = 240;
-  static const double dayWidth = 24;
+  final GanttZoom zoom;
 
-  const GanttChart({super.key, required this.rows, this.from, this.to});
+  static const double rowHeight = 32;
+  static const double headerTopHeight = 22;
+  static const double headerBottomHeight = 22;
+  static const double labelWidth = 240;
+
+  const GanttChart({
+    super.key,
+    required this.rows,
+    this.from,
+    this.to,
+    this.zoom = GanttZoom.day,
+  });
+
+  double get _cellWidth => switch (zoom) {
+        GanttZoom.day => 28,
+        GanttZoom.week => 80,
+        GanttZoom.month => 120,
+      };
+
+  /// Average number of calendar days per cell. Days in months vary so this is
+  /// a fractional approximation — fine for visual layout, never used for
+  /// task math.
+  double get _cellDays => switch (zoom) {
+        GanttZoom.day => 1,
+        GanttZoom.week => 7,
+        GanttZoom.month => 30.4375,
+      };
 
   ({DateTime from, DateTime to})? _resolveRange() {
     if (from != null && to != null) return (from: from!, to: to!);
@@ -51,17 +80,16 @@ class GanttChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) {
-      return const Center(child: Text('No tasks yet.'));
-    }
+    if (rows.isEmpty) return const Center(child: Text('No tasks yet.'));
     final range = _resolveRange();
     if (range == null) {
       return const Center(child: Text('No timeline data yet. Add Current timeline to tasks.'));
     }
 
-    final days = range.to.difference(range.from).inDays;
+    final spanDays = range.to.difference(range.from).inDays.toDouble();
+    final timelineWidth = (spanDays / _cellDays) * _cellWidth;
+    final headerHeight = headerTopHeight + headerBottomHeight;
     final totalHeight = headerHeight + rowHeight * rows.length;
-    final timelineWidth = days * dayWidth;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -72,50 +100,7 @@ class GanttChart extends StatelessWidget {
             children: [
               SizedBox(
                 width: labelWidth,
-                child: Column(
-                  children: [
-                    Container(
-                      height: headerHeight,
-                      alignment: Alignment.centerLeft,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                        border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor)),
-                      ),
-                      child: const Text('Task', style: TextStyle(fontWeight: FontWeight.w600)),
-                    ),
-                    ...rows.map((r) => Container(
-                          height: rowHeight,
-                          padding: EdgeInsets.only(left: 12 + r.depth * 16.0, right: 12),
-                          decoration: BoxDecoration(
-                            border: Border(bottom: BorderSide(color: Theme.of(context).dividerColor.withValues(alpha: 0.3))),
-                          ),
-                          alignment: Alignment.centerLeft,
-                          child: Row(
-                            children: [
-                              Icon(
-                                r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
-                                size: 16,
-                                color: r.hasChildren
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(context).colorScheme.outline,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  r.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: r.hasChildren
-                                      ? const TextStyle(fontWeight: FontWeight.w600)
-                                      : null,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
-                  ],
-                ),
+                child: _LabelGutter(rows: rows, headerHeight: headerHeight),
               ),
               Expanded(
                 child: SingleChildScrollView(
@@ -130,9 +115,12 @@ class GanttChart extends StatelessWidget {
                         rows: rows,
                         from: range.from,
                         to: range.to,
+                        zoom: zoom,
+                        cellDays: _cellDays,
+                        cellWidth: _cellWidth,
                         rowHeight: rowHeight,
-                        headerHeight: headerHeight,
-                        dayWidth: dayWidth,
+                        headerTopHeight: headerTopHeight,
+                        headerBottomHeight: headerBottomHeight,
                         palette: _Palette.from(Theme.of(context)),
                       ),
                     ),
@@ -147,6 +135,60 @@ class GanttChart extends StatelessWidget {
   }
 }
 
+class _LabelGutter extends StatelessWidget {
+  final List<GanttRow> rows;
+  final double headerHeight;
+  const _LabelGutter({required this.rows, required this.headerHeight});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Container(
+          height: headerHeight,
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            border: Border(bottom: BorderSide(color: theme.dividerColor)),
+          ),
+          child: const Text('Task', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+        ),
+        ...rows.map((r) => Container(
+              height: GanttChart.rowHeight,
+              padding: EdgeInsets.only(left: 12 + r.depth * 16.0, right: 12),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3))),
+              ),
+              alignment: Alignment.centerLeft,
+              child: Row(
+                children: [
+                  Icon(
+                    r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
+                    size: 14,
+                    color: r.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+                  ),
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      r.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: r.hasChildren ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+      ],
+    );
+  }
+}
+
 class _Palette {
   final Color grid;
   final Color header;
@@ -155,6 +197,7 @@ class _Palette {
   final Color real;
   final Color summary;
   final Color text;
+  final Color textMuted;
 
   _Palette({
     required this.grid,
@@ -164,6 +207,7 @@ class _Palette {
     required this.real,
     required this.summary,
     required this.text,
+    required this.textMuted,
   });
 
   factory _Palette.from(ThemeData theme) {
@@ -176,6 +220,7 @@ class _Palette {
       real: cs.tertiary.withValues(alpha: 0.95),
       summary: cs.secondary.withValues(alpha: 0.75),
       text: cs.onSurface,
+      textMuted: cs.outline,
     );
   }
 }
@@ -184,78 +229,200 @@ class _GanttPainter extends CustomPainter {
   final List<GanttRow> rows;
   final DateTime from;
   final DateTime to;
+  final GanttZoom zoom;
+  final double cellDays;
+  final double cellWidth;
   final double rowHeight;
-  final double headerHeight;
-  final double dayWidth;
+  final double headerTopHeight;
+  final double headerBottomHeight;
   final _Palette palette;
 
   _GanttPainter({
     required this.rows,
     required this.from,
     required this.to,
+    required this.zoom,
+    required this.cellDays,
+    required this.cellWidth,
     required this.rowHeight,
-    required this.headerHeight,
-    required this.dayWidth,
+    required this.headerTopHeight,
+    required this.headerBottomHeight,
     required this.palette,
   });
 
+  double _xFromDate(DateTime d) {
+    final days = d.toUtc().difference(from).inHours / 24.0;
+    return (days / cellDays) * cellWidth;
+  }
+
   @override
   void paint(Canvas canvas, Size size) {
-    final days = to.difference(from).inDays;
+    final headerHeight = headerTopHeight + headerBottomHeight;
     final gridPaint = Paint()
       ..color = palette.grid
       ..strokeWidth = 1;
 
-    final headerPaint = Paint()..color = palette.header;
-    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, headerHeight), headerPaint);
+    // Header background
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, headerHeight), Paint()..color = palette.header);
 
-    final df = DateFormat('M/d');
-    for (var i = 0; i <= days; i++) {
-      final x = i * dayWidth;
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-      if (i < days) {
-        final date = from.add(Duration(days: i));
-        final isWeekStart = date.weekday == DateTime.monday || i == 0;
-        if (isWeekStart) {
-          final tp = TextPainter(
-            text: TextSpan(
-              text: df.format(date.toLocal()),
-              style: TextStyle(color: palette.text, fontSize: 11),
-            ),
-            textDirection: TextDirection.ltr,
-          )..layout();
-          tp.paint(canvas, Offset(x + 4, 4));
-        }
-      }
-    }
+    _drawHeaders(canvas, size);
 
+    // Horizontal divider after header
     canvas.drawLine(
       Offset(0, headerHeight),
       Offset(size.width, headerHeight),
-      gridPaint..color = palette.grid,
+      gridPaint,
     );
 
+    // Row dividers + bars
     for (var r = 0; r < rows.length; r++) {
       final top = headerHeight + rowHeight * r;
       canvas.drawLine(Offset(0, top + rowHeight), Offset(size.width, top + rowHeight), gridPaint);
 
       final row = rows[r];
       if (row.hasChildren) {
-        // Parent summary bar: single slim bar spanning the computed union range.
         _drawBar(canvas, row.current.start, row.current.end,
-            top: top + 16, height: 10, color: palette.summary, radius: 3);
-        // Thin bracket ticks at both ends
-        _drawBracket(canvas, row.current.start, row.current.end, top: top + 16, height: 10);
+            top: top + 14, height: 8, color: palette.summary, radius: 2);
       } else {
-        // Leaf task: full 3-layer bars.
         _drawBar(canvas, row.origin.start, row.origin.end,
-            top: top + 6, height: 6, color: palette.origin);
+            top: top + 4, height: 4, color: palette.origin);
         _drawBar(canvas, row.current.start, row.current.end,
-            top: top + 14, height: 16, color: palette.current, radius: 3);
+            top: top + 10, height: 14, color: palette.current, radius: 3);
         _drawBar(canvas, row.real.start, row.real.end,
-            top: top + 32, height: 4, color: palette.real);
+            top: top + 26, height: 4, color: palette.real);
       }
     }
+  }
+
+  void _drawHeaders(Canvas canvas, Size size) {
+    final gridPaint = Paint()
+      ..color = palette.grid
+      ..strokeWidth = 1;
+
+    switch (zoom) {
+      case GanttZoom.day:
+        _drawDayHeaders(canvas, size, gridPaint);
+        break;
+      case GanttZoom.week:
+        _drawWeekHeaders(canvas, size, gridPaint);
+        break;
+      case GanttZoom.month:
+        _drawMonthHeaders(canvas, size, gridPaint);
+        break;
+    }
+  }
+
+  void _drawDayHeaders(Canvas canvas, Size size, Paint gridPaint) {
+    final dfDay = DateFormat('d');
+    final dfMonth = DateFormat('MMM');
+    final spanDays = to.difference(from).inDays;
+
+    DateTime? lastMonthDrawn;
+    for (var i = 0; i <= spanDays; i++) {
+      final x = (i / cellDays) * cellWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      if (i < spanDays) {
+        final date = from.add(Duration(days: i));
+        // Top tier: month label at first day or month boundary
+        if (lastMonthDrawn == null || date.month != lastMonthDrawn.month) {
+          _text(canvas, dfMonth.format(date.toLocal()), x + 4, 4,
+              fontSize: 11, weight: FontWeight.w600);
+          lastMonthDrawn = date;
+        }
+        // Bottom tier: day number, weekend muted
+        final dayColor = (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday)
+            ? palette.textMuted
+            : palette.text;
+        _text(canvas, dfDay.format(date.toLocal()), x + 4, headerTopHeight + 4,
+            fontSize: 11, color: dayColor);
+      }
+    }
+    canvas.drawLine(Offset(0, headerTopHeight),
+        Offset(size.width, headerTopHeight), gridPaint);
+  }
+
+  void _drawWeekHeaders(Canvas canvas, Size size, Paint gridPaint) {
+    final dfMonth = DateFormat('MMM');
+    final spanDays = to.difference(from).inDays;
+    final cellCount = (spanDays / cellDays).ceil();
+
+    DateTime? lastMonthDrawn;
+    for (var i = 0; i <= cellCount; i++) {
+      final x = i * cellWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      if (i < cellCount) {
+        final cellStart = from.add(Duration(days: (i * 7)));
+        if (lastMonthDrawn == null || cellStart.month != lastMonthDrawn.month) {
+          _text(canvas, dfMonth.format(cellStart.toLocal()), x + 4, 4,
+              fontSize: 11, weight: FontWeight.w600);
+          lastMonthDrawn = cellStart;
+        }
+        final week = _isoWeek(cellStart);
+        _text(canvas, 'W$week', x + 4, headerTopHeight + 4, fontSize: 11);
+      }
+    }
+    canvas.drawLine(Offset(0, headerTopHeight),
+        Offset(size.width, headerTopHeight), gridPaint);
+  }
+
+  void _drawMonthHeaders(Canvas canvas, Size size, Paint gridPaint) {
+    final dfMonthShort = DateFormat('MMM');
+    final spanDays = to.difference(from).inDays;
+    final cellCount = (spanDays / cellDays).ceil();
+
+    int? lastQuarter;
+    int? lastQuarterYear;
+    for (var i = 0; i <= cellCount; i++) {
+      final x = i * cellWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+      if (i < cellCount) {
+        // Approximate cell start by adding average days/cell.
+        final cellStartApprox = from.add(Duration(days: (i * cellDays).round()));
+        final quarter = ((cellStartApprox.month - 1) ~/ 3) + 1;
+        if (lastQuarter == null ||
+            quarter != lastQuarter ||
+            cellStartApprox.year != lastQuarterYear) {
+          _text(canvas, '${cellStartApprox.year} Q$quarter', x + 4, 4,
+              fontSize: 11, weight: FontWeight.w600);
+          lastQuarter = quarter;
+          lastQuarterYear = cellStartApprox.year;
+        }
+        _text(canvas, dfMonthShort.format(cellStartApprox.toLocal()),
+            x + 4, headerTopHeight + 4, fontSize: 11);
+      }
+    }
+    canvas.drawLine(Offset(0, headerTopHeight),
+        Offset(size.width, headerTopHeight), gridPaint);
+  }
+
+  /// ISO 8601 week number (1..53).
+  int _isoWeek(DateTime date) {
+    final thursday = date.add(Duration(days: 4 - (date.weekday == 7 ? 7 : date.weekday)));
+    final firstThursday = DateTime.utc(thursday.year, 1, 4);
+    final firstWeekStart = firstThursday.subtract(
+        Duration(days: firstThursday.weekday - 1));
+    return ((thursday.difference(firstWeekStart).inDays) ~/ 7) + 1;
+  }
+
+  void _text(
+    Canvas canvas,
+    String text,
+    double x,
+    double y, {
+    double fontSize = 11,
+    FontWeight weight = FontWeight.w400,
+    Color? color,
+  }) {
+    final tp = TextPainter(
+      text: TextSpan(
+        text: text,
+        style: TextStyle(color: color ?? palette.text, fontSize: fontSize, fontWeight: weight),
+      ),
+      textDirection: TextDirection.ltr,
+      maxLines: 1,
+      ellipsis: '…',
+    )..layout(maxWidth: cellWidth - 6);
+    tp.paint(canvas, Offset(x, y));
   }
 
   void _drawBar(
@@ -268,39 +435,22 @@ class _GanttPainter extends CustomPainter {
     double radius = 2,
   }) {
     if (start == null || end == null) return;
-    final s = _daysSince(start);
-    final e = _daysSince(end);
-    if (e <= 0 || s >= to.difference(from).inDays) return;
-    final clampedS = s.clamp(0, to.difference(from).inDays).toDouble();
-    final clampedE = e.clamp(0, to.difference(from).inDays).toDouble();
-    final left = clampedS * dayWidth;
-    final right = clampedE * dayWidth;
+    final left = _xFromDate(start);
+    final right = _xFromDate(end);
+    if (right <= 0) return;
+    final width = (right - left).clamp(4.0, double.infinity);
     final rect = RRect.fromRectAndRadius(
-      Rect.fromLTRB(left, top, right, top + height),
+      Rect.fromLTRB(left, top, left + width, top + height),
       Radius.circular(radius),
     );
     canvas.drawRRect(rect, Paint()..color = color);
   }
 
-  void _drawBracket(Canvas canvas, DateTime? start, DateTime? end,
-      {required double top, required double height}) {
-    if (start == null || end == null) return;
-    final s = _daysSince(start).clamp(0, to.difference(from).inDays).toDouble();
-    final e = _daysSince(end).clamp(0, to.difference(from).inDays).toDouble();
-    final paint = Paint()
-      ..color = palette.summary
-      ..strokeWidth = 2;
-    final left = s * dayWidth;
-    final right = e * dayWidth;
-    final midY = top + height / 2;
-    canvas.drawLine(Offset(left, midY - 4), Offset(left, midY + 4), paint);
-    canvas.drawLine(Offset(right, midY - 4), Offset(right, midY + 4), paint);
-  }
-
-  double _daysSince(DateTime date) =>
-      DateTime.utc(date.year, date.month, date.day).difference(from).inDays.toDouble();
-
   @override
   bool shouldRepaint(covariant _GanttPainter old) =>
-      old.rows != rows || old.from != from || old.to != to;
+      old.rows != rows ||
+      old.from != from ||
+      old.to != to ||
+      old.zoom != zoom ||
+      old.cellWidth != cellWidth;
 }

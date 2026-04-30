@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../state/providers.dart';
 import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
+import '../widgets/matrix_section.dart';
 import '../widgets/my_work_section.dart';
 
 /// Top-level screen: the AppShell wraps a section view chosen by
@@ -26,7 +27,7 @@ class MainScreen extends ConsumerWidget {
       AppSection.resources =>
         (_HeaderTitle('Resources'), _Coming(label: 'Resources')),
       AppSection.matrix =>
-        (_HeaderTitle('Matrix load'), _Coming(label: 'Resource matrix')),
+        (_HeaderTitle('Matrix load'), const MatrixSection()),
       AppSection.plans =>
         (_HeaderTitle('Plans', subtitle: 'M2'), _Coming(label: 'Plan review queue (M2)')),
       AppSection.audit =>

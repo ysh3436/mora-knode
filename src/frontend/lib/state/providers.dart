@@ -133,6 +133,13 @@ final calendarAnchorProvider = StateProvider<DateTime>((_) {
   return DateTime.utc(now.year, now.month, now.day);
 });
 
+/// Matrix view's anchor (snapped to a Monday inside the displayed week).
+final matrixAnchorProvider = StateProvider<DateTime>((_) {
+  final now = DateTime.now().toUtc();
+  final today = DateTime.utc(now.year, now.month, now.day);
+  return today.subtract(Duration(days: today.weekday - DateTime.monday));
+});
+
 class MatrixRange {
   final DateTime from;
   final DateTime to;

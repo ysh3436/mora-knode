@@ -25,193 +25,193 @@
   "tasks": [
     {
       "title": "Phase 1.5 — 외부 에이전트 host 사양 구현",
-      "description": "외부 AI 에이전트가 mora-knode 를 1급 시민으로 협업할 수 있도록 최소 스키마 + endpoints 구축. 4개 PR 로 차례차례. 이 단계가 끝나야 매트릭스 PM 의 핵심 차별화 (사람 + agent 협업 host) 가 실제 작동.",
+      "description": "외부 AI 에이전트가 mora-knode 를 1급 시민으로 사용해 협업 가능하게 만드는 단계. M1.5 라고 부름 — M1 (기본 PM 기능) 과 M2 (dogfooding 시뮬레이션) 사이의 인프라 구축 단계.\n\n4개 PR 로 차례차례: PR1 (status / kind enum) → PR2 (task / resource 필드) → PR3 (plan / run 도메인) → PR4 (외부 endpoints). 이 단계가 끝나야 mora-knode 의 핵심 차별화 (사람 + agent 협업 host) 가 실제 작동하고 Phase 2 (dogfooding) 시작 가능.",
       "currentTimeline": {"start": "2026-05-08", "end": "2026-05-21"},
       "assignees": [{"resource": "ysh", "allocationPercent": 100}],
       "children": [
         {
           "title": "PR 1 — Enum 확장",
-          "description": "외부 agent 흐름 (plan 작성 → 검토 → 승인 → 실패/취소) 을 표현할 수 있는 status 종류 + 사람 / agent 구분 enum 추가. 후속 PR 들의 의미 토대.",
+          "description": "외부 agent 흐름을 표현 가능한 status 종류 + 사람 / agent 구분 enum 추가. 후속 PR 들의 의미 토대 (PR2 의 필드, PR3 의 도메인, PR4 의 endpoint 가 모두 이 enum 위에서 의미를 가짐).\n\n작은 PR 로 분리한 이유 — 회귀 위험 분리. status 추가는 모든 task 데이터에 영향, kind 는 모든 resource 데이터에 영향. 다른 변경과 묶이면 회귀 시 root cause 추적이 어려움.",
           "currentTimeline": {"start": "2026-05-08", "end": "2026-05-09"},
           "children": [
             {
               "title": "TaskStatus 에 PlanDrafting/PlanReview/PlanApproved/Failed/Cancelled 추가",
-              "description": "agent 가 plan 작성 → 검토 대기 → 승인 → 실패 / 취소 흐름을 task status 한 줄로 표현. ADR-002 의 승인 게이트가 PlanReview / PlanApproved status 위에서 동작."
+              "description": "agent 가 plan 작성 → 검토 대기 → 승인 → 실패 / 취소 흐름을 task status 한 줄로 표현.\n\n현재 status (시작 전 / 진행 중 / 막힘 / 완료) 4종은 일반 작업 흐름만 표현 가능해 외부 agent 의 plan 게이트를 담을 수 없음. PlanReview 는 \"agent 가 제출한 plan 을 사람이 검토 중\" 상태로, 이 status 위에서 ADR-002 의 \"plan 은 검토 통과 후에만 다운스트림 작업 진행\" 원칙이 강제됨. PlanApproved 부터 work-queue 에 task 가 노출됨. Failed 는 agent 자동 재시도 한계 도달, Cancelled 는 사람 명시 취소 — 둘 다 단순 \"막힘\" 으로 묶기엔 의미가 다름.\n\n비명백한 제약: 기존 4개 status 는 의미와 정수 매핑 그대로 유지 — 이미 저장된 task 들이 변환 없이 deserialize 되어야 함."
             },
             {
               "title": "ResourceKind { Human, Agent } — 이미 적용됨",
-              "description": "Resource 가 사람인지 agent 인지 구분할 enum. 매트릭스 가동률 합산과 agent 관리 화면이 이 구분에 의존. (이미 적용 — 확인용 marker)",
+              "description": "Resource 가 사람 사용자인지 외부 agent identity 인지 구분할 enum. 매트릭스 가동률 합산이 사람 / agent 를 같은 표면에서 보여주는 것 (옵션 C — Phase 2 의 매트릭스 매니저 task) 과 agent 관리 화면이 이 구분에 의존.\n\n상태: 이미 백엔드 도메인에 정의되어 있어 추가 작업 불필요. 본 task 는 의존하는 다른 task (PR 2 의 Resource.Kind 활용, Phase 2 의 매트릭스 합산) 가 헷갈리지 않게 진행 상태를 명시하는 marker.",
               "status": "Done"
             },
             {
               "title": "Frontend TaskStatus enum 동기화 + 라벨 + 배지 색상",
-              "description": "백엔드 status 5종 추가에 맞춰 프론트 enum / 한국어 라벨 / 인스펙터 색상 분기 갱신. 사용자가 새 status 를 인식 가능해야 함."
+              "description": "백엔드의 신규 status 5종 (PlanDrafting / PlanReview / PlanApproved / Failed / Cancelled) 을 프론트가 인식하고 사용자에게 의미 있게 표시.\n\n현재 인스펙터의 status 드롭다운과 status pill 색상이 4종 기준으로 분기됨. 백엔드만 추가하고 프론트가 모르면 신규 status 인 task 가 \"알 수 없음\" 으로 표시되거나 색상 미스. 색상 의도: PlanReview 는 검토 대기를 강조하는 주의 색상 (예: 주황계), PlanApproved 는 진행 가능한 긍정 색상 (예: 초록계), Failed 는 에러 색상, Cancelled 는 흐릿한 회색.\n\nKorean / English 라벨도 i18n 에 함께 추가 (사용자가 어느 locale 이든 의미 파악 가능)."
             }
           ]
         },
         {
           "title": "PR 2 — TaskItem / Resource 필드 추가",
-          "description": "외부 agent 가 작업 결과 (수용 조건 / git 위치 / 재시도 / 에러 / 적합 역할) 를 task 에 기록하고, 사람이 인스펙터에서 그걸 볼 수 있게 한다. PR 3 의 plan/run 도메인이 참조할 메타데이터.",
+          "description": "agent 가 task 를 의미 있게 처리하는 데 필요한 메타데이터를 도메인에 추가. PR3 의 plan / run 도메인이 참조하고, PR4 의 endpoints 가 노출하는 정보의 토대.\n\n비명백한 제약: 모든 신규 필드는 nullable 또는 기본값 — 이미 저장된 task / resource document 가 새 필드 없이도 deserialize 가능해야 함. migration 없이 호환 유지.",
           "currentTimeline": {"start": "2026-05-10", "end": "2026-05-12"},
           "children": [
             {
               "title": "TaskItem 필드 5종 추가 (AcceptanceCriteria/Git/RetryCount/LastError/AssignedRoleHint)",
-              "description": "agent 가 task 를 의미 있게 처리하려면 '무엇이 끝남인지', '어디 코드인지', '실패 메타', '어떤 역할에 적합한지' 정보가 task 자체에 붙어야 함. 이 필드들이 그 토대."
+              "description": "agent 가 task 를 의미 있게 처리하려면 \"task 가 끝났다는 게 무엇인가\", \"코드는 어디 있나\", \"실패하면 어떤 에러였나\", \"어떤 역할에 적합한 task 인가\" 같은 메타가 task 자체에 붙어야 한다.\n\n각 필드의 목적:\n- AcceptanceCriteria: 사람 / agent 가 작성하는 완료 정의. agent 가 본인 작업이 끝났는지 자체 검증할 기준이며 PR review 시 reviewer 가 참조하는 합의 지점.\n- Git: agent 가 작업한 코드 저장소 / 브랜치 / PR 링크. mora-knode 가 GitHub 등을 직접 호출하지 않더라도 (ADR-005) audit / 인스펙터에 노출 가능.\n- RetryCount / LastError: agent 실행 실패 시 자동 재시도 메타. 운영 가시성, 반복 실패 패턴 식별.\n- AssignedRoleHint: work-queue 에서 어떤 RBAC preset (Manager / Developer / QA 등) 에 어울리는 task 인지 힌트. 강제 배정이 아니라 매칭 보조용 — 사람 / agent 모두가 work-queue 필터링에 사용.\n\n비명백한 제약: 모두 nullable / 기본값. 기존 task document 호환."
             },
             {
               "title": "Resource.Kind/Rbac/AgentDescription — 이미 적용됨",
-              "description": "agent identity 의 종류 / 권한 / 설명. 매트릭스 합산과 work-queue 매칭의 토대. (이미 적용 — 확인용 marker)",
+              "description": "Resource 가 사람 / agent 인지 구분 (Kind), 어떤 권한 묶음인지 (Rbac, 5개 preset), agent 면 어떤 모델 / 도구 / 프롬프트셋인지 자유 텍스트 (AgentDescription).\n\nADR-004 에 따라 외부 agent 는 자체 identity 와 RBAC 로 관리됨. 매트릭스 합산, work-queue 가시성, agent 관리 화면 모두 이 세 필드에 의존.\n\n상태: 이미 백엔드 도메인에 정의되어 있음. 본 task 는 의존 task 가 누락 우려 없이 진행할 수 있게 명시하는 marker.",
               "status": "Done"
             },
             {
               "title": "MongoDB 누락 필드 null 직렬화 회귀 확인",
-              "description": "기존 task 가 새 필드 없이 저장되어 있어 deserialize 시 깨질 위험. 호환성 회귀 한 번 점검."
+              "description": "PR 2 의 신규 필드 5종이 기존 task / resource document 와 호환되는지 한 번 회귀 점검.\n\n위험: nullable / BsonDefaultValue 누락 시 기존 document 가 deserialize 예외 발생. 인스펙터 / 매트릭스 / 간트 등 거의 모든 surface 가 깨짐. 발견은 백엔드 재시작 직후 GET /api/projects/{id}/tasks 가 200 OK 인지로 빠르게.\n\n적합 시점: PR2 머지 직후 — 신규 필드 추가가 다른 변경과 섞이기 전에 단독 검증."
             },
             {
               "title": "Frontend TaskItem 모델 확장 + Inspector UI 에 새 필드 노출",
-              "description": "신규 필드들을 인스펙터에서 보고 편집할 수 있게 한다. 사람이 agent 가 채운 정보를 검토하고, 사람이 직접 채울 수도 있는 surface."
+              "description": "신규 5개 필드를 인스펙터에서 보고 편집할 수 있게 한다. 사람이 agent 가 채운 정보를 검토하고, 사람이 직접 채울 수도 있는 surface.\n\n현재 인스펙터는 inline 편집 UX 가 정착됨 (제목 / 설명 / status / 부모 / timeline 모두 클릭 → 편집 → 저장). 새 필드도 같은 패턴으로 추가 — 모달 X. AcceptanceCriteria 는 multi-line 텍스트 (설명 편집기와 같은 패턴), Git 정보는 작은 form, RetryCount + LastError 는 read-only 표시 (실행 결과는 agent 가 채움), AssignedRoleHint 는 RBAC preset 드롭다운.\n\n주의: agent 관련 필드는 사용자가 거의 채우지 않는 경우가 많음 — 빈 상태도 깔끔하게 (placeholder \"추가...\" 등)."
             }
           ]
         },
         {
           "title": "PR 3 — 신규 도메인 + Repository (AgentPlanHistory, AgentRun)",
-          "description": "agent 가 제출한 plan 이력 (revision 포함) 과 실행 이력 을 별도 entity 로 저장. PR 4 의 endpoints 가 이 두 entity 위에서 plan 게이트 / runs 메트릭 노출.",
+          "description": "agent 가 제출한 plan 이력 (revision 포함) 과 실행 이력을 별도 entity 로 저장. PR 4 의 endpoints 가 이 두 entity 위에서 plan 게이트와 runs 메트릭을 노출.\n\n핵심 ADR 준수:\n- ADR-002: plan 은 사람 검토 / 승인 게이트 통과 후에만 다운스트림 진행. AgentPlanHistory 의 status 흐름이 이를 강제.\n- ADR-005: mora-knode 는 LLM 을 호출하지 않음. AgentRun 의 token / cost 가 모두 optional 인 이유 — 보고하는 agent 만 채우고 mora-knode 는 어떤 모델인지 모름.",
           "currentTimeline": {"start": "2026-05-13", "end": "2026-05-16"},
           "children": [
             {
               "title": "AgentPlanHistory + PlanStatus enum 도입",
-              "description": "agent 가 같은 task 에 여러 번 plan 제출 / revise 할 수 있게 versioned 이력으로 저장. ADR-002 의 승인 게이트가 이 entity 의 status 흐름 (Submitted → Revised / Approved / Rejected) 으로 동작."
+              "description": "agent 가 같은 task 에 plan 을 여러 번 제출 (revise 흐름) 하고 그 이력을 시간순으로 추적할 수 있는 별도 entity.\n\nADR-002 의 승인 게이트가 이 entity 위에서 동작 — agent 가 plan 제출 (Submitted) → 검토자가 approve / revise / reject. revise 면 agent 가 새 version 으로 다시 제출, 이전 version 은 Revised 로 마킹. 한 task 의 plan 흐름 전체가 audit 가능해야 dogfooding 시뮬레이션의 회귀 추적과 PR 5 (Phase 2 확장) 의 Plan History UI 가 가능.\n\n핵심 — task 가 여러 plan 을 가질 수 있다는 것. 단일 plan 만 저장하면 revise 의 \"이전엔 뭐라 적었었는지\" 가 사라짐 → manager 가 비교 검토 불가."
             },
             {
               "title": "AgentRun (Token/Cost 모두 optional, ADR-005)",
-              "description": "agent 가 task 를 실제로 실행한 기록. token / cost 는 optional — mora-knode 는 어떤 모델인지 모르고 강제하지 않는다 (ADR-005). 보고하는 agent 만 채움."
+              "description": "agent 가 task 를 실제로 실행한 기록. 시작 / 종료 / 결과 / 메트릭을 한 entity 로 모음.\n\nADR-005 준수가 핵심: token 사용량과 cost 가 모두 nullable — mora-knode 는 어떤 모델 / SDK 가 호출되는지 모르고 강제하지 않음. 보고하는 agent 는 채우고, 보고 안 하면 null 인 채로 저장. UI 는 null 이면 'N/A' 또는 안 보이게 처리.\n\nUse case: 매트릭스의 가동률 합산 (사람 + agent), audit 의 \"이 task 는 누가 / 언제 / 얼마나 실행했나\", agent 별 활동 패턴 분석."
             },
             {
               "title": "MongoContext 컬렉션 핸들 + AgentPlanRepository / AgentRunRepository",
-              "description": "신규 두 도메인을 read / write 하는 repository 계층. PR 4 의 endpoints 와 추후 인스펙터 Plan History / Runs 탭이 이 위에서 동작."
+              "description": "PR3 의 두 신규 도메인 (AgentPlanHistory, AgentRun) 을 MongoDB 에 read / write 하는 repository 계층. PR 4 의 endpoints 가 이 위에서 동작.\n\n기존 repository 패턴 (TaskRepository, ProjectRepository 등) 과 일관 — 같은 단순한 List / Get / Create / Update API 모양. 추가로 AgentPlanRepository 는 task 별 version 자동 증분 (latest + 1), AgentRunRepository 는 agent 별 / task 별 시간순 조회 같은 도메인 특화 메서드 한두개."
             },
             {
               "title": "인덱스 추가",
-              "description": "task 별 plan / run 조회와 agent 별 활동 조회가 자주 일어남. 미리 인덱스로 read path 빠르게."
+              "description": "task 별 plan / run 조회와 agent 별 활동 조회가 자주 일어나는 read 패턴이라 미리 인덱스로 빠르게.\n\n3개 인덱스 — task 별 plan version 내림차순 (인스펙터 Plan History), task 별 run 시간 내림차순 (인스펙터 Runs), agent 별 run 시간 내림차순 (audit / agent 가시성). 데이터 양이 늘기 전에 미리 만들어두는 게 비용 작음."
             }
           ]
         },
         {
           "title": "PR 4 — AgentEndpoints 신설",
-          "description": "외부 agent 가 mora-knode 와 협업하기 위한 REST 표면. identity / 토큰 / plan 게이트 / work-queue / runs 네 묶음을 한 PR 에 모아 외부 도구 onboarding 이 가능해짐.",
+          "description": "외부 agent 가 mora-knode 와 협업하기 위한 REST 표면을 한 묶음으로 정리. identity / 토큰 / plan 게이트 / work-queue / runs 네 묶음을 한 PR 에 모아 외부 도구 (Claude Code, Cursor, 자체 봇 등) 의 onboarding 이 가능해짐.\n\n인증 모델 — Bearer 토큰 + X-Agent-Id 헤더. M1.5 단계는 토큰 존재 여부만 확인하는 placeholder, M2 에서 hash + expiry + revocation 도입.",
           "currentTimeline": {"start": "2026-05-17", "end": "2026-05-21"},
           "children": [
             {
               "title": "/api/agents (identity / 토큰 / permissions)",
-              "description": "외부 agent 가 mora-knode 와 통신하려면 먼저 identity 와 토큰이 필요하다. 그 발급 / 관리 / 권한 조회 표면."
+              "description": "외부 agent 가 mora-knode 와 통신하려면 먼저 identity (= Resource 의 Kind=Agent) 와 토큰이 필요하다. 그 발급 / 관리 / 권한 조회 표면.\n\nADR-006 의 BYOA (Bring Your Own Agent) 온보딩 UX 의 백엔드 토대 — 사용자가 외부 도구 (Claude Code 등) 를 mora-knode 에 연결할 때 첫 단계가 여기.\n\n토큰 발급 시 secret 은 한 번만 반환 (저장 X) — 분실 시 신규 발급."
             },
             {
               "title": "/api/agents/plans/* (PlanReview 게이트)",
-              "description": "agent 가 plan 을 제출하고, 사람이 검토 / 승인 / 수정 요청 / 거절. ADR-002 의 \"plan 은 검토 게이트 통과 후에만 다운스트림\" 원칙이 여기서 강제됨."
+              "description": "agent 가 plan 을 제출하고 사람 / Manager 가 검토 / 승인 / 수정 요청 / 거절. ADR-002 의 \"plan 은 검토 게이트 통과 후에만 다운스트림 진행\" 원칙이 여기서 강제됨.\n\nplan 제출 시 자동으로 task.Status = PlanReview 전환 + AgentPlanHistory 신규 version 생성. approve 면 task.Status = PlanApproved (work-queue 에 노출 시작). revise 면 task.Status = PlanDrafting + agent 에게 신호. reject 면 task.Status = Cancelled.\n\n검토자 큐 — Status=PlanReview 인 task 들을 한 화면에 모은 GET /pending 이 ysh 의 메인 검토 surface (Phase 2 확장 의 PlanReview UI 와 직결)."
             },
             {
               "title": "/api/agents/work-queue/* (claim/release)",
-              "description": "승인된 task 를 agent 가 가져가서 작업하는 흐름. RBAC 별로 가시 task 가 다르고, 한 task 는 한 agent 가 claim."
+              "description": "승인된 (Status=PlanApproved) task 를 agent 가 본인이 가져가서 작업하는 흐름. 한 task 는 한 agent 만 claim 할 수 있고, claim 시 임시 lock + AgentRun 자동 생성.\n\nRBAC 별 가시성 — 호출 agent 의 RBAC preset 에 따라 보이는 task 가 다름. Manager 는 모두 보고, Developer 는 AssignedRoleHint=Developer 또는 hint 없는 task 만, QA 는 QA 만. preset 별 view scope 정책은 ADR-004 §3.\n\nrelease 는 작업 중단 / 완료 시 — 기존 AgentRun 의 endedAt + status 업데이트."
             },
             {
               "title": "/api/agents/runs (실행 메트릭, optional)",
-              "description": "agent 의 실행 시작 / 종료 / 결과 / 메트릭 보고 표면. token / cost 는 보고할 수도 있고 안 할 수도 있음 (ADR-005)."
+              "description": "agent 의 실행 시작 / 종료 / 결과 / 메트릭 보고 표면.\n\nADR-005 준수가 핵심 — token 사용량과 cost 는 보고할 수도 있고 안 할 수도 있음. 보고하는 agent 는 매트릭스 / audit 에서 풍부하게 보이고, 보고 안 하는 agent 는 단순히 \"task X 가 agent Y 에 의해 작업되었음\" 까지만 mora-knode 가 안다 — 둘 다 정상 흐름.\n\nclaim 시 자동으로 run 이 생성되므로 명시적 POST 는 거의 호출 안 됨. 주로 사용되는 건 PATCH (진행 중 메트릭 업데이트) 와 종료 보고 (status: Success / Failed / Cancelled)."
             },
             {
               "title": "Program.cs 등록 + 수동 curl 테스트 체크리스트",
-              "description": "신규 endpoints 를 앱에 연결하고, 4개 묶음을 한 흐름 (identity → plan → claim → run) 으로 직접 테스트해 회귀 확인."
+              "description": "신규 endpoints 를 앱에 연결하고, 4개 묶음을 한 흐름 (identity 생성 → 토큰 발급 → plan 제출 → approve → claim → run 종료 보고) 으로 직접 호출해 회귀 확인.\n\n수동 스모크 스크립트로 정리 — 매 PR 직후 / 환경 변경 후 빠르게 \"agent 통신 흐름이 살아있는지\" 확인 가능. 추후 자동 테스트 / CI 의 토대가 될 수도 있음."
             }
           ]
         },
         {
           "title": "(검토) MCP 서버 스캐폴딩 위치 결정",
-          "description": "agent endpoints 가 안정되면 외부 도구 (claude desktop / cursor / claude code) 가 MCP 로 mora-knode 를 직접 부를 수 있게 wrapper 가 필요. 어디에 둘지 / 어떻게 패키징할지 ADR 로 결정.",
+          "description": "agent endpoints 가 안정되면 외부 도구 (Claude Desktop / Cursor / Claude Code) 가 MCP 로 mora-knode 를 직접 부를 수 있게 wrapper 가 필요.\n\nP0-1 = research/2026-04-29-ai-agent-trends-fit-review.md §8 의 가장 우선순위 P0 첫 번째 항목 (적합도 검토 결과 가장 영향 큰 후보). 위치 / 패키징 / 배포 흐름은 PR 4 의 API 표면이 안정된 후 결정 — 지금 너무 일찍 결정하면 API 변화에 따라 다시 손봐야 할 위험.\n\n산출물 — ADR-010 같은 결정 문서 + 선택한 위치에 빈 스캐폴드 + README. 실제 구현은 Phase 2 확장 의 MCP 서버 스캐폴딩 (P0-1) task 에서.",
           "currentTimeline": {"start": "2026-05-21", "end": "2026-05-21"}
         }
       ]
     },
     {
       "title": "Phase 2 — 외부 에이전트 dogfooding 시뮬레이션 (M2)",
-      "description": "ysh 가 본인 외부 도구로 4개 agent 운영하며 mora-knode API 가 실제 사용에 충분한지 + UX 가 매트릭스 PM 시나리오에 맞는지 검증. 이 단계 통과해야 mora-knode 가 \"외부 agent host\" 로 동작한다고 말할 수 있음.",
+      "description": "ysh 가 본인 외부 도구 (Claude Code 등) 로 4개 agent identity 를 운영하면서 mora-knode API 가 실제 사용에 충분한지, UX 가 매트릭스 PM 시나리오에 맞는지 검증.\n\nADR-005 준수가 핵심 — mora-knode 안에 에이전트 코드를 만들지 않음. ysh 가 자기 외부 도구로 운영하며 mora-knode API 를 사용. 이 분리가 mora-knode 가 \"에이전트 host\" 라는 카테고리 정체성의 토대 (LLM 호출 도구 X, 에이전트의 협업 호스트 O).\n\n이 단계 통과 = mora-knode 가 \"외부 agent host\" 로 동작한다고 말할 수 있는 첫 시점. Phase 2 확장 / M3 (OSS 공개) 의 전제 조건.",
       "currentTimeline": {"start": "2026-05-22", "end": "2026-06-15"},
       "assignees": [{"resource": "ysh", "allocationPercent": 100}],
       "children": [
         {
           "title": "매트릭스 리소스 매니저 가동률 합산 + 100% 경보 (옵션 C)",
-          "description": "사람과 agent 의 할당률을 한 매트릭스에서 합산해 over-allocation 을 한눈에 본다. 사람만 보던 매트릭스를 agent 에도 동등하게 적용 — mora-knode 의 매트릭스 PM 카테고리 일관성."
+          "description": "사람과 agent 의 할당률을 한 매트릭스에서 합산해 over-allocation 을 한눈에 본다.\n\n옵션 C = M1 계획 시점에 \"매트릭스를 M1 의 후속이 아니라 처음부터 사람 + agent 통합 설계로 가기\" 로 결정한 트랙 (TODO.md 참조). 사람만 보던 매트릭스를 agent 에도 동등하게 적용하는 것이 mora-knode 의 매트릭스 PM 카테고리 일관성의 핵심.\n\n100% 초과 시 errorContainer 색으로 경보 — 사람이든 agent 든 capacity 넘어 할당된 셀을 즉시 식별 가능."
         },
         {
           "title": "4개 agent identity 등록 (manager/developer/researcher/qa)",
-          "description": "역할별 4 agent 를 mora-knode 에 등록하고 토큰 발급. 시뮬레이션의 출연자 셋업."
+          "description": "역할별 4 agent 를 mora-knode 에 등록하고 토큰 발급. 시뮬레이션의 출연자 셋업.\n\n4개 RBAC preset (Manager / Reviewer / Developer / QA) 에 맞춰 각 1개씩. AgentDescription 에 어떤 모델 / 도구 / 프롬프트셋인지 자유 텍스트로 기록 (예: \"Claude Sonnet 4.6 + Code skill\") — mora-knode 는 이 정보를 강제하지 않지만 (ADR-005) 사람이 운영 시 참조."
         },
         {
           "title": "외부 도구 셋업 (Claude Code 등) — 토큰 + sub-agent 정의",
-          "description": "ysh 의 외부 도구 (Claude Code 등) 가 발급된 토큰으로 mora-knode API 를 호출할 수 있게 환경 구성. mora-knode 본 코드는 건드리지 않음 (ADR-005)."
+          "description": "ysh 의 외부 도구가 발급된 토큰으로 mora-knode API 를 호출할 수 있게 환경 구성.\n\nADR-005 준수 — mora-knode 본 코드는 건드리지 않음. 외부 도구의 sub-agent 정의 (예: .claude/agents/manager.md) 와 환경변수 (MORAKNODE_BASE_URL / MORAKNODE_AGENT_ID / MORAKNODE_TOKEN) 만으로 연결. docs/dogfooding/agent-operations.md 에 권장 패턴 참조 (강제 사양 X)."
         },
         {
           "title": "End-to-end 검증 시나리오 1건 (plan -> review -> approve -> develop -> 머지)",
-          "description": "task 1개를 plan 부터 머지까지 실제 4 agent + ysh 협업으로 통과시킨다. 모든 audit / status 전환 / 메트릭이 자연스럽게 흘러야 합격."
+          "description": "task 1개를 plan 부터 머지까지 실제 4 agent + ysh 협업으로 통과시킨다. 모든 audit / status 전환 / 메트릭이 자연스럽게 흘러야 합격.\n\n시나리오 흐름 — manager-01 이 plan 제출 → ysh 가 인스펙터에서 검토 → 1회 revise → v2 approve → developer-01 이 work-queue claim → 코드 작성 + PR → mora-knode 에 run 종료 보고 → 머지. 이 한 사이클 동안 모든 새 entity (AgentPlanHistory v1+v2, AgentRun) 가 기록되고 인스펙터 / 매트릭스 / change log 모두 자연스럽게 반영되어야 함.\n\n첫 사이클은 빈틈 / 마찰 발견의 보물창고 — 발견된 UX gap 은 즉시 patch."
         },
         {
           "title": "2주 시뮬레이션 운용 (5 프로젝트 / 50 태스크 목표)",
-          "description": "한 시나리오로 끝나지 않고 2주간 다수 프로젝트 / task 를 운영해 안정성과 UX 마찰을 본다. 3회 연속 성공 = 안정화 기준."
+          "description": "한 시나리오로 끝나지 않고 2주간 다수 프로젝트 / task 를 운영해 안정성과 UX 마찰을 본다.\n\n안정화 기준 — 시나리오 3회 연속 성공 (각 사이클 클린 통과 + UX 불편 없음). 실패 시 root cause 분석 → API / UI 개선 → 재실행. 이 주기를 거쳐야 mora-knode 가 실제 사용 가능 수준에 도달했다고 말할 수 있음.\n\n측정 지표 — 평균 plan-to-approve 시간, revise 횟수 평균 (낮을수록 plan 품질 좋음), agent run 성공률, ysh 가 실제로 본 작업 시간 vs PM 오버헤드 비율."
         }
       ]
     },
     {
       "title": "Phase 2 확장 — Stage 1 (M2 이후)",
-      "description": "M2 dogfooding 에서 식별된 우선순위 폴리시 + 적합도 검토 P0~P1 채택. 항목별 우선순위는 시뮬레이션 결과 따라 조정.",
+      "description": "M2 dogfooding 에서 식별된 우선순위 폴리시 + 적합도 검토 (research/2026-04-29-ai-agent-trends-fit-review.md §8) 의 P0~P1 항목 채택. 항목별 우선순위는 시뮬레이션 결과 따라 조정.\n\nP0-N / P1-N 표기 = 적합도 검토 우선순위 등급 + 항목 번호. 각각 별도 PR 단위.",
       "children": [
         {
           "title": "MCP 서버 스캐폴딩 (P0-1)",
-          "description": "외부 MCP client (claude desktop, cursor 등) 가 mora-knode API 를 도구로 직접 호출할 수 있게 한다. agent onboarding 의 진입 장벽을 환경 변수 설정 → 도구 등록 한 번으로 줄임."
+          "description": "외부 MCP client (Claude Desktop, Cursor 등) 가 mora-knode API 를 도구 (tool) 로 직접 호출할 수 있게 한다.\n\nMCP = Model Context Protocol. 표준화된 인터페이스로 LLM 클라이언트가 외부 도구를 호출. 스캐폴딩이 있으면 agent onboarding 이 \"환경변수 + 토큰 + sub-agent 정의\" 단계가 \"MCP server 등록\" 한 번으로 줄어 진입 장벽 대폭 낮아짐. Phase 1.5 의 위치 결정 task 의 후속 — 결정된 위치에 실제 MCP server 구현."
         },
         {
           "title": "워크스페이스 .claude 공통 skill (P0-2)",
-          "description": "mora-knode 운영 (task 작성 / agent 등록 / plan 검토 등) 을 NilPop 워크스페이스 공통 skill 로 추출. 다른 NilPop 프로젝트도 같은 흐름 재사용."
+          "description": "mora-knode 운영 (task 작성 / agent 등록 / plan 검토 등) 을 NilPop 워크스페이스 공통 skill 로 추출.\n\n위치 — NilPop 루트의 .claude/skills/ (mora-knode 가 아닌 NilPop 전체 공통). 다른 NilPop 프로젝트도 같은 흐름 재사용 가능. 예: \"새 task 를 in-app 에 시드하는 skill\", \"agent 새로 등록하는 skill\" 등 ysh 가 자주 반복하는 흐름을 skill 화."
         },
         {
           "title": "Conventional Commit 검증 hook (P0-3)",
-          "description": "CLAUDE.md 의 Conventional Commits 규약을 commit-msg hook 으로 강제. 자동 changelog / 일관 히스토리 토대."
+          "description": "CLAUDE.md 의 Conventional Commits 규약 (`<type>(<scope>): <subject>`) 을 commit-msg hook 으로 강제.\n\n자동 changelog / 일관된 히스토리 / dogfooding 시뮬레이션의 audit 가독성 모두 conventional commit 위에서 동작. 사람이든 agent 든 머지 직전에 자동 검증 — 어기면 commit 거부."
         },
         {
           "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐 (P1-5)",
-          "description": "PlanReview status task 들이 한 화면에 모이는 검토 큐. agent 가 늘어날수록 ysh 의 메인 surface 가 됨."
+          "description": "PlanReview status 인 task 들이 한 화면에 모이는 검토 큐.\n\nADR-002 의 승인 게이트가 UI 상에서 명시적으로 보이는 것이 핵심 — agent 가 늘어날수록 ysh 의 메인 작업 surface 가 됨. 사이드바의 \"Plans\" 섹션이 현재 placeholder (Coming) — 이 PR 로 실제 채움. 각 행에 plan 본문 미리보기 + approve / revise / reject 빠른 액션."
         },
         {
           "title": "revision 횟수 가시화 (P1-6)",
-          "description": "agent 의 plan 품질 (재시도 횟수) 을 인스펙터와 간트에서 한눈에. 자주 revise 되는 agent / task 패턴 추적."
+          "description": "agent 의 plan 품질 (재시도 횟수) 을 인스펙터와 간트에서 한눈에.\n\n자주 revise 되는 task / agent 패턴이 발견되면 — 해당 agent 의 prompt / context 가 부족하거나 task description 이 불명확. 이 시그널로 Context Engine (P1-7) 또는 description 가이드 개선 같은 후속 작업 우선순위 결정."
         },
         {
           "title": "Context Engine 최소 버전 (P1-7)",
-          "description": "agent 가 plan 제출할 때 mora-knode 가 자동으로 관련 context (인접 task / 변경 이력 / 마일스톤) 를 첨부해 plan 품질을 끌어올린다. 첫 버전은 단순 모음."
+          "description": "agent 가 plan 제출 / work-queue claim 시점에 mora-knode 가 자동으로 관련 context 를 첨부해서 plan 품질을 끌어올린다.\n\n현재 agent 는 task 본문만 보고 plan 작성 — 인접 task / 관련 ADR / 변경 이력 / 코드 위치 등을 모르면 헛다리 plan 가능 (revision cycle 증가). Context Engine 은 mora-knode 가 알고 있는 관련 정보 (parent task, sibling titles, 최근 ChangeLog, 관련 마일스톤) 를 자동으로 묶어 첨부. 첫 버전은 단순 모음, 추후 코드 스니펫 / ADR 본문 / 인접 프로젝트 연결로 확장."
         },
         {
           "title": "PR 5 (Flutter) — Plan History / Runs / 매트릭스 agent 아이콘 / Agent 관리 화면 (ADR-006, 5분 셋업 UX)",
-          "description": "agent 관련 모든 UI surface 정리. 특히 신규 agent 가 5분 안에 work-queue 호출 가능하도록 셋업 UX 단축 (ADR-006 BYOA)."
+          "description": "agent 관련 모든 UI surface 를 한 PR 로 정리.\n\n구성 — 인스펙터에 Plan History 탭 (versioned plan 목록 + diff), 인스펙터에 Runs 탭 (실행 이력 + token / cost optional 표시), 매트릭스에 Kind=Agent 행 별도 색상 + 아이콘, 사이드바 Agent 관리 화면.\n\nADR-006 BYOA 의 5분 셋업 목표 — 신규 agent 를 등록 (form) → 토큰 발급 (1회 표시 + 클립보드) → 환경변수 자동 generator (Claude Code / Cursor / Python / curl 4가지 포맷) → work-queue 호출 가능 까지 5분 안에. 첫 사용자가 좌절 없이 mora-knode 와 외부 도구를 연결할 수 있는 진입 흐름."
         },
         {
           "title": "Human-in-the-loop 알림 (Slack / 이메일)",
-          "description": "agent 가 plan 제출 / 실행 실패 / 마감 임박 등 ysh 가 알아야 할 이벤트를 Slack / 이메일로 푸시. ysh 가 mora-knode 에 상시 떠 있지 않아도 됨."
+          "description": "agent 가 plan 제출 / 실행 실패 / 마감 임박 등 ysh 가 알아야 할 이벤트를 Slack / 이메일로 푸시.\n\nysh 가 mora-knode 에 상시 떠 있지 않아도 검토 / 응답 가능 — 운영 부담 감소. 첫 채널은 Slack (incoming webhook 으로 가장 빠른 셋업)."
         },
         {
           "title": "docker/ — backend.Dockerfile + docker-compose.yml (orchestrator 없음, ADR-005)",
-          "description": "self-hosted 배포의 토대 — 다른 환경에서 docker compose up 한 번으로 mora-knode 전체 (mongo + backend) 띄움. orchestrator 컨테이너는 없음 (ADR-005)."
+          "description": "self-hosted 배포의 토대. 다른 환경에서 docker compose up 한 번으로 mora-knode 전체 (mongo + backend) 띄움.\n\nADR-005 준수 — orchestrator 컨테이너 없음. mora-knode 자체엔 LLM 호출 코드가 없으므로 Python / SDK / 모델 키 같은 게 들어간 컨테이너를 패키징하지 않음. 외부 agent 는 사용자가 본인 환경에서 운영."
         },
         {
           "title": "docker compose up 으로 mongo + backend end-to-end 검증",
-          "description": "빈 환경에서 docker compose up 만으로 task 생성 / 편집까지 통과하는지 확인. M3 OSS 공개 직전의 self-hosted 검증."
+          "description": "빈 환경에서 docker compose up 만으로 task 생성 / 편집까지 통과하는지 확인.\n\nM3 OSS 공개 직전의 self-hosted 검증 — ysh 가 본인 노트북에서만 동작하는 게 아니라 다른 환경에서도 잘 시작되는지. Auto-seed (한국 공휴일) / 인스펙터 / 매트릭스 모두 정상 동작 확인."
         }
       ]
     },
     {
       "title": "프로젝트 정렬 순서 사용자 지정",
-      "description": "사이드바 프로젝트 목록 순서를 사용자가 직접 정할 수 있게 한다. 자주 보는 프로젝트를 위로 올려 항상 한 클릭에 도달.",
+      "description": "사이드바 프로젝트 목록 순서를 사용자가 직접 정할 수 있게 한다.\n\n현재는 createdAt 또는 알파벳 순 고정이라 사용자 작업 빈도와 무관. 규모가 늘어날수록 \"자주 보는 5개\" 가 사이드바 가운데 / 아래로 밀려 클릭 효율 떨어짐. 신규 프로젝트는 가장 아래에 추가되고, 기존 항목은 사용자가 명시적으로 위치 조정한 순서가 영구 저장됨.",
       "status": "NotStarted"
     },
     {
       "title": "프로젝트 즐겨찾기 / 핀",
-      "description": "특히 중요한 프로젝트에 별표 핀을 달아 사이드바 상단 고정. 정렬 순서와는 별개로 \"지금 가장 보는 것\" 을 분리 노출.",
+      "description": "특히 중요한 프로젝트에 별표 핀을 달아 사이드바 상단 고정.\n\n정렬 순서 (위 task) 와는 별개의 차원 — \"전반적인 정렬\" 은 자주 안 바뀌지만 \"지금 가장 보는 것\" 은 주 단위로 바뀜. 핀은 그 단기 우선순위를 즉시 반영. 정렬 시 핀된 것이 항상 위, 그 다음 SortOrder.",
       "status": "NotStarted"
     }
   ]

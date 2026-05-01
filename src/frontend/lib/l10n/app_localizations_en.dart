@@ -325,10 +325,13 @@ class AppL10nEn extends AppL10n {
   String get sortBy => 'Sort';
 
   @override
-  String get sortKeyDefault => 'Default';
+  String get sortAddStep => 'Add sort';
 
   @override
   String get sortKeyPriority => 'Priority';
+
+  @override
+  String get sortKeyStartDate => 'Start date';
 
   @override
   String get sortKeyDueDate => 'Due date';
@@ -337,10 +340,28 @@ class AppL10nEn extends AppL10n {
   String get sortKeyStatus => 'Status';
 
   @override
-  String get sortAscending => 'Ascending';
+  String get sortPriorityUrgentFirst => 'Urgent first';
 
   @override
-  String get sortDescending => 'Descending';
+  String get sortPriorityUnsetFirst => 'Unset first';
+
+  @override
+  String get sortStartDateEarliestFirst => 'Earliest start first';
+
+  @override
+  String get sortStartDateLatestFirst => 'Latest start first';
+
+  @override
+  String get sortDueDateSoonestFirst => 'Soonest first';
+
+  @override
+  String get sortDueDateLatestFirst => 'Latest first';
+
+  @override
+  String get sortStatusActiveFirst => 'Active first';
+
+  @override
+  String get sortStatusDoneFirst => 'Done first';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

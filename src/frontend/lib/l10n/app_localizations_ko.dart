@@ -322,10 +322,13 @@ class AppL10nKo extends AppL10n {
   String get sortBy => '정렬';
 
   @override
-  String get sortKeyDefault => '기본';
+  String get sortAddStep => '정렬 추가';
 
   @override
   String get sortKeyPriority => '우선순위';
+
+  @override
+  String get sortKeyStartDate => '시작일';
 
   @override
   String get sortKeyDueDate => '마감일';
@@ -334,10 +337,28 @@ class AppL10nKo extends AppL10n {
   String get sortKeyStatus => '상태';
 
   @override
-  String get sortAscending => '오름차순';
+  String get sortPriorityUrgentFirst => '긴급 먼저';
 
   @override
-  String get sortDescending => '내림차순';
+  String get sortPriorityUnsetFirst => '미설정 먼저';
+
+  @override
+  String get sortStartDateEarliestFirst => '이른 시작 먼저';
+
+  @override
+  String get sortStartDateLatestFirst => '늦은 시작 먼저';
+
+  @override
+  String get sortDueDateSoonestFirst => '임박 먼저';
+
+  @override
+  String get sortDueDateLatestFirst => '여유 먼저';
+
+  @override
+  String get sortStatusActiveFirst => '활성 먼저';
+
+  @override
+  String get sortStatusDoneFirst => '종료 먼저';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

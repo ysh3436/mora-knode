@@ -131,7 +131,29 @@ int _defaultCompare(TaskHierarchyNode a, TaskHierarchyNode b) {
 }
 
 /// Sort key shared by the tasks workspace (List + Gantt + Calendar).
-enum TaskSortKey { defaultOrder, priority, dueDate, status }
+/// Only "real" keys live here — the implicit fallback (creation order /
+/// hierarchy position) is expressed by an empty sort chain, not by an
+/// enum value.
+enum TaskSortKey { priority, startDate, dueDate, status }
+
+/// One step in a multi-level (Notion-style) sort. The chain is evaluated
+/// left-to-right; the first non-zero result wins, and `_defaultCompare`
+/// is the final tie-breaker once the chain is exhausted.
+class TaskSortStep {
+  final TaskSortKey key;
+  final bool asc;
+  const TaskSortStep(this.key, {this.asc = true});
+
+  TaskSortStep withAsc(bool v) => TaskSortStep(key, asc: v);
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TaskSortStep && other.key == key && other.asc == asc);
+
+  @override
+  int get hashCode => Object.hash(key, asc);
+}
 
 /// Hand-crafted ordering for status sort — "active first, terminal last"
 /// regardless of the underlying enum integer mapping. Lower number = more
@@ -161,14 +183,13 @@ const _priorityActiveOrder = <TaskPriority, int>{
   TaskPriority.Unset: 4,
 };
 
-/// Build a comparator for [flattenHierarchy] from the active sort key and
-/// direction. For aggregate (parent) rows the *computed* values are used
-/// so the parent's spot reflects what the user actually sees on the row.
-Comparator<TaskHierarchyNode> taskSortComparator(TaskSortKey key, {required bool asc}) {
-  int dir(int x) => asc ? x : -x;
-  switch (key) {
-    case TaskSortKey.defaultOrder:
-      return (a, b) => dir(_defaultCompare(a, b));
+/// Per-step comparator. Returns 0 on tie so the chain executor can fall
+/// through to the next step. For aggregate (parent) rows the *computed*
+/// values are used so the parent's spot reflects what the user actually
+/// sees on the row.
+Comparator<TaskHierarchyNode> _stepComparator(TaskSortStep step) {
+  int dir(int x) => step.asc ? x : -x;
+  switch (step.key) {
     case TaskSortKey.priority:
       // Use _priorityActiveOrder so ASC means "most urgent first" — the
       // Dart enum's declaration index runs the opposite direction from
@@ -177,8 +198,19 @@ Comparator<TaskHierarchyNode> taskSortComparator(TaskSortKey key, {required bool
       return (a, b) {
         final pa = _priorityActiveOrder[a.hasChildren ? a.computedPriority : a.priority] ?? 99;
         final pb = _priorityActiveOrder[b.hasChildren ? b.computedPriority : b.priority] ?? 99;
-        if (pa != pb) return dir(pa.compareTo(pb));
-        return dir(_defaultCompare(a, b));
+        return dir(pa.compareTo(pb));
+      };
+    case TaskSortKey.startDate:
+      return (a, b) {
+        // Aggregate parents use the union start (computed); leaves use
+        // their own current timeline start. Tasks without a start date
+        // drop to the bottom regardless of direction.
+        final sa = (a.hasChildren ? a.computedCurrentTimeline.start : a.currentTimeline.start);
+        final sb = (b.hasChildren ? b.computedCurrentTimeline.start : b.currentTimeline.start);
+        if (sa == null && sb == null) return 0;
+        if (sa == null) return 1;
+        if (sb == null) return -1;
+        return dir(sa.compareTo(sb));
       };
     case TaskSortKey.dueDate:
       return (a, b) {
@@ -187,12 +219,10 @@ Comparator<TaskHierarchyNode> taskSortComparator(TaskSortKey key, {required bool
         // bottom regardless of direction.
         final ea = (a.hasChildren ? a.computedCurrentTimeline.end : a.currentTimeline.end);
         final eb = (b.hasChildren ? b.computedCurrentTimeline.end : b.currentTimeline.end);
-        if (ea == null && eb == null) return _defaultCompare(a, b);
+        if (ea == null && eb == null) return 0;
         if (ea == null) return 1;
         if (eb == null) return -1;
-        final c = ea.compareTo(eb);
-        if (c != 0) return dir(c);
-        return dir(_defaultCompare(a, b));
+        return dir(ea.compareTo(eb));
       };
     case TaskSortKey.status:
       return (a, b) {
@@ -200,8 +230,24 @@ Comparator<TaskHierarchyNode> taskSortComparator(TaskSortKey key, {required bool
         final sb = b.hasChildren ? b.computedStatus : b.status;
         final ra = _statusActiveOrder[sa] ?? 99;
         final rb = _statusActiveOrder[sb] ?? 99;
-        if (ra != rb) return dir(ra.compareTo(rb));
-        return dir(_defaultCompare(a, b));
+        return dir(ra.compareTo(rb));
       };
   }
+}
+
+/// Build a comparator for [flattenHierarchy] from a Notion-style sort
+/// chain. Empty chain → falls through to [_defaultCompare] (creation /
+/// hierarchy order). Otherwise each step is tried in turn; the first
+/// non-zero result wins, and ties at the end of the chain still defer
+/// to [_defaultCompare] for stability.
+Comparator<TaskHierarchyNode> taskSortComparator(List<TaskSortStep> chain) {
+  if (chain.isEmpty) return _defaultCompare;
+  final cmps = chain.map(_stepComparator).toList(growable: false);
+  return (a, b) {
+    for (final c in cmps) {
+      final r = c(a, b);
+      if (r != 0) return r;
+    }
+    return _defaultCompare(a, b);
+  };
 }

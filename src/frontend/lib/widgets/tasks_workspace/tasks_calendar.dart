@@ -12,10 +12,12 @@ import '../../models/task_item.dart';
 import '../../models/work_calendar.dart';
 import '../../state/providers.dart';
 
-/// Shared Korean weekday/holiday day-text color rule. Holiday wins over
-/// weekday so a holiday-on-Saturday still reads red.
+/// Shared Korean weekday/holiday day-text color rule. Holiday-kind entries
+/// win over weekday so a holiday-on-Saturday still reads red. Observance-
+/// kind entries (절기·기념일) don't affect the date color — only the label.
 Color? _koreanDayColor(DateTime date, Map<int, Holiday> holidays) {
-  if (holidays.containsKey(holidayKey(date))) return const Color(0xFFE53935);
+  final h = holidays[holidayKey(date)];
+  if (h != null && h.kind == HolidayKind.holiday) return const Color(0xFFE53935);
   if (date.weekday == DateTime.sunday) return const Color(0xFFE53935);
   if (date.weekday == DateTime.saturday) return const Color(0xFF1976D2);
   return null;
@@ -293,7 +295,9 @@ class _MonthCell extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontSize: 10,
-                        color: const Color(0xFFE53935),
+                        color: holiday.kind == HolidayKind.holiday
+                            ? const Color(0xFFE53935)
+                            : theme.colorScheme.outline,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -602,7 +606,9 @@ class _WeekHeaderRow extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: theme.textTheme.bodySmall?.copyWith(
                                 fontSize: 10,
-                                color: const Color(0xFFE53935),
+                                color: holiday.kind == HolidayKind.holiday
+                                    ? const Color(0xFFE53935)
+                                    : theme.colorScheme.outline,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

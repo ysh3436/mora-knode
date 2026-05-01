@@ -1134,11 +1134,14 @@ class _GanttHeaderPainter extends CustomPainter {
     }
   }
 
-  /// Korean calendar coloring: holiday and Sunday → red, Saturday → blue.
-  /// Holiday wins over weekday so a holiday-on-Saturday still reads red.
+  /// Korean calendar coloring: holiday-kind entries and Sunday → red,
+  /// Saturday → blue. Holiday wins over weekday so a holiday-on-Saturday
+  /// still reads red. Observance-kind entries (절기·기념일) don't tint
+  /// the date itself — only the hover tooltip / label is shown elsewhere.
   Color _dayColor(DateTime date) {
     final key = date.year * 10000 + date.month * 100 + date.day;
-    if (holidays.containsKey(key)) return palette.holiday;
+    final h = holidays[key];
+    if (h != null && h.kind == HolidayKind.holiday) return palette.holiday;
     if (date.weekday == DateTime.sunday) return palette.holiday;
     if (date.weekday == DateTime.saturday) return palette.saturday;
     return palette.text;

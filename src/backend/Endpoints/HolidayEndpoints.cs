@@ -32,6 +32,7 @@ public static class HolidayEndpoints
                         sourceId = e.SourceId,
                         sourceName = s.Name,
                         colorHex = s.ColorHex,
+                        kind = s.Kind,
                     };
                 });
             return Results.Ok(result);

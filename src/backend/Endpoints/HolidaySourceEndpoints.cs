@@ -117,6 +117,7 @@ public static class HolidaySourceEndpoints
                 Name = preset.Name,
                 Url = preset.Url,
                 Enabled = true,
+                Kind = HolidayKind.Holiday,
             }, ct);
             meta.HolidaysAutoSeeded = true;
             await metaRepo.UpsertAsync(meta, ct);

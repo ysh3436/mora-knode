@@ -4,6 +4,17 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace MoraKnode.Domain;
 
 /// <summary>
+/// 구독이 어떤 종류의 일자를 공급하는지 — 렌더링 분기에 사용된다.
+/// Holiday 는 빨강 셀 + 빨강 라벨 (휴무일 의미), Observance 는 셀 색은
+/// 그대로 두고 회색 라벨만 (절기·기념일·표시만 하는 일자).
+/// </summary>
+public enum HolidayKind
+{
+    Holiday = 0,
+    Observance = 1,
+}
+
+/// <summary>
 /// User-configured iCalendar (.ics) subscription that supplies holiday /
 /// non-working-day data to the gantt + calendar views. Multiple sources can
 /// be active at once (e.g. legal Korean holidays, company workshops, target
@@ -26,6 +37,10 @@ public class HolidaySource
     public string? ColorHex { get; set; }
 
     public bool Enabled { get; set; } = true;
+
+    /// <summary>Holiday (휴무일·빨강) vs Observance (절기·기념일·표시만).</summary>
+    [BsonRepresentation(BsonType.String)]
+    public HolidayKind Kind { get; set; } = HolidayKind.Holiday;
 
     public DateTime? LastFetchedAt { get; set; }
     /// <summary>Last fetch error, null when the most recent fetch succeeded.</summary>

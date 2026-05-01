@@ -25,7 +25,7 @@ public class HolidaySourceRepository
     }
 
     /// <summary>
-    /// Patch-style update — only Name / Url / ColorHex / Enabled are
+    /// Patch-style update — Name / Url / ColorHex / Enabled / Kind are
     /// updatable. Cache + LastFetchedAt are managed by the fetcher.
     /// </summary>
     public async Task<HolidaySource?> UpdateAsync(string id, HolidaySource patch, CancellationToken ct = default)
@@ -36,6 +36,7 @@ public class HolidaySourceRepository
         if (!string.IsNullOrWhiteSpace(patch.Url)) existing.Url = patch.Url;
         existing.ColorHex = patch.ColorHex;
         existing.Enabled = patch.Enabled;
+        existing.Kind = patch.Kind;
         existing.UpdatedAt = DateTime.UtcNow;
         await _ctx.HolidaySources.ReplaceOneAsync(s => s.Id == id, existing, cancellationToken: ct);
         return existing;

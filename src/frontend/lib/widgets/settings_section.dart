@@ -55,7 +55,9 @@ class SettingsSection extends ConsumerWidget {
             const SizedBox(height: 24),
             const _WorkCalendarEditor(),
             const SizedBox(height: 32),
-            const _HolidaySourcesEditor(),
+            const _HolidaySourcesEditor(kind: HolidayKind.holiday),
+            const SizedBox(height: 24),
+            const _HolidaySourcesEditor(kind: HolidayKind.observance),
           ],
         ],
       ),
@@ -336,9 +338,9 @@ class _TimeField extends StatelessWidget {
 }
 
 /// One-click presets so users don't have to look up well-known .ics URLs.
-/// Currently shipping just the Google Korean Holidays feed; add more
-/// (US/Japan/근로자의 날 self-hosted) as we identify trustworthy sources.
-const _holidayPresets = <({String name, String url})>[
+/// Holiday-section presets cover legal public holidays for major locales.
+/// Add more as we identify trustworthy public feeds.
+const _holidayPresetsHoliday = <({String name, String url})>[
   (
     name: '한국 공휴일 (Google)',
     url:
@@ -346,13 +348,40 @@ const _holidayPresets = <({String name, String url})>[
   ),
 ];
 
-/// Settings section for managing iCalendar holiday subscriptions. Lists each
-/// source with last-fetch status, supports add (via preset or custom URL),
-/// edit (rename, recolor, enable toggle), delete, and on-demand refresh.
-/// Backend fetches each .ics on add + on-demand and exposes the merged
-/// result via /api/holidays for the gantt + calendar to render.
+/// Observance presets — 절기·기념일 등 표시 전용. 사용자가 본인 GitHub Pages
+/// 등에 .ics 호스팅 후 일반 추가 흐름으로 등록하는 게 기본 시나리오라 현재
+/// preset 비어있음. 신뢰할 만한 공개 .ics 가 확인되면 추가.
+const _holidayPresetsObservance = <({String name, String url})>[];
+
+/// Settings section for managing iCalendar holiday subscriptions. One
+/// instance per [HolidayKind] — the kind determines section title, default
+/// kind for new subscriptions added here, list filter, and which preset
+/// chips show. Lists each source with last-fetch status, supports add
+/// (via preset or custom URL), edit (rename, change URL), delete, and
+/// on-demand refresh. Backend fetches each .ics on add + on-demand and
+/// exposes the merged result via /api/holidays for the gantt + calendar.
 class _HolidaySourcesEditor extends ConsumerWidget {
-  const _HolidaySourcesEditor();
+  final HolidayKind kind;
+  const _HolidaySourcesEditor({required this.kind});
+
+  bool get _isHoliday => kind == HolidayKind.holiday;
+
+  String get _title => _isHoliday ? '공휴일 / 휴무일 구독' : '절기 / 기념일 표시 구독';
+
+  IconData get _icon => _isHoliday ? Icons.calendar_month : Icons.event_note;
+
+  String get _hint => _isHoliday
+      ? '.ics 캘린더 URL을 등록하면 그 일정의 휴일/기념일이 간트와 캘린더에 빨간색으로 표시됩니다. '
+          '회사·국가·팀별로 여러 개 추가 가능.'
+      : '.ics URL을 등록하면 셀 색상은 그대로 두고 회색 라벨로만 표시됩니다. '
+          '24절기, 회사 기념일 등 휴무는 아니지만 표시하고 싶은 일자.';
+
+  String get _emptyHint => _isHoliday
+      ? '아래 preset 으로 한 번에 추가하거나 "구독 추가" 버튼으로 직접 URL을 입력하세요.'
+      : '"구독 추가" 버튼으로 .ics URL을 직접 등록하세요. (예: 본인 GitHub Pages 호스팅 .ics)';
+
+  List<({String name, String url})> get _presets =>
+      _isHoliday ? _holidayPresetsHoliday : _holidayPresetsObservance;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -370,9 +399,9 @@ class _HolidaySourcesEditor extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.calendar_month, size: 18, color: theme.colorScheme.primary),
+              Icon(_icon, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
-              Text('공휴일 / 휴무일 구독', style: theme.textTheme.titleMedium),
+              Text(_title, style: theme.textTheme.titleMedium),
               const Spacer(),
               FilledButton.tonalIcon(
                 icon: const Icon(Icons.add, size: 16),
@@ -383,8 +412,7 @@ class _HolidaySourcesEditor extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '.ics 캘린더 URL을 등록하면 그 일정의 휴일/기념일이 간트와 캘린더에 표시됩니다. '
-            '회사·국가·팀별로 여러 개 추가 가능.',
+            _hint,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
           ),
           const SizedBox(height: 16),
@@ -400,7 +428,8 @@ class _HolidaySourcesEditor extends ConsumerWidget {
                 style: TextStyle(color: theme.colorScheme.error),
               ),
             ),
-            data: (list) {
+            data: (full) {
+              final list = full.where((s) => s.kind == kind).toList();
               if (list.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.all(24),
@@ -416,7 +445,7 @@ class _HolidaySourcesEditor extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '아래 preset 으로 한 번에 추가하거나 "구독 추가" 버튼으로 직접 URL을 입력하세요.',
+                        _emptyHint,
                         style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
                         textAlign: TextAlign.center,
                       ),
@@ -431,24 +460,26 @@ class _HolidaySourcesEditor extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 16),
-          Text('빠른 추가', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 6),
-          Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: [
-              for (final preset in _holidayPresets)
-                ActionChip(
-                  avatar: const Icon(Icons.add, size: 14),
-                  label: Text(preset.name),
-                  onPressed: () => _addSource(
-                    ref,
-                    HolidaySource(name: preset.name, url: preset.url),
+          if (_presets.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('빠른 추가', style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final preset in _presets)
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 14),
+                    label: Text(preset.name),
+                    onPressed: () => _addSource(
+                      ref,
+                      HolidaySource(name: preset.name, url: preset.url, kind: kind),
+                    ),
                   ),
-                ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -460,15 +491,15 @@ class _HolidaySourcesEditor extends ConsumerWidget {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('새 .ics 구독 추가'),
+        title: Text(_isHoliday ? '새 공휴일 구독 추가' : '새 표시 구독 추가'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameC,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: '이름',
-                hintText: '예: 우리회사 휴무일',
+                hintText: _isHoliday ? '예: 우리회사 휴무일' : '예: 24절기',
               ),
               autofocus: true,
             ),
@@ -492,6 +523,7 @@ class _HolidaySourcesEditor extends ConsumerWidget {
                 HolidaySource(
                   name: nameC.text.trim().isEmpty ? urlC.text.trim() : nameC.text.trim(),
                   url: urlC.text.trim(),
+                  kind: kind,
                 ),
               );
               Navigator.pop(ctx);

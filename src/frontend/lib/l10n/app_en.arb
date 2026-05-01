@@ -50,6 +50,11 @@
   "languageKorean": "한국어",
   "languageEnglish": "English",
 
+  "settingsTheme": "Theme",
+  "themeSystem": "System",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+
   "settingsAdminOnlyTitle": "Settings are visible to admin roles only.",
   "settingsAdminOnlyHint": "Switch to the ysh user from the sidebar to edit WorkCalendar and other org-level settings.",
   "settingsWorkCalendar": "Work Calendar",

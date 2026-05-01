@@ -49,6 +49,11 @@
   "languageKorean": "한국어",
   "languageEnglish": "English",
 
+  "settingsTheme": "테마",
+  "themeSystem": "시스템",
+  "themeLight": "라이트",
+  "themeDark": "다크",
+
   "settingsAdminOnlyTitle": "설정은 관리자 권한에서만 표시됩니다.",
   "settingsAdminOnlyHint": "사이드바에서 ysh 사용자로 전환하면 WorkCalendar 등 조직 설정을 편집할 수 있습니다.",
   "settingsWorkCalendar": "Work Calendar",

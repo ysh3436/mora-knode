@@ -126,6 +126,18 @@ class AppL10nKo extends AppL10n {
   String get languageEnglish => 'English';
 
   @override
+  String get settingsTheme => '테마';
+
+  @override
+  String get themeSystem => '시스템';
+
+  @override
+  String get themeLight => '라이트';
+
+  @override
+  String get themeDark => '다크';
+
+  @override
   String get settingsAdminOnlyTitle => '설정은 관리자 권한에서만 표시됩니다.';
 
   @override

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,6 +32,11 @@ final inspectorWidthProvider = StateProvider<double>((_) => 520);
 /// settings panel exposes a switcher. null would let MaterialApp fall back to
 /// the platform locale, which we intentionally avoid here.
 final localeProvider = StateProvider<Locale>((_) => const Locale('ko'));
+
+/// Active color scheme. Default Dark for long dev sessions (눈 피로 완화).
+/// Sidebar exposes a quick switcher next to the language dropdown. Not yet
+/// persisted across reloads — same memory-only pattern as [localeProvider].
+final themeModeProvider = StateProvider<ThemeMode>((_) => ThemeMode.dark);
 
 enum AppSection { myWork, allWork, projects, resources, matrix, plans, audit, agents, settings }
 

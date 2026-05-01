@@ -489,7 +489,8 @@ class _GanttChartState extends State<GanttChart> {
                                     final viewport = ready
                                         ? _hHeaderCtrl.position.viewportDimension
                                         : effectiveTimelineWidth;
-                                    return CustomPaint(
+                                    return RepaintBoundary(
+                                      child: CustomPaint(
                                       painter: _GanttHeaderPainter(
                                         from: range.from,
                                         to: range.to,
@@ -505,6 +506,7 @@ class _GanttChartState extends State<GanttChart> {
                                         visibleToPx: off + viewport,
                                         holidays: widget.holidays,
                                       ),
+                                    ),
                                     );
                                   },
                                 ),
@@ -569,12 +571,14 @@ class _GanttChartState extends State<GanttChart> {
                           SizedBox(
                             width: GanttChart.labelWidth,
                             height: bodyHeight,
-                            child: _LabelGutter(
-                              rows: widget.rows,
-                              selectedId: widget.selectedId,
-                              onRowTap: widget.onRowTap,
-                              collapsed: widget.collapsed,
-                              onToggleCollapse: widget.onToggleCollapse,
+                            child: RepaintBoundary(
+                              child: _LabelGutter(
+                                rows: widget.rows,
+                                selectedId: widget.selectedId,
+                                onRowTap: widget.onRowTap,
+                                collapsed: widget.collapsed,
+                                onToggleCollapse: widget.onToggleCollapse,
+                              ),
                             ),
                           ),
                           Expanded(
@@ -596,18 +600,20 @@ class _GanttChartState extends State<GanttChart> {
                                       final viewport = ready
                                           ? _hBodyCtrl.position.viewportDimension
                                           : effectiveTimelineWidth;
-                                      return CustomPaint(
-                                        painter: _GanttBodyPainter(
-                                          rows: widget.rows,
-                                          from: range.from,
-                                          to: range.to,
-                                          cellDays: _cellDays,
-                                          cellWidth: _cellWidth,
-                                          rowHeight: GanttChart.rowHeight,
-                                          palette: palette,
-                                          today: today,
-                                          visibleFromPx: off,
-                                          visibleToPx: off + viewport,
+                                      return RepaintBoundary(
+                                        child: CustomPaint(
+                                          painter: _GanttBodyPainter(
+                                            rows: widget.rows,
+                                            from: range.from,
+                                            to: range.to,
+                                            cellDays: _cellDays,
+                                            cellWidth: _cellWidth,
+                                            rowHeight: GanttChart.rowHeight,
+                                            palette: palette,
+                                            today: today,
+                                            visibleFromPx: off,
+                                            visibleToPx: off + viewport,
+                                          ),
                                         ),
                                       );
                                     },
@@ -985,27 +991,35 @@ class _Palette {
     required this.holiday,
   });
 
+  // Palette is identified entirely by the input ThemeData. Caching by theme
+  // identity means painter shouldRepaint can use simple `!=` comparison —
+  // without this, every parent rebuild produces a fresh _Palette instance
+  // and the gantt repaints unnecessarily.
+  static final Map<ThemeData, _Palette> _cache = {};
+
   factory _Palette.from(ThemeData theme) {
-    final cs = theme.colorScheme;
-    return _Palette(
-      grid: theme.dividerColor.withValues(alpha: 0.3),
-      header: cs.surfaceContainerHighest,
-      origin: cs.outline.withValues(alpha: 0.45),
-      current: cs.primary.withValues(alpha: 0.85),
-      real: cs.tertiary.withValues(alpha: 0.95),
-      summary: cs.secondary.withValues(alpha: 0.75),
-      text: cs.onSurface,
-      textMuted: cs.outline,
-      // Soft primary tint covers the full day-column under today — same idiom
-      // as GitHub Projects / Linear. Distinct from current/real bar fills
-      // (which use the same primary at higher opacity).
-      today: cs.primary.withValues(alpha: 0.14),
-      // Korean calendar idiom: blue for Saturday, red for Sunday + holidays.
-      // Picked direct CSS colors instead of theme channels so the cue stays
-      // recognizable even under tinted theme variants.
-      saturday: const Color(0xFF1976D2),
-      holiday: const Color(0xFFE53935),
-    );
+    return _cache.putIfAbsent(theme, () {
+      final cs = theme.colorScheme;
+      return _Palette(
+        grid: theme.dividerColor.withValues(alpha: 0.3),
+        header: cs.surfaceContainerHighest,
+        origin: cs.outline.withValues(alpha: 0.45),
+        current: cs.primary.withValues(alpha: 0.85),
+        real: cs.tertiary.withValues(alpha: 0.95),
+        summary: cs.secondary.withValues(alpha: 0.75),
+        text: cs.onSurface,
+        textMuted: cs.outline,
+        // Soft primary tint covers the full day-column under today — same idiom
+        // as GitHub Projects / Linear. Distinct from current/real bar fills
+        // (which use the same primary at higher opacity).
+        today: cs.primary.withValues(alpha: 0.14),
+        // Korean calendar idiom: blue for Saturday, red for Sunday + holidays.
+        // Picked direct CSS colors instead of theme channels so the cue stays
+        // recognizable even under tinted theme variants.
+        saturday: const Color(0xFF1976D2),
+        holiday: const Color(0xFFE53935),
+      );
+    });
   }
 }
 
@@ -1238,7 +1252,8 @@ class _GanttHeaderPainter extends CustomPainter {
       old.today != today ||
       old.visibleFromPx != visibleFromPx ||
       old.visibleToPx != visibleToPx ||
-      !identical(old.holidays, holidays);
+      !identical(old.holidays, holidays) ||
+      old.palette != palette;
 }
 
 class _GanttBodyPainter extends CustomPainter {
@@ -1356,7 +1371,8 @@ class _GanttBodyPainter extends CustomPainter {
       old.visibleFromPx != visibleFromPx ||
       old.visibleToPx != visibleToPx ||
       old.cellWidth != cellWidth ||
-      old.today != today;
+      old.today != today ||
+      old.palette != palette;
 }
 
 /// Floating chip that surfaces the Korean holiday name for the cell the

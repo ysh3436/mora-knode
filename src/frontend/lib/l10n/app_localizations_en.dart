@@ -127,6 +127,18 @@ class AppL10nEn extends AppL10n {
   String get languageEnglish => 'English';
 
   @override
+  String get settingsTheme => 'Theme';
+
+  @override
+  String get themeSystem => 'System';
+
+  @override
+  String get themeLight => 'Light';
+
+  @override
+  String get themeDark => 'Dark';
+
+  @override
   String get settingsAdminOnlyTitle =>
       'Settings are visible to admin roles only.';
 

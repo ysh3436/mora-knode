@@ -28,6 +28,8 @@ class SettingsSection extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const _LanguageCard(),
+          const SizedBox(height: 16),
+          const _ThemeCard(),
           if (!isAdmin) ...[
             const SizedBox(height: 24),
             Container(
@@ -97,13 +99,86 @@ class _LanguageCard extends ConsumerWidget {
           ),
           const SizedBox(height: 12),
           SegmentedButton<String>(
+            // Fixed-width labels so the button group width stays stable when
+            // the selected language changes — otherwise the segments resize
+            // and visibly shift surrounding layout.
             segments: [
-              ButtonSegment(value: 'ko', label: Text(l.languageKorean)),
-              ButtonSegment(value: 'en', label: Text(l.languageEnglish)),
+              ButtonSegment(value: 'ko', label: SizedBox(width: 60, child: Text(l.languageKorean, textAlign: TextAlign.center))),
+              ButtonSegment(value: 'en', label: SizedBox(width: 60, child: Text(l.languageEnglish, textAlign: TextAlign.center))),
             ],
             selected: {locale.languageCode},
             onSelectionChanged: (s) =>
                 ref.read(localeProvider.notifier).state = Locale(s.first),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Theme picker. Lives in Settings (not the sidebar) because the per-frame
+/// rebuild cost during Material's animated theme transition is noticeable
+/// when the gantt is on screen — burying the toggle behind a settings click
+/// keeps that cost out of frequent paths. Default is dark for long dev
+/// sessions.
+class _ThemeCard extends ConsumerWidget {
+  const _ThemeCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l = AppL10n.of(context);
+    final mode = ref.watch(themeModeProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        border: Border.all(color: theme.dividerColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                switch (mode) {
+                  ThemeMode.system => Icons.brightness_auto,
+                  ThemeMode.light => Icons.light_mode_outlined,
+                  ThemeMode.dark => Icons.dark_mode_outlined,
+                },
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(l.settingsTheme, style: theme.textTheme.titleMedium),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<ThemeMode>(
+            // Fixed-width labels so the button group width stays stable across
+            // ko ↔ en switches (시스템/라이트/다크 vs System/Light/Dark differ
+            // enough to visibly shift surrounding layout otherwise).
+            segments: [
+              ButtonSegment(
+                value: ThemeMode.system,
+                label: SizedBox(width: 56, child: Text(l.themeSystem, textAlign: TextAlign.center)),
+                icon: const Icon(Icons.brightness_auto, size: 16),
+              ),
+              ButtonSegment(
+                value: ThemeMode.light,
+                label: SizedBox(width: 56, child: Text(l.themeLight, textAlign: TextAlign.center)),
+                icon: const Icon(Icons.light_mode_outlined, size: 16),
+              ),
+              ButtonSegment(
+                value: ThemeMode.dark,
+                label: SizedBox(width: 56, child: Text(l.themeDark, textAlign: TextAlign.center)),
+                icon: const Icon(Icons.dark_mode_outlined, size: 16),
+              ),
+            ],
+            selected: {mode},
+            onSelectionChanged: (s) =>
+                ref.read(themeModeProvider.notifier).state = s.first,
           ),
         ],
       ),

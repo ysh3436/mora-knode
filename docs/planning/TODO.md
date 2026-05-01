@@ -2,7 +2,7 @@
 
 - slug: mora-knode
 - 오너: ysh
-- 최종 수정: 2026-04-29 (외부 에이전트 host 모델로 재구성)
+- 최종 수정: 2026-05-01 (M1 진행 상황 체크포인트)
 - 관련: [../prd.md](../prd.md), [../architecture/ADR-002-manager-approval-gate.md](../architecture/ADR-002-manager-approval-gate.md), [../architecture/ADR-004-agent-identity-and-api.md](../architecture/ADR-004-agent-identity-and-api.md), [../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)
 
 ## Phase별 큰 그림
@@ -16,13 +16,25 @@
 > **Flutter 결정 (2026-04-29, [ADR-008](../architecture/ADR-008-flutter-web-desktop-only.md))**: 모든 Flutter 작업은 Flutter Web 데스크톱 사이즈 only. Windows native 제거됨. 모바일 / 앱스토어 / 반응형 / Task 코멘트는 미래 별도 ADR.
 
 ### Phase 1: MVP — M1 (2026-04-23 ~ 2026-05-07, 옵션 C 채택)
-- [ ] 프로젝트 CRUD API 완성 (ASP.NET Core + MongoDB)
-- [ ] 태스크 CRUD API (3단계 타임라인, ParentTaskId)
-- [ ] 일정 변경 로깅 (`ScheduleChangeLog` 자동 기록)
-- [ ] 간트차트 뷰 UI (Flutter 기본 바 렌더링)
-- [ ] 마일스톤 관리 (P1, 시간 되면)
+- [x] 프로젝트 CRUD API 완성 (ASP.NET Core + MongoDB) — `ProjectRepository` + `/api/projects`
+- [x] 태스크 CRUD API (3단계 타임라인, ParentTaskId) — `TaskRepository`, `/api/projects/{id}/tasks/hierarchy`
+- [x] 일정 변경 로깅 (`ScheduleChangeLog` 자동 기록) — `ChangeLogRepository`, 인스펙터 "변경 이력" 탭
+- [x] 간트차트 뷰 UI — virtual ±5y 스크롤, today highlight, holiday-aware, 일/주/월 줌, off-screen 화살표
+- [x] 마일스톤 관리 — backend CRUD (`MilestoneRepository`) + 캘린더 flag 아이콘 표시 (전용 관리 UI 는 M2 로 이동)
 - [x] **LICENSE 파일 commit** — AGPL v3 적용 완료 (2026-04-29, commit 247ef51)
 - ~~매트릭스 리소스 매니저~~ → **M2 로 이동** (옵션 C: 외부 에이전트 합산을 처음부터 통합 설계)
+
+### Phase 1 추가 완성 (계획 외 polish — dogfooding 중 누적, 2026-04-29 ~ 2026-05-01)
+- [x] i18n 도입 (ko default + en fallback) — `00069b4`
+- [x] 재사용 가능 tasks workspace (List / Gantt / Calendar 가 All work + per-project Tasks 공유) — `bc047de`
+- [x] Multi-level sticky 헤더 + 가로 스크롤 + 사이드바 fixes — `f3441ae`
+- [x] 인스펙터 (notes + 변경 이력 + 리사이즈) — `7807c75`, `f3441ae`
+- [x] Dev-mode 사용자 스위처 (`X-Dev-User-Id` 헤더) + 사이드바 RBAC visibility
+- [x] WorkCalendar 설정 (org-level singleton) + Settings UI
+- [x] 한국 캘린더 색상 (토 파랑 / 일+공휴일 빨강) + 공휴일명 표시
+- [x] .ics 캘린더 구독 시스템 — auto-seed + 편집 + 활성화 토글 + 즉시 갱신 + 다중 등록 — `4486fc5`
+- [x] Holiday / Observance kind 분리 (휴일=빨강 셀 / 절기·기념일=회색 라벨) — `a01ecd1`
+- [x] 프로젝트 페이지 탭 (Overview / Tasks / Issues / Initiatives / Documents) — `bc047de`
 
 ### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-08 ~ 2026-05-21)
 M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md)

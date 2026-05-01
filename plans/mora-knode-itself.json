@@ -1,0 +1,199 @@
+{
+  "project": {
+    "name": "mora-knode itself",
+    "description": "mora-knode 자체 개발을 mora-knode 로 추적 (dogfooding). docs/planning/TODO.md 의 Phase 1.5+ 항목을 in-app task 로 이관.",
+    "status": "Active"
+  },
+
+  "resources": [
+    {
+      "name": "ysh",
+      "role": "Owner / Solo dev",
+      "capacityPercent": 100,
+      "kind": "Human",
+      "rbac": "Manager"
+    }
+  ],
+
+  "milestones": [
+    {"title": "M1 마감", "date": "2026-05-07"},
+    {"title": "M1.5 마감 (Agent host 사양)", "date": "2026-05-21"},
+    {"title": "M2 시작 — dogfooding 시뮬레이션", "date": "2026-05-22"},
+    {"title": "M2 마감 (2주 시뮬레이션 완료)", "date": "2026-06-15"}
+  ],
+
+  "tasks": [
+    {
+      "title": "Phase 1.5 — 외부 에이전트 host 사양 구현",
+      "description": "M1 직후. 상세: docs/architecture/schema-integration-for-agents.md. 일정: 2026-05-08 ~ 2026-05-21.",
+      "currentTimeline": {"start": "2026-05-08", "end": "2026-05-21"},
+      "assignees": [{"resource": "ysh", "allocationPercent": 100}],
+      "children": [
+        {
+          "title": "PR 1 — Enum 확장",
+          "description": "TaskStatus 5개 추가, ResourceKind 추가. 기존 4개 enum 값 순서/정수 매핑 유지 회귀 테스트.",
+          "currentTimeline": {"start": "2026-05-08", "end": "2026-05-09"},
+          "children": [
+            {
+              "title": "TaskStatus 에 PlanDrafting/PlanReview/PlanApproved/Failed/Cancelled 추가",
+              "description": "src/backend/Domain/Enums.cs. 기존 NotStarted/InProgress/Blocked/Done 정수 매핑 0~3 유지, 신규는 4~ 부터."
+            },
+            {
+              "title": "ResourceKind { Human, Agent } — 이미 적용됨",
+              "description": "src/backend/Domain/Enums.cs 에 이미 존재. 확인만 하고 done 처리.",
+              "status": "Done"
+            },
+            {
+              "title": "Frontend TaskStatus enum 동기화 + 라벨 + 배지 색상",
+              "description": "src/frontend/lib/models/task_item.dart 등. 신규 status 5종 라벨 i18n (ko/en) 추가."
+            }
+          ]
+        },
+        {
+          "title": "PR 2 — TaskItem / Resource 필드 추가",
+          "description": "AcceptanceCriteria, GitInfo, RetryCount, LastError, AssignedRoleHint 등. Resource 측은 일부 이미 적용됨.",
+          "currentTimeline": {"start": "2026-05-10", "end": "2026-05-12"},
+          "children": [
+            {
+              "title": "TaskItem 필드 5종 추가 (AcceptanceCriteria/Git/RetryCount/LastError/AssignedRoleHint)",
+              "description": "src/backend/Domain/TaskItem.cs. 신규 value type GitInfo (src/backend/Domain/GitInfo.cs)."
+            },
+            {
+              "title": "Resource.Kind/Rbac/AgentDescription — 이미 적용됨",
+              "description": "src/backend/Domain/Resource.cs 에 이미 존재.",
+              "status": "Done"
+            },
+            {
+              "title": "MongoDB 누락 필드 null 직렬화 회귀 확인",
+              "description": "기존 데이터에 BsonDefaultValue 가 잘 작동해서 깨지지 않는지 확인."
+            },
+            {
+              "title": "Frontend TaskItem 모델 확장 + Inspector UI 에 새 필드 노출",
+              "description": "Acceptance/Git/RetryCount/LastError/RoleHint 입력/표시. Inspector 의 detail 영역 확장."
+            }
+          ]
+        },
+        {
+          "title": "PR 3 — 신규 도메인 + Repository (AgentPlanHistory, AgentRun)",
+          "description": "PlanStatus enum, ApprovedBy, Token/Cost optional. Indexes 등.",
+          "currentTimeline": {"start": "2026-05-13", "end": "2026-05-16"},
+          "children": [
+            {
+              "title": "AgentPlanHistory + PlanStatus enum 도입",
+              "description": "src/backend/Domain/AgentPlanHistory.cs. ApprovedBy 포함."
+            },
+            {
+              "title": "AgentRun (Token/Cost 모두 optional, ADR-005)",
+              "description": "src/backend/Domain/AgentRun.cs."
+            },
+            {
+              "title": "MongoContext 컬렉션 핸들 + AgentPlanRepository / AgentRunRepository",
+              "description": "src/backend/Infrastructure/."
+            },
+            {
+              "title": "인덱스 추가",
+              "description": "agentPlans {taskId:1, version:-1}, agentRuns {taskId:1, startedAt:-1}, agentRuns {agentId:1, startedAt:-1}."
+            }
+          ]
+        },
+        {
+          "title": "PR 4 — AgentEndpoints 신설",
+          "description": "Identity / 토큰 / RBAC, Plan 게이트, Work-queue, Run 메트릭. Bearer 토큰 + X-Agent-Id 헤더 (M1 placeholder, M2 실제 검증).",
+          "currentTimeline": {"start": "2026-05-17", "end": "2026-05-21"},
+          "children": [
+            {
+              "title": "/api/agents (identity / 토큰 / permissions)",
+              "description": "GET/POST/PATCH /api/agents, /tokens, /permissions."
+            },
+            {
+              "title": "/api/agents/plans/* (PlanReview 게이트)",
+              "description": "pending, {taskId}, approve, revise, reject, versions."
+            },
+            {
+              "title": "/api/agents/work-queue/* (claim/release)",
+              "description": "GET work-queue, POST claim/release."
+            },
+            {
+              "title": "/api/agents/runs (실행 메트릭, optional)",
+              "description": "POST runs - Token/Cost 포함되든 빠지든 모두 처리."
+            },
+            {
+              "title": "Program.cs 등록 + 수동 curl 테스트 체크리스트",
+              "description": "tools/agent_endpoints_smoke.sh 같은 스모크 스크립트 함께."
+            }
+          ]
+        },
+        {
+          "title": "(검토) MCP 서버 스캐폴딩 위치 결정",
+          "description": "tools/mora-knode-mcp/ vs src/mcp-server/. PR 4 의 API 표면 안정 후. 적합도 검토 P0-1.",
+          "currentTimeline": {"start": "2026-05-21", "end": "2026-05-21"}
+        }
+      ]
+    },
+    {
+      "title": "Phase 2 — 외부 에이전트 dogfooding 시뮬레이션 (M2)",
+      "description": "ysh 가 자기 외부 도구로 4개 agent identity 운영. mora-knode 안에 에이전트 코드 만들지 않음 (ADR-005). 일정: 2026-05-22 ~ 2026-06-15.",
+      "currentTimeline": {"start": "2026-05-22", "end": "2026-06-15"},
+      "assignees": [{"resource": "ysh", "allocationPercent": 100}],
+      "children": [
+        {
+          "title": "매트릭스 리소스 매니저 가동률 합산 + 100% 경보 (옵션 C)",
+          "description": "사람 + Resource.Kind=Agent 합산, Flutter UI. PR 2 직후."
+        },
+        {
+          "title": "4개 agent identity 등록 (manager/developer/researcher/qa)",
+          "description": "API 토큰 발급 + RBAC preset 매핑."
+        },
+        {
+          "title": "외부 도구 셋업 (Claude Code 등) — 토큰 + sub-agent 정의",
+          "description": "ysh 본인 워크플로. .claude/agents/manager.md 등."
+        },
+        {
+          "title": "End-to-end 검증 시나리오 1건 (plan -> review -> approve -> develop -> 머지)",
+          "description": "audit / revision 메트릭 / 간트 PlanReview 배지 확인."
+        },
+        {
+          "title": "2주 시뮬레이션 운용 (5 프로젝트 / 50 태스크 목표)",
+          "description": "안정화 = 3회 연속 성공."
+        }
+      ]
+    },
+    {
+      "title": "Phase 2 확장 — Stage 1 (M2 이후)",
+      "description": "적합도 검토 P0~P1 채택 결정 + Flutter PR 5 + 알림 + Docker.",
+      "children": [
+        {
+          "title": "MCP 서버 스캐폴딩 (P0-1)",
+          "description": "Phase 1.5 검토 항목 후속."
+        },
+        {
+          "title": "워크스페이스 .claude 공통 skill (P0-2)"
+        },
+        {
+          "title": "Conventional Commit 검증 hook (P0-3)"
+        },
+        {
+          "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐 (P1-5)"
+        },
+        {
+          "title": "revision 횟수 가시화 (P1-6)"
+        },
+        {
+          "title": "Context Engine 최소 버전 (P1-7)"
+        },
+        {
+          "title": "PR 5 (Flutter) — Plan History / Runs / 매트릭스 agent 아이콘 / Agent 관리 화면 (ADR-006, 5분 셋업 UX)"
+        },
+        {
+          "title": "Human-in-the-loop 알림 (Slack / 이메일)"
+        },
+        {
+          "title": "docker/ — backend.Dockerfile + docker-compose.yml (orchestrator 없음, ADR-005)"
+        },
+        {
+          "title": "docker compose up 으로 mongo + backend end-to-end 검증"
+        }
+      ]
+    }
+  ]
+}

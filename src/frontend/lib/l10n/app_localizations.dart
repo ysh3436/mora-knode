@@ -613,6 +613,12 @@ abstract class AppL10n {
   /// **'Not started'**
   String get taskStatusNotStarted;
 
+  /// No description provided for @taskStatusInReview.
+  ///
+  /// In en, this message translates to:
+  /// **'In review'**
+  String get taskStatusInReview;
+
   /// No description provided for @taskStatusInProgress.
   ///
   /// In en, this message translates to:
@@ -622,7 +628,7 @@ abstract class AppL10n {
   /// No description provided for @taskStatusBlocked.
   ///
   /// In en, this message translates to:
-  /// **'Blocked'**
+  /// **'On hold'**
   String get taskStatusBlocked;
 
   /// No description provided for @taskStatusDone.
@@ -631,11 +637,17 @@ abstract class AppL10n {
   /// **'Done'**
   String get taskStatusDone;
 
-  /// No description provided for @taskStatusInReview.
+  /// No description provided for @taskStatusCancelled.
   ///
   /// In en, this message translates to:
-  /// **'In review'**
-  String get taskStatusInReview;
+  /// **'Cancelled'**
+  String get taskStatusCancelled;
+
+  /// No description provided for @taskStatusDropped.
+  ///
+  /// In en, this message translates to:
+  /// **'Dropped'**
+  String get taskStatusDropped;
 
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///

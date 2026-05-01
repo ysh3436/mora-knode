@@ -306,18 +306,22 @@ class _Lane extends StatelessWidget {
 
   IconData _statusIcon(TaskStatus s) => switch (s) {
         TaskStatus.NotStarted => Icons.radio_button_unchecked,
-        TaskStatus.InProgress => Icons.timelapse,
-        TaskStatus.Blocked => Icons.block,
-        TaskStatus.Done => Icons.check_circle,
         TaskStatus.InReview => Icons.rate_review_outlined,
+        TaskStatus.InProgress => Icons.timelapse,
+        TaskStatus.Blocked => Icons.pause_circle_outline,
+        TaskStatus.Done => Icons.check_circle,
+        TaskStatus.Cancelled => Icons.cancel_outlined,
+        TaskStatus.Dropped => Icons.do_not_disturb_on_outlined,
       };
 
   Color _statusColor(ThemeData theme, TaskStatus s) => switch (s) {
         TaskStatus.NotStarted => theme.colorScheme.outline,
+        TaskStatus.InReview => theme.colorScheme.secondary,
         TaskStatus.InProgress => theme.colorScheme.primary,
         TaskStatus.Blocked => theme.colorScheme.error,
         TaskStatus.Done => theme.colorScheme.tertiary,
-        TaskStatus.InReview => theme.colorScheme.secondary,
+        TaskStatus.Cancelled => theme.colorScheme.outline,
+        TaskStatus.Dropped => theme.colorScheme.outlineVariant,
       };
 
   String _l2Range(BuildContext context, TaskHierarchyNode n) {

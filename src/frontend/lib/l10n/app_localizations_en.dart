@@ -286,16 +286,22 @@ class AppL10nEn extends AppL10n {
   String get taskStatusNotStarted => 'Not started';
 
   @override
+  String get taskStatusInReview => 'In review';
+
+  @override
   String get taskStatusInProgress => 'In progress';
 
   @override
-  String get taskStatusBlocked => 'Blocked';
+  String get taskStatusBlocked => 'On hold';
 
   @override
   String get taskStatusDone => 'Done';
 
   @override
-  String get taskStatusInReview => 'In review';
+  String get taskStatusCancelled => 'Cancelled';
+
+  @override
+  String get taskStatusDropped => 'Dropped';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

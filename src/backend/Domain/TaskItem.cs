@@ -17,6 +17,11 @@ public class TaskItem
 
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
+
+    // Persisted as the enum name (NotStarted / InReview / ...) instead of an
+    // integer so the sparse numeric values in TaskStatus can be reordered
+    // freely without breaking stored data.
+    [BsonRepresentation(BsonType.String)]
     public TaskStatus Status { get; set; } = TaskStatus.NotStarted;
 
     public Timeline OriginTimeline { get; set; } = new();

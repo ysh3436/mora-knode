@@ -9,24 +9,26 @@ public enum ProjectStatus
     Archived
 }
 
-// First four values keep their original integer mapping (0-3) so existing
-// persisted tasks deserialize without migration. InReview is the only
-// agent-host addition — generic enough to cover any "human review pending"
-// situation (ADR-002 agent plan gate, code review, QA, manager approval).
-// Other agent lifecycle moments collapse into the existing four:
-//   - drafting / approved → reuse NotStarted (no work yet) and InProgress
-//     (work begun) respectively; the agent's internal drafting state lives
-//     outside mora-knode (ADR-005).
-//   - failed → Blocked (both demand human intervention).
-//   - cancelled → Done (both are terminal; cancellation reason goes in the
-//     task description / change log).
+// Lifecycle is represented by sparse integer values so future intermediate
+// states can slot in without renumbering existing rows. Anchors at 10 / 30
+// / 50 (NotStarted / InProgress / Done); intermediate beats (InReview at
+// 20, Blocked at 40) sit between them. Terminal-but-not-Done states (51
+// Cancelled, 52 Dropped) sit just above Done to read as "alternative
+// endings" — Cancelled is an explicit decision to stop, Dropped is passive
+// abandonment / deprioritization.
+//
+// TaskItem.Status is persisted as a string (BsonRepresentation.String) so
+// these integer values are *only* a sort/order signal — changing them
+// later won't break existing data.
 public enum TaskStatus
 {
-    NotStarted,
-    InProgress,
-    Blocked,
-    Done,
-    InReview
+    NotStarted = 10,
+    InReview = 20,
+    InProgress = 30,
+    Blocked = 40,
+    Done = 50,
+    Cancelled = 51,
+    Dropped = 52
 }
 
 public enum MilestoneStatus

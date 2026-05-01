@@ -1,7 +1,7 @@
 {
   "project": {
     "name": "mora-knode itself",
-    "description": "mora-knode 자체 개발을 mora-knode 로 추적 (dogfooding). docs/planning/TODO.md 의 Phase 1.5+ 항목을 in-app task 로 이관.",
+    "description": "mora-knode 자체 개발을 mora-knode 로 추적 (dogfooding). docs/planning/TODO.md 의 Phase 1.5+ 항목을 in-app task 로 이관.\n\n작업 흐름: 본 plan JSON 이 시드 + 재동기화 source. tools/bulk_insert.py 로 처음 적재, 이후 description 수정 시 tools/bulk_update_descriptions.py 로 동일 JSON 재적용.",
     "status": "Active"
   },
 
@@ -25,175 +25,194 @@
   "tasks": [
     {
       "title": "Phase 1.5 — 외부 에이전트 host 사양 구현",
-      "description": "M1 직후. 상세: docs/architecture/schema-integration-for-agents.md. 일정: 2026-05-08 ~ 2026-05-21.",
+      "description": "M1 직후 진행. 상세 계획: docs/architecture/schema-integration-for-agents.md.\n\n범위: 외부 AI 에이전트가 mora-knode REST API 를 통해 1급 시민으로 협업 가능한 최소 스키마 + endpoints. mora-knode 자체는 LLM 호출 X (ADR-005). 4개 PR 로 분리 — 각 PR 은 독립적으로 머지 가능하도록 설계.\n\n순서 의존: PR 1 → PR 2 → PR 3 → PR 4. PR 1 (enum) 완료 후 PR 2 (필드) 시작 — 새 status/role 이 도메인 모델에 들어가야 PR 2 의 필드 의미 있음. PR 3 (도메인) 는 PR 1+2 완료 후. PR 4 (endpoints) 는 PR 3 완료 후.\n\n일정: 2026-05-08 ~ 2026-05-21 (2주). PR 1 (1일) + PR 2 (3일) + PR 3 (4일) + PR 4 (5일).",
       "currentTimeline": {"start": "2026-05-08", "end": "2026-05-21"},
       "assignees": [{"resource": "ysh", "allocationPercent": 100}],
       "children": [
         {
           "title": "PR 1 — Enum 확장",
-          "description": "TaskStatus 5개 추가, ResourceKind 추가. 기존 4개 enum 값 순서/정수 매핑 유지 회귀 테스트.",
+          "description": "TaskStatus 5개 + ResourceKind 추가. 후속 PR 2/3/4 의 토대가 되는 가장 작은 변경.\n\n범위 (작음): 백엔드 enum 정의 + 프론트 enum/라벨 동기화. UI 동작 변경 X (status 선택지가 5개 더 추가될 뿐).\n\n회귀 위험: 기존 4개 enum 값 (NotStarted/InProgress/Blocked/Done) 의 정수 매핑 0~3 그대로 유지 필수 — MongoDB 에 이미 저장된 task 들이 변환 없이 deserialize 되어야 함.\n\n일정: 1일 (2026-05-08).",
           "currentTimeline": {"start": "2026-05-08", "end": "2026-05-09"},
           "children": [
             {
               "title": "TaskStatus 에 PlanDrafting/PlanReview/PlanApproved/Failed/Cancelled 추가",
-              "description": "src/backend/Domain/Enums.cs. 기존 NotStarted/InProgress/Blocked/Done 정수 매핑 0~3 유지, 신규는 4~ 부터."
+              "description": "**파일**: src/backend/Domain/Enums.cs\n\n**변경**: 기존 4개 (NotStarted=0, InProgress=1, Blocked=2, Done=3) 뒤에 신규 5개 (PlanDrafting=4, PlanReview=5, PlanApproved=6, Failed=7, Cancelled=8) 추가. JsonStringEnumConverter 가 enum 이름으로 직렬화하니 문자열 매핑은 자동.\n\n**의미**:\n- PlanDrafting: 외부 agent 가 plan 을 작성 중\n- PlanReview: agent 가 plan 제출, 사람/Manager 검토 대기\n- PlanApproved: 검토 통과, 다운스트림 작업 진행 가능 (ADR-002)\n- Failed: agent 실행 중 에러로 중단\n- Cancelled: 사람 또는 manager 가 명시적으로 취소\n\n**회귀 검증**: 기존 task 의 Status BSON 값이 0~3 정수 그대로 유지되는지 확인. 새 field BsonDefaultValue 불필요 (기존 값은 그대로 deserialize)."
             },
             {
               "title": "ResourceKind { Human, Agent } — 이미 적용됨",
-              "description": "src/backend/Domain/Enums.cs 에 이미 존재. 확인만 하고 done 처리.",
+              "description": "**상태**: 이미 src/backend/Domain/Enums.cs (라인 38-42) 에 정의됨. 이 task 는 확인용 marker.\n\n**검증**: Resource.cs 의 Kind 필드, BsonDefaultValue(Human), 인스펙터 / 매트릭스 UI 가 Kind 필드 사용하는지 확인.",
               "status": "Done"
             },
             {
               "title": "Frontend TaskStatus enum 동기화 + 라벨 + 배지 색상",
-              "description": "src/frontend/lib/models/task_item.dart 등. 신규 status 5종 라벨 i18n (ko/en) 추가."
+              "description": "**파일**:\n- src/frontend/lib/models/task_item.dart — `enum TaskStatus { ... }` 5개 추가\n- src/frontend/lib/l10n/app_ko.arb / app_en.arb — `taskStatusPlanDrafting` 등 라벨 키 5개 추가\n- src/frontend/lib/l10n/labels.dart — `taskStatusLabel(context, status)` switch 에 5개 case 추가\n- src/frontend/lib/widgets/inspector_panels/task_inspector.dart — `_InlineStatusPicker._bg(theme, s)` switch 에 5개 case 색상 매핑 추가\n  - PlanDrafting → surfaceContainerHighest (gray)\n  - PlanReview → secondaryContainer (orange-ish, 검토 대기 강조)\n  - PlanApproved → tertiaryContainer (green)\n  - Failed → errorContainer (red)\n  - Cancelled → surfaceContainerHighest dim\n\n**검증**: 인스펙터 status pill 클릭 → 드롭다운에 9개 status 표시, 각각 라벨/색상 정확. 기존 4개는 변화 없음."
             }
           ]
         },
         {
           "title": "PR 2 — TaskItem / Resource 필드 추가",
-          "description": "AcceptanceCriteria, GitInfo, RetryCount, LastError, AssignedRoleHint 등. Resource 측은 일부 이미 적용됨.",
+          "description": "외부 agent 협업에 필요한 5개 신규 필드 추가. AgentRun/AgentPlanHistory (PR 3) 가 참조할 메타데이터.\n\n회귀 위험: 기존 task documents 가 새 필드 없이 저장되어 있음 — 모든 신규 필드는 nullable 또는 BsonDefaultValue 로 처리해 deserialize 시 깨지지 않게.\n\n일정: 3일 (2026-05-10 ~ 2026-05-12).",
           "currentTimeline": {"start": "2026-05-10", "end": "2026-05-12"},
           "children": [
             {
               "title": "TaskItem 필드 5종 추가 (AcceptanceCriteria/Git/RetryCount/LastError/AssignedRoleHint)",
-              "description": "src/backend/Domain/TaskItem.cs. 신규 value type GitInfo (src/backend/Domain/GitInfo.cs)."
+              "description": "**파일**:\n- src/backend/Domain/TaskItem.cs — 필드 5개 추가\n- src/backend/Domain/GitInfo.cs (신규) — value type\n\n**필드 정의**:\n- `AcceptanceCriteria` (string?, nullable) — 사람 또는 agent 가 작성하는 완료 조건. 마크다운 체크리스트 권장.\n- `Git` (GitInfo?) — { RepoUrl: string, Branch: string?, BaseRef: string?, PrUrl: string? } — agent 가 작업한 코드 저장소 위치 + PR 링크\n- `RetryCount` (int, BsonDefaultValue(0)) — agent 실행 실패 후 재시도 횟수\n- `LastError` (string?, nullable) — 마지막 실패 메시지 (Truncate 1KB 권장, 위로 displayName 만)\n- `AssignedRoleHint` (RbacPreset?, nullable) — 이 task 에 적합한 RBAC preset 힌트 (Developer / QA / Manager). work-queue 에서 매칭 보조용. 강제 배정 X.\n\n**회귀 검증**: 기존 task GET → JSON 응답에 새 필드들이 null / 0 / 빈 객체로 잘 나오는지. 기존 PUT (description 만 변경) 시 다른 필드 잘 보존되는지."
             },
             {
               "title": "Resource.Kind/Rbac/AgentDescription — 이미 적용됨",
-              "description": "src/backend/Domain/Resource.cs 에 이미 존재.",
+              "description": "**상태**: 이미 src/backend/Domain/Resource.cs 에 정의됨 (Kind, Rbac, AgentDescription 모두).\n\n**확인**: BsonDefaultValue 가 Human / Human / null 로 잘 들어가 있어 기존 데이터가 deserialize 됨.",
               "status": "Done"
             },
             {
               "title": "MongoDB 누락 필드 null 직렬화 회귀 확인",
-              "description": "기존 데이터에 BsonDefaultValue 가 잘 작동해서 깨지지 않는지 확인."
+              "description": "**목적**: PR 2 의 새 필드 5종이 기존 task documents (이미 DB 에 저장된) 와 호환되는지 회귀 검증.\n\n**방법**:\n1. 백엔드 재시작 후 GET /api/projects/{id}/tasks → 모든 기존 task 응답이 200 OK + 새 필드 null/0/빈객체로 표시\n2. 임의 기존 task PUT (title 만 변경) → 새 필드들이 사라지거나 변형되지 않음\n3. mora-knode itself 프로젝트의 41 task 중 임의 5개 골라 inspector 에서 편집 → 회귀 X\n\n**위험 시 대응**: BsonDefaultValue 누락 / nullable 누락 시 deserialize 예외 발생 — Domain 클래스 다시 점검."
             },
             {
               "title": "Frontend TaskItem 모델 확장 + Inspector UI 에 새 필드 노출",
-              "description": "Acceptance/Git/RetryCount/LastError/RoleHint 입력/표시. Inspector 의 detail 영역 확장."
+              "description": "**파일**:\n- src/frontend/lib/models/task_item.dart — 5개 필드 + GitInfo 추가, fromJson/toJson 확장\n- src/frontend/lib/widgets/inspector_panels/task_inspector.dart — 새 섹션 추가\n\n**Inspector 변경**:\n- `_SectionHeader('완료 조건')` + AcceptanceCriteria inline editor (multi-line, 마크다운 raw text)\n- `_SectionHeader('Git')` + GitInfo display + edit (작은 form)\n- `_SectionHeader('실행 메타')` + RetryCount badge + LastError text (있을 때만)\n- `_SectionHeader('적합 역할')` + AssignedRoleHint dropdown (RbacPreset 5개 + None)\n\n**Inline 패턴**: Title/Description 처럼 InkWell → 편집 모드 → 저장. 빈 값은 placeholder 로 '추가...' 표시.\n\n**검증**: agent 관련 fields 가 인스펙터에서 편집 가능, 저장 후 다시 열어 유지됨. ChangeLog 에 자동 기록 (TaskRepository 가 처리)."
             }
           ]
         },
         {
           "title": "PR 3 — 신규 도메인 + Repository (AgentPlanHistory, AgentRun)",
-          "description": "PlanStatus enum, ApprovedBy, Token/Cost optional. Indexes 등.",
+          "description": "외부 agent 가 plan 을 제출하고 실행 결과를 기록할 수 있도록 두 신규 entity 도입.\n\n핵심 ADR 준수:\n- ADR-002: plan 은 사람 검토/승인 게이트 통과 후에만 다운스트림 진행\n- ADR-005: Token / Cost 모두 optional — mora-knode 는 LLM 모름\n\n일정: 4일 (2026-05-13 ~ 2026-05-16).",
           "currentTimeline": {"start": "2026-05-13", "end": "2026-05-16"},
           "children": [
             {
               "title": "AgentPlanHistory + PlanStatus enum 도입",
-              "description": "src/backend/Domain/AgentPlanHistory.cs. ApprovedBy 포함."
+              "description": "**신규 파일**: src/backend/Domain/AgentPlanHistory.cs\n\n**스키마**:\n```\nclass AgentPlanHistory {\n  string Id;\n  string TaskId;           // 어느 task 의 plan 인지\n  int Version;             // 1, 2, 3 ... revision 횟수\n  PlanStatus Status;       // Submitted / Approved / Revised / Rejected\n  string SubmittedBy;      // agent identity (Resource.Id)\n  DateTime SubmittedAt;\n  string Body;             // plan 본문 (마크다운)\n  string? ApprovedBy;      // 검토자 (Resource.Id, 사람 또는 권한있는 agent)\n  DateTime? ApprovedAt;\n  string? DecisionNote;    // 승인/거절 사유\n}\n\nenum PlanStatus { Submitted=0, Approved=1, Revised=2, Rejected=3 }\n```\n\n**Versioning**: 한 task 에 여러 plan 가능. revise 시 새 version 생성, 이전 version 은 status=Revised 로 마킹.\n\n**MongoDB 컬렉션**: `agentPlans`."
             },
             {
               "title": "AgentRun (Token/Cost 모두 optional, ADR-005)",
-              "description": "src/backend/Domain/AgentRun.cs."
+              "description": "**신규 파일**: src/backend/Domain/AgentRun.cs\n\n**스키마**:\n```\nclass AgentRun {\n  string Id;\n  string TaskId;\n  string AgentId;          // Resource.Id (Kind=Agent)\n  DateTime StartedAt;\n  DateTime? EndedAt;       // null = 진행 중\n  RunStatus Status;        // Running / Success / Failed / Cancelled\n  string? Output;          // 실행 결과 요약 (선택)\n  long? PromptTokens;      // optional - LLM 외 도구는 null\n  long? CompletionTokens;\n  decimal? CostUsd;        // optional\n}\n\nenum RunStatus { Running=0, Success=1, Failed=2, Cancelled=3 }\n```\n\n**ADR-005 준수**: Token / Cost 가 모두 nullable — agent 가 어떤 모델 / SDK 인지 mora-knode 는 모르므로 강제하지 않음. 보고하는 agent 는 채우고, 안 보고하면 null 유지.\n\n**MongoDB 컬렉션**: `agentRuns`."
             },
             {
               "title": "MongoContext 컬렉션 핸들 + AgentPlanRepository / AgentRunRepository",
-              "description": "src/backend/Infrastructure/."
+              "description": "**파일**:\n- src/backend/Infrastructure/MongoContext.cs — `IMongoCollection<AgentPlanHistory> AgentPlans`, `IMongoCollection<AgentRun> AgentRuns` getter 추가\n- src/backend/Infrastructure/AgentPlanRepository.cs (신규)\n- src/backend/Infrastructure/AgentRunRepository.cs (신규)\n- src/backend/Program.cs — `AddSingleton<AgentPlanRepository>()`, `AddSingleton<AgentRunRepository>()` 등록\n\n**AgentPlanRepository API**:\n- `ListByTaskAsync(taskId)` — version 내림차순\n- `LatestByTaskAsync(taskId)` — 가장 최근 version\n- `CreateAsync(plan)` — version 자동 증분 (existing latest + 1)\n- `UpdateStatusAsync(id, status, approvedBy?, decisionNote?)`\n\n**AgentRunRepository API**:\n- `ListByTaskAsync(taskId)` — startedAt 내림차순\n- `ListByAgentAsync(agentId, since?)` — startedAt 내림차순\n- `CreateAsync(run)`\n- `EndAsync(id, status, output?, tokens?, cost?)`"
             },
             {
               "title": "인덱스 추가",
-              "description": "agentPlans {taskId:1, version:-1}, agentRuns {taskId:1, startedAt:-1}, agentRuns {agentId:1, startedAt:-1}."
+              "description": "**파일**: src/backend/Infrastructure/MongoContext.EnsureIndexesAsync()\n\n**인덱스 3종**:\n```\nagentPlans:  { taskId: 1, version: -1 }\nagentRuns:   { taskId: 1, startedAt: -1 }\nagentRuns:   { agentId: 1, startedAt: -1 }\n```\n\n**이유**:\n- 첫 번째: task 별 plan 목록을 최신 순으로 조회 (인스펙터 Plan History 탭)\n- 두 번째: task 별 run 목록 (인스펙터 Runs 탭)\n- 세 번째: 특정 agent 의 최근 활동 조회 (audit / agent 가시성)\n\n**검증**: `db.agentPlans.getIndexes()` 등으로 인덱스 생성 확인. 기존 EnsureIndexesAsync 패턴 (TaskRepository 등) 따르기."
             }
           ]
         },
         {
           "title": "PR 4 — AgentEndpoints 신설",
-          "description": "Identity / 토큰 / RBAC, Plan 게이트, Work-queue, Run 메트릭. Bearer 토큰 + X-Agent-Id 헤더 (M1 placeholder, M2 실제 검증).",
+          "description": "외부 agent 가 호출할 REST endpoints. Bearer 토큰 + X-Agent-Id 헤더로 인증 (M1 단계는 placeholder, M2 에서 실제 검증).\n\n범위 분리: identity / plan 게이트 / work-queue / runs — 각각 독립적인 서브 그룹.\n\n일정: 5일 (2026-05-17 ~ 2026-05-21).",
           "currentTimeline": {"start": "2026-05-17", "end": "2026-05-21"},
           "children": [
             {
               "title": "/api/agents (identity / 토큰 / permissions)",
-              "description": "GET/POST/PATCH /api/agents, /tokens, /permissions."
+              "description": "**파일**: src/backend/Endpoints/AgentEndpoints.cs (신규)\n\n**Endpoints**:\n- `GET /api/agents` — Resource 중 Kind=Agent 만 필터링해서 반환\n- `POST /api/agents` — 신규 agent identity 생성 (Resource 생성 + Kind=Agent 강제). body: { name, agentDescription, rbac }\n- `GET /api/agents/{id}` — single\n- `PATCH /api/agents/{id}` — name / description / rbac / capacity 수정\n- `DELETE /api/agents/{id}`\n- `POST /api/agents/{id}/tokens` — 신규 bearer 토큰 발급. response: { tokenId, secret, createdAt }. secret 은 한 번만 반환 (저장 X)\n- `GET /api/agents/{id}/tokens` — 발급된 토큰 목록 (메타데이터만, secret 제외)\n- `DELETE /api/agents/{id}/tokens/{tokenId}` — 토큰 폐기\n- `GET /api/agents/{id}/permissions` — 현재 RBAC + 가시 scope (read-only view)\n\n**M1 단계 placeholder**: 토큰 검증은 단순히 토큰이 존재하는지만 체크. M2 에서 hash + expiry + revocation list 도입."
             },
             {
               "title": "/api/agents/plans/* (PlanReview 게이트)",
-              "description": "pending, {taskId}, approve, revise, reject, versions."
+              "description": "**Endpoints**:\n- `POST /api/agents/plans` — agent 가 plan 제출. body: { taskId, body }. 자동으로 task.Status = PlanReview 로 전환, AgentPlanHistory 생성 (version auto-increment, status=Submitted)\n- `GET /api/agents/plans/pending` — Status=PlanReview 인 task 들 + 각 task 의 latest plan. 검토자 큐.\n- `GET /api/agents/plans/{taskId}` — task 의 모든 plan (versioned 목록, 최신순). approved/revised/rejected 모두\n- `POST /api/agents/plans/{taskId}/approve` — 검토자가 승인. body: { decisionNote? }. plan.Status=Approved, task.Status=PlanApproved 로 전환\n- `POST /api/agents/plans/{taskId}/revise` — 수정 요청. body: { decisionNote }. plan.Status=Revised, task.Status=PlanDrafting 로 전환 (agent 가 새 version 제출하도록)\n- `POST /api/agents/plans/{taskId}/reject` — 거절. body: { decisionNote }. plan.Status=Rejected, task.Status=Cancelled\n- `GET /api/agents/plans/{taskId}/versions` — version 목록 (메타만)\n\n**ADR-002 준수**: PlanApproved 가 아닌 task 는 외부 agent 의 코드 작성 / 머지 등 다운스트림 작업 차단. (검증은 work-queue claim 시점에 수행)"
             },
             {
               "title": "/api/agents/work-queue/* (claim/release)",
-              "description": "GET work-queue, POST claim/release."
+              "description": "**Endpoints**:\n- `GET /api/agents/work-queue` — 호출하는 agent 가 claim 가능한 task 목록. 필터:\n  - task.Status = PlanApproved\n  - task.AssignedRoleHint == null OR == agent.Rbac (preset 일치)\n  - 이미 다른 agent 가 claim 한 task 제외 (또는 claim 정보 함께 반환)\n  - sort: createdAt 오름차순\n- `POST /api/agents/work-queue/{taskId}/claim` — claim. body: { agentId? } (X-Agent-Id 헤더 우선). task 에 임시 lock (예: AssignedAgentId 필드 또는 별도 컬렉션). claim 시 AgentRun 자동 생성 (status=Running)\n- `POST /api/agents/work-queue/{taskId}/release` — claim 해제 (작업 중단 또는 완료 후). 기존 AgentRun 의 endedAt + status 업데이트\n\n**RBAC 가시성**: GET /work-queue 는 caller 의 RBAC preset 에 따라 다른 결과. Manager 는 모두, Developer 는 AssignedRoleHint=Developer 또는 null 만, 등."
             },
             {
               "title": "/api/agents/runs (실행 메트릭, optional)",
-              "description": "POST runs - Token/Cost 포함되든 빠지든 모두 처리."
+              "description": "**Endpoints**:\n- `POST /api/agents/runs` — agent 가 실행 시작 시 호출 (claim 직후 자동 생성되거나 명시 호출). body: { taskId, startedAt? (default now) }\n- `PATCH /api/agents/runs/{id}` — 진행 중 업데이트. body: { output?, promptTokens?, completionTokens?, costUsd? } — 모두 optional\n- `POST /api/agents/runs/{id}/end` — 종료. body: { status: Success/Failed/Cancelled, output?, tokens?, cost? }\n- `GET /api/agents/runs?taskId=X|agentId=X&since=Y` — 목록\n\n**ADR-005 준수**: token/cost 받든 안 받든 처리. null 인 채로 저장. UI 에서 'N/A' 또는 안 보이게 처리.\n\n**Use case**: agent 가 보고하면 매트릭스 가동률 / 비용 패널 / audit 등에 활용. 보고 안 하면 mora-knode 는 단순히 'task X 가 agent Y 에 의해 작업되었음' 까지만 안다."
             },
             {
               "title": "Program.cs 등록 + 수동 curl 테스트 체크리스트",
-              "description": "tools/agent_endpoints_smoke.sh 같은 스모크 스크립트 함께."
+              "description": "**파일**:\n- src/backend/Program.cs — `app.MapAgentEndpoints();` 추가\n- tools/agent_endpoints_smoke.sh (신규) — 수동 스모크 테스트 (curl chain)\n\n**스모크 시나리오**:\n```\n# 1. agent 생성 + 토큰 발급\nAGENT_ID=$(curl -X POST .../api/agents -d '{name:\"smoke-dev\",rbac:\"Developer\"}' | jq .id)\nTOKEN=$(curl -X POST .../api/agents/$AGENT_ID/tokens | jq .secret)\n\n# 2. plan 제출\ncurl -X POST .../api/agents/plans -H \"Authorization: Bearer $TOKEN\" \\\n  -d '{taskId:\"X\", body:\"# Plan...\"}'\n\n# 3. (수동) ysh 가 approve\ncurl -X POST .../api/agents/plans/X/approve\n\n# 4. work-queue 에서 claim\ncurl -X POST .../api/agents/work-queue/X/claim -H \"Authorization: Bearer $TOKEN\"\n\n# 5. run 종료 보고\ncurl -X POST .../api/agents/runs/{runId}/end -d '{status:\"Success\", output:\"...\"}'\n```\n\n**검증**: 5단계 모두 200/201 OK + DB 에 흔적 (task.Status 전환, AgentPlanHistory, AgentRun 모두 기록)."
             }
           ]
         },
         {
           "title": "(검토) MCP 서버 스캐폴딩 위치 결정",
-          "description": "tools/mora-knode-mcp/ vs src/mcp-server/. PR 4 의 API 표면 안정 후. 적합도 검토 P0-1.",
+          "description": "**상황**: Phase 2 확장 의 P0-1 항목. PR 4 의 API 표면이 안정된 후 결정.\n\n**선택지**:\n- (a) tools/mora-knode-mcp/ — 별도 도구 디렉토리. 외부 도구 (claude desktop / cursor) 가 MCP server 로 mora-knode API 호출 가능하게 thin wrapper\n- (b) src/mcp-server/ — backend 와 같은 솔루션 안. 패키징 / 배포 동시\n- (c) 별도 repo — 추후 OSS 공개 (M3) 와 같이\n\n**결정 기준**: agent endpoints 의 호출 패턴이 안정되면, MCP 도구 정의 (tool list, schema) 가 명확해짐. 그 시점에 위치 / 패키징 결정.\n\n**산출물**: ADR-010 같은 문서로 결정 + 선택한 위치에 빈 스캐폴드 + README.",
           "currentTimeline": {"start": "2026-05-21", "end": "2026-05-21"}
         }
       ]
     },
     {
       "title": "Phase 2 — 외부 에이전트 dogfooding 시뮬레이션 (M2)",
-      "description": "ysh 가 자기 외부 도구로 4개 agent identity 운영. mora-knode 안에 에이전트 코드 만들지 않음 (ADR-005). 일정: 2026-05-22 ~ 2026-06-15.",
+      "description": "ysh 가 자기 외부 도구 (Claude Code 등) 로 4개 agent identity 운영. mora-knode 안에 에이전트 코드 만들지 않음 (ADR-005). 권장 운영 패턴: docs/dogfooding/agent-operations.md.\n\n핵심 검증: API 표면이 외부 agent 가 실제로 사용하기에 충분한지 + UX 가 매트릭스 PM 시나리오에 맞는지.\n\n일정: 2026-05-22 ~ 2026-06-15 (3.5주).",
       "currentTimeline": {"start": "2026-05-22", "end": "2026-06-15"},
       "assignees": [{"resource": "ysh", "allocationPercent": 100}],
       "children": [
         {
           "title": "매트릭스 리소스 매니저 가동률 합산 + 100% 경보 (옵션 C)",
-          "description": "사람 + Resource.Kind=Agent 합산, Flutter UI. PR 2 직후."
+          "description": "**파일**:\n- src/backend/Endpoints/MatrixEndpoints.cs — 가동률 계산에 ResourceKind 별 분리 추가\n- src/frontend/lib/widgets/matrix_section.dart — 사람 + agent 합산 행, 100% 초과 시 색상 경보\n\n**계산 로직**: 특정 주차 / 일자에 대해 각 resource 의 assignment 합산 (allocationPercent). Kind=Human 과 Kind=Agent 모두 동일 방식. UI 에선 두 묶음으로 표시 (사람 / 에이전트).\n\n**100% 경보**: 합산 > resource.capacityPercent 인 셀을 errorContainer 색으로. 한눈에 over-allocation 식별.\n\n**우선순위**: PR 2 (Resource.Kind 추가) 가 이미 적용되어 있으므로 즉시 시작 가능."
         },
         {
           "title": "4개 agent identity 등록 (manager/developer/researcher/qa)",
-          "description": "API 토큰 발급 + RBAC preset 매핑."
+          "description": "**작업** (in-app):\n1. Settings 또는 Agent 관리 화면 (PR 5) 에서 4개 Resource 생성:\n   - manager-01 (Rbac: Manager)\n   - developer-01 (Rbac: Developer)\n   - researcher-01 (Rbac: Reviewer)  ← 또는 새 preset 추가 검토\n   - qa-01 (Rbac: QA)\n2. 각 identity 에 토큰 발급 (POST /api/agents/{id}/tokens), secret 안전한 곳에 보관 (1Password / 환경변수)\n3. AgentDescription 에 모델 / 도구 / 프롬프트셋 정보 기록 (예: 'Claude Sonnet 4.6 + Code skill')\n\n**RBAC 5 preset**: Manager / Reviewer / Developer / QA / Human. 각각 다른 view scope + 액션 권한."
         },
         {
           "title": "외부 도구 셋업 (Claude Code 등) — 토큰 + sub-agent 정의",
-          "description": "ysh 본인 워크플로. .claude/agents/manager.md 등."
+          "description": "**환경 변수** (각 agent 호출 환경):\n```\nMORAKNODE_BASE_URL=http://localhost:5163\nMORAKNODE_AGENT_ID=<id>\nMORAKNODE_TOKEN=<secret>\n```\n\n**Sub-agent 정의** (Claude Code 예시): .claude/agents/manager.md, .claude/agents/developer.md 등. 각 파일에서 mora-knode API 호출 가이드 + 수행 가능 작업 명시.\n\n**참조**: docs/dogfooding/agent-operations.md (권장 패턴, 강제 사양 X).\n\n**검증**: 환경에서 agent 가 GET /api/agents/work-queue 를 호출해 본인 RBAC 에 맞는 task 목록을 받아오는지."
         },
         {
           "title": "End-to-end 검증 시나리오 1건 (plan -> review -> approve -> develop -> 머지)",
-          "description": "audit / revision 메트릭 / 간트 PlanReview 배지 확인."
+          "description": "**시나리오** (실제 task 1개 골라):\n1. 외부 manager-01 → POST /api/agents/plans (taskId=X, body=plan 본문) → task.Status=PlanReview\n2. ysh 가 인스펙터 'Plan History' 탭에서 plan 검토 → 1회 revise 요청\n3. manager-01 이 v2 plan 제출 → ysh approve → task.Status=PlanApproved\n4. developer-01 이 GET work-queue → claim taskX → 코드 작성 → GitInfo.PrUrl 기록 → PR 머지\n5. 인스펙터에서 Runs 탭 + ChangeLog 확인 — 모든 단계 audit 가능\n\n**검증 포인트**:\n- 각 단계 status 전환 자동\n- AgentPlanHistory version 1 (Revised) + version 2 (Approved) 둘 다 기록됨\n- AgentRun 에 startedAt/endedAt + status=Success 기록\n- 매트릭스에 developer-01 가동률 반영\n- 모든 변경이 ChangeLog 에 자동 기록"
         },
         {
           "title": "2주 시뮬레이션 운용 (5 프로젝트 / 50 태스크 목표)",
-          "description": "안정화 = 3회 연속 성공."
+          "description": "**기간**: 2026-06-01 ~ 2026-06-15 (2주)\n\n**규모**:\n- 5 프로젝트 (mora-knode itself 포함)\n- 50 task 동시 진행\n- 4 agent + ysh 가 매일 협업\n\n**측정 지표**:\n- 평균 plan-to-approve 시간 (목표: 24h 이내)\n- revise 횟수 평균 (낮을수록 plan 품질 좋음)\n- agent run 성공률 (목표: 80%+)\n- ysh 가 실제로 본 작업 시간 vs PM 오버헤드 비율\n\n**안정화 기준**: 시뮬레이션 3회 연속 성공 (각 시나리오 클린 통과 + UX 불편 없음). 실패 시 root cause 분석 → API/UI 개선 → 재실행."
         }
       ]
     },
     {
       "title": "Phase 2 확장 — Stage 1 (M2 이후)",
-      "description": "적합도 검토 P0~P1 채택 결정 + Flutter PR 5 + 알림 + Docker.",
+      "description": "M2 dogfooding 후 식별된 우선순위 폴리시 + 적합도 검토 P0~P1 채택. 각 항목은 별도 PR.\n\n출처: docs/research/2026-04-29-ai-agent-trends-fit-review.md §8.\n\n일정: M2 종료 후 (2026-06 중순 ~). 항목별 우선순위는 dogfooding 결과 따라 조정.",
       "children": [
         {
           "title": "MCP 서버 스캐폴딩 (P0-1)",
-          "description": "Phase 1.5 검토 항목 후속."
+          "description": "Phase 1.5 의 MCP 위치 결정 task 의 후속 — 실제 구현. MCP server 가 mora-knode API 를 도구로 노출 (list_projects, list_tasks, submit_plan, claim_task 등).\n\n**효과**: claude desktop, cursor, claude code 의 MCP client 가 mora-knode 에 직접 접근. 환경 변수 셋업 없이 도구 등록만으로 사용."
         },
         {
-          "title": "워크스페이스 .claude 공통 skill (P0-2)"
+          "title": "워크스페이스 .claude 공통 skill (P0-2)",
+          "description": "**위치**: NilPop 워크스페이스 루트의 .claude/skills/ (mora-knode 가 아닌 NilPop 전체 공통).\n\n**Skill 예시**:\n- mora-knode-task-create — task 1건 생성 가이드\n- mora-knode-bulk-plan — plan JSON 작성 + bulk insert 가이드\n- mora-knode-agent-onboard — 새 agent 등록 + 토큰 + 환경변수 가이드\n\n**효과**: NilPop 안의 모든 프로젝트에서 동일 skill 재사용. ysh 가 task 작성 / 시드 / agent 운영 시 skill invoke 만 하면 됨."
         },
         {
-          "title": "Conventional Commit 검증 hook (P0-3)"
+          "title": "Conventional Commit 검증 hook (P0-3)",
+          "description": "**위치**: mora-knode repo 의 .git/hooks/commit-msg (또는 husky 등 도구).\n\n**검증**: 정규식 `^(feat|fix|docs|refactor|test|chore|perf|build|ci|style)(\\(.+\\))?: .+` 매치 안 되면 commit 거부. CLAUDE.md 의 Conventional Commits 규약 강제.\n\n**효과**: 커밋 히스토리 일관성, 자동 changelog 생성 가능."
         },
         {
-          "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐 (P1-5)"
+          "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐 (P1-5)",
+          "description": "**파일**: src/frontend/lib/widgets/plans_section.dart (신규 또는 placeholder 채움).\n\n**UI**: 사이드바 'Plans' 섹션 클릭 → Status=PlanReview 인 task 들이 큐 형태로 표시. 각 행에 plan 본문 미리보기 + approve/revise/reject 빠른 액션. ysh 가 한눈에 검토 대기 처리 가능.\n\n**ADR-002**: 승인 게이트의 사용자 경험을 명시화. agent 가 늘어날수록 이 화면이 ysh 의 메인 작업 surface 가 됨."
         },
         {
-          "title": "revision 횟수 가시화 (P1-6)"
+          "title": "revision 횟수 가시화 (P1-6)",
+          "description": "**파일**: 인스펙터 + 간트.\n\n**UI**:\n- 인스펙터 새 섹션 'Plan History' — AgentPlanHistory.Version 들을 카드로 나열. 각 카드 Status (Submitted/Revised/Approved/Rejected) + 본문 diff (이전 version 대비)\n- 간트 행에 'revisions: N' 배지 (3회 이상 revised 면 강조)\n\n**효과**: agent 의 plan 품질 추적, ysh 가 어느 task / agent 가 자주 revise 되는지 파악."
         },
         {
-          "title": "Context Engine 최소 버전 (P1-7)"
+          "title": "Context Engine 최소 버전 (P1-7)",
+          "description": "**목적**: agent 가 plan 제출 시 mora-knode 가 자동으로 context 를 첨부 → agent 의 plan 품질 향상.\n\n**최소 버전 (M2 직후)**:\n- task 본문 + parent task 본문 + sibling task titles\n- recent change log (최근 5건)\n- 관련 milestone (같은 project)\n\n**확장 (추후)**:\n- 인접 프로젝트의 관련 task\n- AcceptanceCriteria 자동 분석\n- GitInfo 의 base ref 코드 일부\n\n**API**: GET /api/agents/context?taskId=X 같은 새 endpoint."
         },
         {
-          "title": "PR 5 (Flutter) — Plan History / Runs / 매트릭스 agent 아이콘 / Agent 관리 화면 (ADR-006, 5분 셋업 UX)"
+          "title": "PR 5 (Flutter) — Plan History / Runs / 매트릭스 agent 아이콘 / Agent 관리 화면 (ADR-006, 5분 셋업 UX)",
+          "description": "**범위**: agent 관련 모든 UI surface 정리.\n\n**구성**:\n1. 인스펙터 Plan History 탭 (revision 가시화 task 와 같이) — version 목록 + diff\n2. 인스펙터 Runs 탭 — AgentRun 목록 (token/cost optional 표시)\n3. 매트릭스에 Kind=Agent 행 별도 색상 + 아이콘 (smart_toy_outlined)\n4. **Agent 관리 화면** (ADR-006 BYOA 온보딩):\n   - Form 으로 agent 등록 (name, description, RBAC preset)\n   - 토큰 발급 + 1회 표시 + 클립보드 복사\n   - RBAC 5 preset 선택 가이드 (각 preset 의 권한 요약)\n   - 환경변수 자동 generator (Claude Code, Cursor, Python, curl 4가지 포맷)\n   - 5분 셋업 목표: 신규 agent 가 5분 안에 work-queue 호출 가능"
         },
         {
-          "title": "Human-in-the-loop 알림 (Slack / 이메일)"
+          "title": "Human-in-the-loop 알림 (Slack / 이메일)",
+          "description": "**Trigger 이벤트**:\n- agent plan 제출 (PlanReview 전환) → ysh 에게 알림\n- agent run 실패 (RunStatus=Failed) → ysh 에게 알림\n- task 마감 임박 (3일 전) → 담당자에게 알림\n\n**구현**:\n- backend webhook 시스템 (Hosted service 가 이벤트 큐 polling, webhook URL 로 POST)\n- Slack incoming webhook + 이메일 (SMTP or 외부 서비스)\n- 사용자 채널 / 이메일 주소는 Settings 또는 Resource 프로필에 저장\n\n**MVP**: Slack 만 (가장 빠른 셋업)."
         },
         {
-          "title": "docker/ — backend.Dockerfile + docker-compose.yml (orchestrator 없음, ADR-005)"
+          "title": "docker/ — backend.Dockerfile + docker-compose.yml (orchestrator 없음, ADR-005)",
+          "description": "**신규 파일**:\n- docker/backend.Dockerfile — multi-stage (.NET SDK build → ASP.NET runtime)\n- docker/docker-compose.yml — services: mongo + backend\n- docker/frontend.Dockerfile (선택) — Flutter web build → nginx 정적 서빙\n- docker/.dockerignore\n\n**ADR-005 준수**: orchestrator (Python 등 LLM 호출 도구) Dockerfile 추가 X — mora-knode 자체엔 LLM 호출 코드 없음. 외부 agent 는 사용자가 본인 환경에서 운영.\n\n**docker-compose 구성**:\n```\nservices:\n  mongo: image mongo:7, volume\n  backend: build ., depends_on mongo, env MONGO_URI\n  frontend (선택): build, ports 80, depends_on backend\n```"
         },
         {
-          "title": "docker compose up 으로 mongo + backend end-to-end 검증"
+          "title": "docker compose up 으로 mongo + backend end-to-end 검증",
+          "description": "**시나리오**:\n1. 빈 디렉토리에 docker/ 만 복사\n2. `docker compose up -d` → mongo + backend 모두 healthy\n3. 브라우저에서 backend health endpoint OK\n4. Auto-seed (한국 공휴일) 자동 실행 확인\n5. POST /api/projects 로 새 프로젝트 생성, GET 으로 확인\n6. (frontend 도 컨테이너에 있으면) UI 에서 task 1개 생성/편집 검증\n\n**목적**: self-hosted 배포 첫 실험. ysh 가 다른 노트북 / 친구 환경에서 docker compose up 만으로 mora-knode 띄울 수 있음 → M3 OSS 공개 직전 검증."
         }
       ]
+    },
+    {
+      "title": "프로젝트 정렬 순서 사용자 지정",
+      "description": "**문제**: 사이드바의 프로젝트 목록 순서가 createdAt 또는 alphabet 고정. 사용자가 자주 보는 프로젝트를 위로 올리고 싶어도 못 함.\n\n**작업**:\n- backend Project domain 에 `int SortOrder` 필드 추가 (BsonDefaultValue 0). API: PATCH /api/projects/{id}/sort-order 또는 일괄 reorder POST /api/projects/reorder body: { ids: [...] in new order }\n- frontend sidebar — 프로젝트 목록을 SortOrder 오름차순으로 정렬. drag-and-drop reorder (Reorderable list) 또는 위/아래 화살표 버튼\n- in-app 즉시 반영, 영구 저장\n\n**검증**: 프로젝트 3개 이상에서 순서 변경 → 새로고침 후 유지. 신규 프로젝트는 맨 아래 (SortOrder = max + 1).",
+      "status": "NotStarted"
+    },
+    {
+      "title": "프로젝트 즐겨찾기 / 핀",
+      "description": "**문제**: 자주 보는 프로젝트와 archive 직전 프로젝트가 같은 가시성. 핀으로 우선 표시 원함.\n\n**작업**:\n- backend Project 에 `bool IsFavorite` (BsonDefaultValue false) + `DateTime? PinnedAt` 필드. API: PATCH /api/projects/{id} 의 기존 ReplaceAsync 가 이미 처리, frontend toggle 만 추가\n- frontend sidebar — 별 아이콘 (Icons.star_outline / Icons.star) toggle. 정렬: 핀된 것 먼저 (PinnedAt 내림차순), 그 다음 SortOrder\n- 별 아이콘 색: 핀 시 노랑/금색\n\n**검증**: 프로젝트 5개 중 2개 핀 → 사이드바 상단에 두 개 먼저 표시. 핀 해제 → 원래 순서로 복귀.",
+      "status": "NotStarted"
     }
   ]
 }

@@ -51,6 +51,15 @@ class ProjectInspection extends Inspection {
   const ProjectInspection(this.projectId);
 }
 
+/// Empty draft form — inspector renders a "create new task" panel instead of
+/// opening a modal dialog. Project / parent are pre-selected when the draft
+/// is opened from a contextual button (e.g. + 새 업무 inside a project tab).
+class TaskDraftInspection extends Inspection {
+  final String? projectId;
+  final String? parentTaskId;
+  const TaskDraftInspection({this.projectId, this.parentTaskId});
+}
+
 final inspectionProvider = StateProvider<Inspection?>((_) => null);
 
 // --- API client ---

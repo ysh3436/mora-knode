@@ -4,18 +4,19 @@
 
 import 'timeline.dart';
 
-// Mirror of backend Enums.cs TaskStatus. Order is load-bearing — the first
-// four values must keep their original integer mapping (0-3) so existing
-// persisted tasks deserialize unchanged. InReview appended at index 4 is
-// the only agent-host addition (covers any "human review pending" — ADR-002
-// agent plan gate, code review, QA, manager approval). Other agent
-// lifecycle moments fold into the existing four (see backend enum).
+// Mirror of backend Enums.cs TaskStatus. Stored / serialized by name so the
+// integer values are only an ordering hint — anchors at 10/30/50, beats in
+// between (InReview 20, Blocked 40), terminal-non-success above Done
+// (Cancelled 51, Dropped 52). Declaration order here also drives the
+// dropdown / filter order, so keep it ascending.
 enum TaskStatus {
   NotStarted,
+  InReview,
   InProgress,
   Blocked,
   Done,
-  InReview,
+  Cancelled,
+  Dropped,
 }
 
 class TaskItem {

@@ -46,11 +46,12 @@
 ### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-08 ~ 2026-05-21)
 M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md)
 
-- [x] **PR 1**: Enum 확장 — backend 부분
-  - `TaskStatus`: `InReview` 1개만 추가 (drafting/approved → 기존 NotStarted/InProgress 흡수, failed → Blocked, cancelled → Done; ADR-002 plan 게이트 + 코드 리뷰 / QA / manager 승인 까지 generic 하게 커버)
+- [x] **PR 1**: Enum 확장 — backend + frontend 동기화
+  - `TaskStatus` 7개 (`NotStarted=10, InReview=20, InProgress=30, Blocked=40, Done=50, Cancelled=51, Dropped=52`) — sparse 정수값으로 미래 상태 삽입 여유. Anchor 10/30/50, intermediate 20/40, terminal-non-success 51/52
+  - `TaskItem.Status` 저장 형식을 int → **string** (`BsonRepresentation.String`) 으로 전환 — 향후 정수값 재배치 무손실. 일회성 마이그레이션: [tools/migrate_task_status_to_string.py](../../tools/migrate_task_status_to_string.py)
   - `ResourceKind { Human, Agent }` 이미 정의됨
-  - 기존 4개 정수 매핑 (0-3) 유지 — InReview = 4 append
-  - Frontend enum / l10n / status pill 색·라벨 / 아이콘 동기화 완료
+  - Frontend enum / l10n (ko/en) / status pill 색·라벨 / 아이콘 동기화 완료. Blocked 의미 강화 (차단 → 보류), Cancelled (취소) / Dropped (중단) 추가
+  - `TaskHierarchyEndpoints.AggregateStatus` 도 새 status 들 인지 (terminal Cancelled/Dropped 는 부모 Done 집계에 포함, InReview 는 부모로 propagate)
 - [ ] **PR 2**: TaskItem / Resource 필드 추가
   - `TaskItem`: `AcceptanceCriteria`, `Git`, `RetryCount`, `LastError`, `AssignedRoleHint`
   - 신규 value type `GitInfo`

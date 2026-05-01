@@ -129,10 +129,16 @@ public static class TaskHierarchyEndpoints
     private static Domain.TaskStatus AggregateStatus(List<Domain.TaskStatus> statuses)
     {
         if (statuses.Count == 0) return Domain.TaskStatus.NotStarted;
-        if (statuses.All(s => s == Domain.TaskStatus.Done)) return Domain.TaskStatus.Done;
+        // All children reached a terminal state (success or otherwise) → parent is done.
+        if (statuses.All(s => s == Domain.TaskStatus.Done
+                           || s == Domain.TaskStatus.Cancelled
+                           || s == Domain.TaskStatus.Dropped))
+            return Domain.TaskStatus.Done;
         if (statuses.Any(s => s == Domain.TaskStatus.Blocked)) return Domain.TaskStatus.Blocked;
         if (statuses.Any(s => s == Domain.TaskStatus.InProgress || s == Domain.TaskStatus.Done))
             return Domain.TaskStatus.InProgress;
+        // No active work yet, but a child is awaiting review — surface that on the parent.
+        if (statuses.Any(s => s == Domain.TaskStatus.InReview)) return Domain.TaskStatus.InReview;
         return Domain.TaskStatus.NotStarted;
     }
 

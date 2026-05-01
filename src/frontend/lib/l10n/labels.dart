@@ -11,22 +11,29 @@ String taskStatusLabel(BuildContext context, TaskStatus status) {
   final l = AppL10n.of(context);
   return switch (status) {
     TaskStatus.NotStarted => l.taskStatusNotStarted,
+    TaskStatus.InReview => l.taskStatusInReview,
     TaskStatus.InProgress => l.taskStatusInProgress,
     TaskStatus.Blocked => l.taskStatusBlocked,
     TaskStatus.Done => l.taskStatusDone,
-    TaskStatus.InReview => l.taskStatusInReview,
+    TaskStatus.Cancelled => l.taskStatusCancelled,
+    TaskStatus.Dropped => l.taskStatusDropped,
   };
 }
 
 /// Background tint for status pills / chips. Centralized so the inspector,
 /// task list, and my-work view can't drift apart. InReview uses the
-/// secondary container to draw the eye — the user has a pending decision.
+/// secondary container to draw the eye (pending decision); Blocked keeps
+/// the error tint as a "needs attention" cue; Done is the celebratory
+/// tertiary; Cancelled / Dropped fall to the lowest neutral surfaces so
+/// the row reads as deprioritized / out-of-flight.
 Color taskStatusBg(ThemeData theme, TaskStatus status) => switch (status) {
       TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
+      TaskStatus.InReview => theme.colorScheme.secondaryContainer,
       TaskStatus.InProgress => theme.colorScheme.primaryContainer,
       TaskStatus.Blocked => theme.colorScheme.errorContainer,
       TaskStatus.Done => theme.colorScheme.tertiaryContainer,
-      TaskStatus.InReview => theme.colorScheme.secondaryContainer,
+      TaskStatus.Cancelled => theme.colorScheme.surfaceContainerLow,
+      TaskStatus.Dropped => theme.colorScheme.surfaceContainerLowest,
     };
 
 /// Same as [taskStatusLabel] but with the "computed from children" marker

@@ -283,16 +283,22 @@ class AppL10nKo extends AppL10n {
   String get taskStatusNotStarted => '시작 전';
 
   @override
+  String get taskStatusInReview => '검토 중';
+
+  @override
   String get taskStatusInProgress => '진행 중';
 
   @override
-  String get taskStatusBlocked => '차단됨';
+  String get taskStatusBlocked => '보류';
 
   @override
   String get taskStatusDone => '완료';
 
   @override
-  String get taskStatusInReview => '검토 중';
+  String get taskStatusCancelled => '취소';
+
+  @override
+  String get taskStatusDropped => '중단';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

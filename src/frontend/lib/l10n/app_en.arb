@@ -110,10 +110,12 @@
   "userSwitcherAdminCaption": "admin (no header)",
 
   "taskStatusNotStarted": "Not started",
-  "taskStatusInProgress": "In progress",
-  "taskStatusBlocked": "Blocked",
-  "taskStatusDone": "Done",
   "taskStatusInReview": "In review",
+  "taskStatusInProgress": "In progress",
+  "taskStatusBlocked": "On hold",
+  "taskStatusDone": "Done",
+  "taskStatusCancelled": "Cancelled",
+  "taskStatusDropped": "Dropped",
   "taskStatusAggregatedSuffix": "{label}*",
   "@taskStatusAggregatedSuffix": {
     "description": "Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.",

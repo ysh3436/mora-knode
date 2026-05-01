@@ -103,10 +103,12 @@
   "userSwitcherAdminCaption": "관리자 (헤더 없음)",
 
   "taskStatusNotStarted": "시작 전",
-  "taskStatusInProgress": "진행 중",
-  "taskStatusBlocked": "차단됨",
-  "taskStatusDone": "완료",
   "taskStatusInReview": "검토 중",
+  "taskStatusInProgress": "진행 중",
+  "taskStatusBlocked": "보류",
+  "taskStatusDone": "완료",
+  "taskStatusCancelled": "취소",
+  "taskStatusDropped": "중단",
   "taskStatusAggregatedSuffix": "{label}*",
 
   "actionEdit": "편집",

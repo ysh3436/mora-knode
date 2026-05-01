@@ -232,6 +232,11 @@ final tasksSubviewProvider = StateProvider<TasksSubview>((_) => TasksSubview.lis
 /// Gantt zoom level. Persists across re-entries to the gantt subview.
 final ganttZoomProvider = StateProvider<int>((_) => 0); // 0=day, 1=week, 2=month
 
+/// User-resizable gantt title column width. Per-session (memory only,
+/// like inspectorWidthProvider). Min/max enforced at the drag handle
+/// inside GanttChart.
+final ganttTitleColWidthProvider = StateProvider<double>((_) => 240);
+
 /// IDs whose children should be hidden in tree-style views (List + Gantt).
 /// Keyed by entity id: a task id collapses that task's subtree;
 /// `proj:<id>` collapses an entire project group. Shared so toggling

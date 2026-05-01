@@ -2,7 +2,9 @@
 
 - slug: mora-knode
 - 오너: ysh
-- 최종 수정: 2026-05-01 (M1 진행 상황 체크포인트)
+- 최종 수정: 2026-05-01 (M1 진행 상황 체크포인트 + in-app task 이관 시작)
+
+> **추적 매체 변경 (2026-05-01)**: Phase 1.5 부터의 세부 항목은 mora-knode 자체 안의 프로젝트 **"mora-knode itself"** 의 task 로 이관되었습니다 (dogfooding). 본 파일은 phase / 마일스톤 overview 만 유지하고, 세부 진행은 in-app 에서 수정·추적합니다. 일괄 적재 도구: [tools/bulk_insert.py](../../tools/bulk_insert.py), 시드 plan: [plans/mora-knode-itself.json](../../plans/mora-knode-itself.json).
 - 관련: [../prd.md](../prd.md), [../architecture/ADR-002-manager-approval-gate.md](../architecture/ADR-002-manager-approval-gate.md), [../architecture/ADR-004-agent-identity-and-api.md](../architecture/ADR-004-agent-identity-and-api.md), [../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)
 
 ## Phase별 큰 그림

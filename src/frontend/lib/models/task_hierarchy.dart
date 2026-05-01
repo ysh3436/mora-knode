@@ -145,8 +145,29 @@ int _defaultCompare(TaskHierarchyNode a, TaskHierarchyNode b) {
 /// Sort key shared by the tasks workspace (List + Gantt + Calendar).
 /// Only "real" keys live here — the implicit fallback (creation order /
 /// hierarchy position) is expressed by an empty sort chain, not by an
-/// enum value.
-enum TaskSortKey { priority, startDate, dueDate, status }
+/// enum value. Declaration order is the dropdown order: stable handle
+/// first (Number), then triage signals (Status, Priority), then
+/// schedule (Start / Due).
+enum TaskSortKey { number, status, priority, startDate, dueDate }
+
+/// Pre-compiled "MK-{N}" search pattern: matches "mk-12", "mk12", "MK-12".
+/// Used by the task search box so typing the identifier jumps straight
+/// to the task without scanning titles.
+final RegExp _mkSearchPattern = RegExp(r'^mk-?(\d+)$');
+
+/// True when [search] (already lowercased + trimmed) selects this node.
+/// Two paths: exact "MK-N" → number equality, otherwise title substring.
+/// Empty search → always true (caller already short-circuits, but
+/// included here for safety).
+bool taskHierarchyMatchesSearch(TaskHierarchyNode node, String search) {
+  if (search.isEmpty) return true;
+  final mk = _mkSearchPattern.firstMatch(search);
+  if (mk != null) {
+    final n = int.tryParse(mk.group(1)!);
+    return n != null && node.number == n;
+  }
+  return node.title.toLowerCase().contains(search);
+}
 
 /// One step in a multi-level (Notion-style) sort. The chain is evaluated
 /// left-to-right; the first non-zero result wins, and `_defaultCompare`
@@ -243,6 +264,17 @@ Comparator<TaskHierarchyNode> _stepComparator(TaskSortStep step) {
         final ra = _statusActiveOrder[sa] ?? 99;
         final rb = _statusActiveOrder[sb] ?? 99;
         return dir(ra.compareTo(rb));
+      };
+    case TaskSortKey.number:
+      // Plain integer compare on the MK-{N} value — same direction as
+      // the underlying number, no remapping needed. Tasks that pre-date
+      // the migration (number == 0) drop to the bottom regardless of
+      // direction so they don't visually crowd the head/tail.
+      return (a, b) {
+        if (a.number == 0 && b.number == 0) return 0;
+        if (a.number == 0) return 1;
+        if (b.number == 0) return -1;
+        return dir(a.number.compareTo(b.number));
       };
   }
 }

@@ -337,6 +337,9 @@ class AppL10nKo extends AppL10n {
   String get sortKeyStatus => '상태';
 
   @override
+  String get sortKeyNumber => '번호';
+
+  @override
   String get sortPriorityUrgentFirst => '긴급 먼저';
 
   @override
@@ -359,6 +362,12 @@ class AppL10nKo extends AppL10n {
 
   @override
   String get sortStatusDoneFirst => '종료 먼저';
+
+  @override
+  String get sortNumberLowFirst => '낮은 번호 먼저';
+
+  @override
+  String get sortNumberHighFirst => '높은 번호 먼저';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

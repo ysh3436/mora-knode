@@ -721,6 +721,12 @@ abstract class AppL10n {
   /// **'Status'**
   String get sortKeyStatus;
 
+  /// No description provided for @sortKeyNumber.
+  ///
+  /// In en, this message translates to:
+  /// **'Number'**
+  String get sortKeyNumber;
+
   /// No description provided for @sortPriorityUrgentFirst.
   ///
   /// In en, this message translates to:
@@ -768,6 +774,18 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Done first'**
   String get sortStatusDoneFirst;
+
+  /// No description provided for @sortNumberLowFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Lower number first'**
+  String get sortNumberLowFirst;
+
+  /// No description provided for @sortNumberHighFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Higher number first'**
+  String get sortNumberHighFirst;
 
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///

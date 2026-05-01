@@ -202,7 +202,7 @@ class _TasksListState extends ConsumerState<TasksList> {
         hiddenAncestor.add(node.id);
       }
 
-      if (search.isNotEmpty && !node.title.toLowerCase().contains(search)) continue;
+      if (search.isNotEmpty && !taskHierarchyMatchesSearch(node, search)) continue;
 
       final effStatus = node.hasChildren ? node.computedStatus : node.status;
       if (statusFilter.isNotEmpty && !statusFilter.contains(effStatus)) continue;

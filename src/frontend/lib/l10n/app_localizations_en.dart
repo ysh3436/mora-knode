@@ -340,6 +340,9 @@ class AppL10nEn extends AppL10n {
   String get sortKeyStatus => 'Status';
 
   @override
+  String get sortKeyNumber => 'Number';
+
+  @override
   String get sortPriorityUrgentFirst => 'Urgent first';
 
   @override
@@ -362,6 +365,12 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get sortStatusDoneFirst => 'Done first';
+
+  @override
+  String get sortNumberLowFirst => 'Lower number first';
+
+  @override
+  String get sortNumberHighFirst => 'Higher number first';
 
   @override
   String taskStatusAggregatedSuffix(String label) {

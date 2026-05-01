@@ -116,6 +116,14 @@
   "taskPriorityHigh": "높음",
   "taskPriorityUrgent": "긴급",
   "filterPriority": "우선순위",
+
+  "sortBy": "정렬",
+  "sortKeyDefault": "기본",
+  "sortKeyPriority": "우선순위",
+  "sortKeyDueDate": "마감일",
+  "sortKeyStatus": "상태",
+  "sortAscending": "오름차순",
+  "sortDescending": "내림차순",
   "taskStatusAggregatedSuffix": "{label}*",
 
   "actionEdit": "편집",

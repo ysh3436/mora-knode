@@ -214,6 +214,14 @@ final assigneeFilterProvider = StateProvider<Set<String>>((_) => <String>{});
 final statusFilterProvider = StateProvider<Set<TaskStatus>>((_) => <TaskStatus>{});
 final searchQueryProvider = StateProvider<String>((_) => '');
 
+/// Sort state shared by the tasks workspace (List + Gantt + Calendar).
+/// [TaskSortKey] is defined alongside [taskSortComparator] in
+/// task_hierarchy.dart. ASC has a "natural" meaning per key: priority ASC
+/// = most urgent first (Urgent is the smallest int by design), dueDate
+/// ASC = soonest first, status ASC = active first.
+final taskSortKeyProvider = StateProvider<TaskSortKey>((_) => TaskSortKey.defaultOrder);
+final taskSortAscProvider = StateProvider<bool>((_) => true);
+
 /// Tasks workspace has multiple subviews (List / Gantt / Calendar). They are
 /// kept as separate widget trees but share the filter state above. The same
 /// workspace renders in All work (no scope) and per-project Tasks tabs

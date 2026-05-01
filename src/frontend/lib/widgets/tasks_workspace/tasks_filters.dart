@@ -5,6 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/labels.dart';
 import '../../models/project.dart';
 import '../../models/resource.dart';
+import '../../models/task_hierarchy.dart' show TaskSortKey;
 import '../../models/task_item.dart';
 import '../../state/providers.dart';
 
@@ -126,6 +127,8 @@ class TasksFilters extends ConsumerWidget {
                 l.filterCounter(projects.length, resources.length),
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline),
               ),
+              const SizedBox(width: 8),
+              const _SortControl(),
             ],
           ),
           if (hasAny) ...[
@@ -159,6 +162,60 @@ class TasksFilters extends ConsumerWidget {
   static List<String> _uniqueNames(List<Resource> resources) {
     final names = <String>{for (final r in resources) r.name.trim()};
     return names.where((n) => n.isNotEmpty).toList()..sort();
+  }
+}
+
+/// Sort key picker + direction toggle. Sits in the filter row alongside
+/// the multi-chips. Direction button is a single tap that flips ASC/DESC
+/// for the active key — quick and discoverable.
+class _SortControl extends ConsumerWidget {
+  const _SortControl();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l = AppL10n.of(context);
+    final theme = Theme.of(context);
+    final key = ref.watch(taskSortKeyProvider);
+    final asc = ref.watch(taskSortAscProvider);
+
+    String labelOf(TaskSortKey k) => switch (k) {
+          TaskSortKey.defaultOrder => l.sortKeyDefault,
+          TaskSortKey.priority => l.sortKeyPriority,
+          TaskSortKey.dueDate => l.sortKeyDueDate,
+          TaskSortKey.status => l.sortKeyStatus,
+        };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        PopupMenuButton<TaskSortKey>(
+          tooltip: l.sortBy,
+          itemBuilder: (ctx) => [
+            for (final k in TaskSortKey.values)
+              CheckedPopupMenuItem<TaskSortKey>(
+                value: k,
+                checked: k == key,
+                child: Text(labelOf(k)),
+              ),
+          ],
+          onSelected: (k) => ref.read(taskSortKeyProvider.notifier).state = k,
+          child: InputChip(
+            avatar: const Icon(Icons.sort, size: 14),
+            label: Text('${l.sortBy}: ${labelOf(key)}'),
+          ),
+        ),
+        const SizedBox(width: 4),
+        // Direction toggle is hidden for the default order — direction has
+        // no semantic meaning when the sort key is the implicit fallback.
+        if (key != TaskSortKey.defaultOrder)
+          IconButton(
+            tooltip: asc ? l.sortAscending : l.sortDescending,
+            iconSize: 18,
+            icon: Icon(asc ? Icons.arrow_upward : Icons.arrow_downward, color: theme.colorScheme.outline),
+            onPressed: () => ref.read(taskSortAscProvider.notifier).state = !asc,
+          ),
+      ],
+    );
   }
 }
 

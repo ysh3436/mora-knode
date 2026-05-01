@@ -91,17 +91,23 @@ class TaskHierarchyNode {
       TaskPriority.values.firstWhere((p) => p.name == v, orElse: () => TaskPriority.Unset);
 }
 
-/// Depth-first flatten of hierarchy nodes. Roots and siblings sorted by current
-/// timeline start (then created date). Returned tuple = (node, depth from 0).
-List<(TaskHierarchyNode node, int depth)> flattenHierarchy(List<TaskHierarchyNode> nodes) {
+/// Depth-first flatten of hierarchy nodes. Roots and siblings are sorted
+/// per parent group using [compare] (defaults to current-timeline-start
+/// ascending, the original behaviour). Sorting per group preserves the
+/// hierarchical structure — children always appear under their parent
+/// regardless of how they would compare to other branches.
+/// Returned tuple = (node, depth from 0).
+List<(TaskHierarchyNode node, int depth)> flattenHierarchy(
+  List<TaskHierarchyNode> nodes, {
+  Comparator<TaskHierarchyNode>? compare,
+}) {
   final byParent = <String?, List<TaskHierarchyNode>>{};
   for (final n in nodes) {
     byParent.putIfAbsent(n.parentTaskId, () => []).add(n);
   }
-  int sortKey(TaskHierarchyNode n) =>
-      (n.computedCurrentTimeline.start ?? n.createdAt).millisecondsSinceEpoch;
+  final cmp = compare ?? _defaultCompare;
   for (final list in byParent.values) {
-    list.sort((a, b) => sortKey(a).compareTo(sortKey(b)));
+    list.sort(cmp);
   }
 
   final out = <(TaskHierarchyNode, int)>[];
@@ -116,4 +122,86 @@ List<(TaskHierarchyNode node, int depth)> flattenHierarchy(List<TaskHierarchyNod
     visit(r, 0);
   }
   return out;
+}
+
+int _defaultCompare(TaskHierarchyNode a, TaskHierarchyNode b) {
+  final ka = (a.computedCurrentTimeline.start ?? a.createdAt).millisecondsSinceEpoch;
+  final kb = (b.computedCurrentTimeline.start ?? b.createdAt).millisecondsSinceEpoch;
+  return ka.compareTo(kb);
+}
+
+/// Sort key shared by the tasks workspace (List + Gantt + Calendar).
+enum TaskSortKey { defaultOrder, priority, dueDate, status }
+
+/// Hand-crafted ordering for status sort — "active first, terminal last"
+/// regardless of the underlying enum integer mapping. Lower number = more
+/// active. Used only for UI sort, not for backend logic.
+const _statusActiveOrder = <TaskStatus, int>{
+  TaskStatus.InProgress: 0,
+  TaskStatus.InReview: 1,
+  TaskStatus.Blocked: 2,
+  TaskStatus.NotStarted: 3,
+  TaskStatus.Done: 4,
+  TaskStatus.Cancelled: 5,
+  TaskStatus.Dropped: 6,
+};
+
+/// Hand-crafted ordering for priority sort. The Dart enum's declaration
+/// `.index` runs Unset(0) → Urgent(4), which is the *opposite* of the
+/// backend integer mapping (Urgent=-20 most urgent, Unset=+100 least), so
+/// we cannot rely on `.index` directly — ASC by rank below means "most
+/// urgent first" with Unset always at the bottom regardless of direction
+/// (DESC then surfaces the lowest-priority ranked rows first while
+/// keeping unranked rows at the end).
+const _priorityActiveOrder = <TaskPriority, int>{
+  TaskPriority.Urgent: 0,
+  TaskPriority.High: 1,
+  TaskPriority.Normal: 2,
+  TaskPriority.Low: 3,
+  TaskPriority.Unset: 4,
+};
+
+/// Build a comparator for [flattenHierarchy] from the active sort key and
+/// direction. For aggregate (parent) rows the *computed* values are used
+/// so the parent's spot reflects what the user actually sees on the row.
+Comparator<TaskHierarchyNode> taskSortComparator(TaskSortKey key, {required bool asc}) {
+  int dir(int x) => asc ? x : -x;
+  switch (key) {
+    case TaskSortKey.defaultOrder:
+      return (a, b) => dir(_defaultCompare(a, b));
+    case TaskSortKey.priority:
+      // Use _priorityActiveOrder so ASC means "most urgent first" — the
+      // Dart enum's declaration index runs the opposite direction from
+      // the backend's signed integer mapping (Urgent = -20 backend vs
+      // index 4 in Dart), so a manual rank is the only safe choice.
+      return (a, b) {
+        final pa = _priorityActiveOrder[a.hasChildren ? a.computedPriority : a.priority] ?? 99;
+        final pb = _priorityActiveOrder[b.hasChildren ? b.computedPriority : b.priority] ?? 99;
+        if (pa != pb) return dir(pa.compareTo(pb));
+        return dir(_defaultCompare(a, b));
+      };
+    case TaskSortKey.dueDate:
+      return (a, b) {
+        // Aggregate parents use the union end (computed); leaves use their
+        // own current timeline end. Tasks without a due date drop to the
+        // bottom regardless of direction.
+        final ea = (a.hasChildren ? a.computedCurrentTimeline.end : a.currentTimeline.end);
+        final eb = (b.hasChildren ? b.computedCurrentTimeline.end : b.currentTimeline.end);
+        if (ea == null && eb == null) return _defaultCompare(a, b);
+        if (ea == null) return 1;
+        if (eb == null) return -1;
+        final c = ea.compareTo(eb);
+        if (c != 0) return dir(c);
+        return dir(_defaultCompare(a, b));
+      };
+    case TaskSortKey.status:
+      return (a, b) {
+        final sa = a.hasChildren ? a.computedStatus : a.status;
+        final sb = b.hasChildren ? b.computedStatus : b.status;
+        final ra = _statusActiveOrder[sa] ?? 99;
+        final rb = _statusActiveOrder[sb] ?? 99;
+        if (ra != rb) return dir(ra.compareTo(rb));
+        return dir(_defaultCompare(a, b));
+      };
+  }
 }

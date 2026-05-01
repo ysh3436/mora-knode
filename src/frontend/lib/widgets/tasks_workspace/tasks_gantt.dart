@@ -43,6 +43,8 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
     final assigneeFilter = ref.watch(assigneeFilterProvider);
     final statusFilter = ref.watch(statusFilterProvider);
     final search = ref.watch(searchQueryProvider).toLowerCase().trim();
+    final sortKey = ref.watch(taskSortKeyProvider);
+    final sortAsc = ref.watch(taskSortAscProvider);
     final zoomIdx = ref.watch(ganttZoomProvider);
     final collapsed = ref.watch(collapsedNodesProvider);
 
@@ -99,7 +101,7 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
       final depthOffset = showProjectGroups ? 1 : 0;
       // Track collapsed-ancestor task ids so we hide their descendants.
       final hiddenAncestor = <String>{};
-      for (final entry in flattenHierarchy(filtered)) {
+      for (final entry in flattenHierarchy(filtered, compare: taskSortComparator(sortKey, asc: sortAsc))) {
         final node = entry.$1;
         if (node.parentTaskId != null && hiddenAncestor.contains(node.parentTaskId)) {
           if (node.hasChildren) hiddenAncestor.add(node.id);

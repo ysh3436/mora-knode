@@ -123,6 +123,14 @@
   "taskPriorityHigh": "High",
   "taskPriorityUrgent": "Urgent",
   "filterPriority": "Priority",
+
+  "sortBy": "Sort",
+  "sortKeyDefault": "Default",
+  "sortKeyPriority": "Priority",
+  "sortKeyDueDate": "Due date",
+  "sortKeyStatus": "Status",
+  "sortAscending": "Ascending",
+  "sortDescending": "Descending",
   "taskStatusAggregatedSuffix": "{label}*",
   "@taskStatusAggregatedSuffix": {
     "description": "Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.",

@@ -111,49 +111,7 @@ class Sidebar extends ConsumerWidget {
               ],
             ),
           ),
-          // Temporary language quick-switcher for review. Final home is the
-          // Settings page; this row stays until the rest of the UI is migrated
-          // and we trust the toggle there.
-          const _LanguageQuickSwitch(),
           const UserSwitcher(),
-        ],
-      ),
-    );
-  }
-}
-
-class _LanguageQuickSwitch extends ConsumerWidget {
-  const _LanguageQuickSwitch();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final locale = ref.watch(localeProvider);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-      child: Row(
-        children: [
-          Icon(Icons.translate, size: 14, color: theme.colorScheme.outline),
-          const SizedBox(width: 8),
-          Expanded(
-            child: DropdownButton<String>(
-              value: locale.languageCode,
-              isDense: true,
-              isExpanded: true,
-              underline: const SizedBox.shrink(),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface,
-              ),
-              items: const [
-                DropdownMenuItem(value: 'ko', child: Text('한국어')),
-                DropdownMenuItem(value: 'en', child: Text('English')),
-              ],
-              onChanged: (v) {
-                if (v == null) return;
-                ref.read(localeProvider.notifier).state = Locale(v);
-              },
-            ),
-          ),
         ],
       ),
     );

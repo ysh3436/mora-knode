@@ -46,11 +46,11 @@
 ### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-08 ~ 2026-05-21)
 M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md)
 
-- [ ] **PR 1**: Enum 확장
-  - `TaskStatus`: `PlanDrafting, PlanReview, PlanApproved, Failed, Cancelled` 5개 추가
-  - `ResourceKind { Human, Agent }` 신설
-  - 파일: `src/backend/Domain/Enums.cs`
-  - 기존 4개 enum 값 순서/정수 매핑 유지 회귀 테스트
+- [x] **PR 1**: Enum 확장 — backend 부분
+  - `TaskStatus`: `InReview` 1개만 추가 (drafting/approved → 기존 NotStarted/InProgress 흡수, failed → Blocked, cancelled → Done; ADR-002 plan 게이트 + 코드 리뷰 / QA / manager 승인 까지 generic 하게 커버)
+  - `ResourceKind { Human, Agent }` 이미 정의됨
+  - 기존 4개 정수 매핑 (0-3) 유지 — InReview = 4 append
+  - Frontend enum / l10n / status pill 색·라벨 / 아이콘 동기화 완료
 - [ ] **PR 2**: TaskItem / Resource 필드 추가
   - `TaskItem`: `AcceptanceCriteria`, `Git`, `RetryCount`, `LastError`, `AssignedRoleHint`
   - 신규 value type `GitInfo`

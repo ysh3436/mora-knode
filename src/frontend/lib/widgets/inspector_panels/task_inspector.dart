@@ -172,13 +172,6 @@ class _InlineStatusPicker extends ConsumerWidget {
   final TaskHierarchyNode node;
   const _InlineStatusPicker({required this.node});
 
-  Color _bg(ThemeData theme, TaskStatus s) => switch (s) {
-        TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
-        TaskStatus.InProgress => theme.colorScheme.primaryContainer,
-        TaskStatus.Blocked => theme.colorScheme.errorContainer,
-        TaskStatus.Done => theme.colorScheme.tertiaryContainer,
-      };
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -186,7 +179,7 @@ class _InlineStatusPicker extends ConsumerWidget {
     final pill = _Pill(
       label: taskStatusDisplay(context, s, aggregated: node.hasChildren),
       icon: Icons.circle,
-      color: _bg(theme, s),
+      color: taskStatusBg(theme, s),
     );
     if (node.hasChildren) return pill;
 
@@ -198,7 +191,7 @@ class _InlineStatusPicker extends ConsumerWidget {
           PopupMenuItem(
             value: v,
             child: Row(children: [
-              Icon(Icons.circle, size: 10, color: _bg(theme, v)),
+              Icon(Icons.circle, size: 10, color: taskStatusBg(theme, v)),
               const SizedBox(width: 8),
               Text(taskStatusLabel(context, v)),
             ]),

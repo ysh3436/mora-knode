@@ -113,6 +113,7 @@
   "taskStatusInProgress": "In progress",
   "taskStatusBlocked": "Blocked",
   "taskStatusDone": "Done",
+  "taskStatusInReview": "In review",
   "taskStatusAggregatedSuffix": "{label}*",
   "@taskStatusAggregatedSuffix": {
     "description": "Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.",

@@ -407,12 +407,7 @@ class _TaskRow extends StatelessWidget {
   }
 
   Widget _statusChip(BuildContext context, ThemeData theme, TaskStatus status, {required bool aggregated}) {
-    final color = switch (status) {
-      TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
-      TaskStatus.InProgress => theme.colorScheme.primaryContainer,
-      TaskStatus.Blocked => theme.colorScheme.errorContainer,
-      TaskStatus.Done => theme.colorScheme.tertiaryContainer,
-    };
+    final color = taskStatusBg(theme, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),
@@ -680,12 +675,7 @@ class _StickyTaskRow extends StatelessWidget {
   }
 
   Widget _statusChip(BuildContext context, ThemeData theme, TaskStatus status) {
-    final color = switch (status) {
-      TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
-      TaskStatus.InProgress => theme.colorScheme.primaryContainer,
-      TaskStatus.Blocked => theme.colorScheme.errorContainer,
-      TaskStatus.Done => theme.colorScheme.tertiaryContainer,
-    };
+    final color = taskStatusBg(theme, status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(8)),

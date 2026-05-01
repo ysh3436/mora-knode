@@ -304,6 +304,24 @@ class AppL10nEn extends AppL10n {
   String get taskStatusDropped => 'Dropped';
 
   @override
+  String get taskPriorityUnset => 'Unset';
+
+  @override
+  String get taskPriorityLow => 'Low';
+
+  @override
+  String get taskPriorityNormal => 'Normal';
+
+  @override
+  String get taskPriorityHigh => 'High';
+
+  @override
+  String get taskPriorityUrgent => 'Urgent';
+
+  @override
+  String get filterPriority => 'Priority';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

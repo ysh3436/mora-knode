@@ -116,6 +116,13 @@
   "taskStatusDone": "Done",
   "taskStatusCancelled": "Cancelled",
   "taskStatusDropped": "Dropped",
+
+  "taskPriorityUnset": "Unset",
+  "taskPriorityLow": "Low",
+  "taskPriorityNormal": "Normal",
+  "taskPriorityHigh": "High",
+  "taskPriorityUrgent": "Urgent",
+  "filterPriority": "Priority",
   "taskStatusAggregatedSuffix": "{label}*",
   "@taskStatusAggregatedSuffix": {
     "description": "Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.",

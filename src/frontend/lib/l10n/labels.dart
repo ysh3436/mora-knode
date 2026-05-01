@@ -36,6 +36,54 @@ Color taskStatusBg(ThemeData theme, TaskStatus status) => switch (status) {
       TaskStatus.Dropped => theme.colorScheme.surfaceContainerLowest,
     };
 
+/// Localized display label for a [TaskPriority]. Same pattern as
+/// [taskStatusLabel] — keeps the API enum stable while letting the UI
+/// follow the active locale.
+String taskPriorityLabel(BuildContext context, TaskPriority priority) {
+  final l = AppL10n.of(context);
+  return switch (priority) {
+    TaskPriority.Unset => l.taskPriorityUnset,
+    TaskPriority.Low => l.taskPriorityLow,
+    TaskPriority.Normal => l.taskPriorityNormal,
+    TaskPriority.High => l.taskPriorityHigh,
+    TaskPriority.Urgent => l.taskPriorityUrgent,
+  };
+}
+
+/// Background tint for priority pills. Centralized alongside the status
+/// helpers so the inspector and tasks list can't drift apart. Urgent
+/// borrows the error tint to read as a strong "do this first" cue;
+/// Unset falls to the lowest neutral so unranked rows recede.
+Color taskPriorityBg(ThemeData theme, TaskPriority priority) => switch (priority) {
+      TaskPriority.Unset => theme.colorScheme.surfaceContainerLowest,
+      TaskPriority.Low => theme.colorScheme.surfaceContainerLow,
+      TaskPriority.Normal => theme.colorScheme.secondaryContainer,
+      TaskPriority.High => theme.colorScheme.tertiaryContainer,
+      TaskPriority.Urgent => theme.colorScheme.errorContainer,
+    };
+
+/// Direction-arrow icon set so urgency reads at a glance even before the
+/// label is parsed.
+IconData taskPriorityIcon(TaskPriority priority) => switch (priority) {
+      TaskPriority.Unset => Icons.remove,
+      TaskPriority.Low => Icons.keyboard_double_arrow_down,
+      TaskPriority.Normal => Icons.drag_handle,
+      TaskPriority.High => Icons.keyboard_double_arrow_up,
+      TaskPriority.Urgent => Icons.priority_high,
+    };
+
+/// Same as [taskPriorityLabel] but with the same "computed from children"
+/// marker the status display uses, so parent rows visually distinguish an
+/// aggregated priority from a directly-set one.
+String taskPriorityDisplay(
+  BuildContext context,
+  TaskPriority priority, {
+  required bool aggregated,
+}) {
+  final base = taskPriorityLabel(context, priority);
+  return aggregated ? AppL10n.of(context).taskStatusAggregatedSuffix(base) : base;
+}
+
 /// Same as [taskStatusLabel] but with the "computed from children" marker
 /// when [aggregated] is true.
 String taskStatusDisplay(

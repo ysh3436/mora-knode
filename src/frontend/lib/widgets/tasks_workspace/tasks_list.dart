@@ -397,6 +397,15 @@ class _TaskRow extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 100, child: _statusChip(context, theme, status, aggregated: node.hasChildren)),
+              SizedBox(
+                width: 80,
+                child: _priorityChip(
+                  context,
+                  theme,
+                  node.hasChildren ? node.computedPriority : node.priority,
+                  aggregated: node.hasChildren,
+                ),
+              ),
               SizedBox(width: 140, child: _assigneeStrip(theme, row.assignees)),
               SizedBox(width: 110, child: _timelineCell(theme, timeline, df)),
             ],
@@ -416,6 +425,33 @@ class _TaskRow extends StatelessWidget {
         style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  /// Empty when priority is Unset — keeps the column width stable without
+  /// adding visual noise for unranked tasks (the common case at first).
+  Widget _priorityChip(BuildContext context, ThemeData theme, TaskPriority priority, {required bool aggregated}) {
+    if (priority == TaskPriority.Unset) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: taskPriorityBg(theme, priority),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(taskPriorityIcon(priority), size: 12, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              taskPriorityDisplay(context, priority, aggregated: aggregated),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -665,6 +701,7 @@ class _StickyTaskRow extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 100, child: _statusChip(context, theme, status)),
+              SizedBox(width: 80, child: _priorityChip(context, theme, node.computedPriority, aggregated: true)),
               const SizedBox(width: 140), // assignees space (kept blank to match column widths)
               SizedBox(width: 110, child: _timelineCell(theme, timeline, df)),
             ],
@@ -684,6 +721,33 @@ class _StickyTaskRow extends StatelessWidget {
         style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
         overflow: TextOverflow.ellipsis,
         textAlign: TextAlign.center,
+      ),
+    );
+  }
+
+  /// Same as the leaf-row variant — empty for Unset to keep column width
+  /// stable without visual noise on unranked tasks.
+  Widget _priorityChip(BuildContext context, ThemeData theme, TaskPriority priority, {required bool aggregated}) {
+    if (priority == TaskPriority.Unset) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: taskPriorityBg(theme, priority),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(taskPriorityIcon(priority), size: 12, color: theme.colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              taskPriorityDisplay(context, priority, aggregated: aggregated),
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
     );
   }

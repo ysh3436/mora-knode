@@ -48,6 +48,7 @@ public static class TaskHierarchyEndpoints
                 {
                     var leaf = new _Computed(
                         t.Status,
+                        t.Priority,
                         t.OriginTimeline,
                         t.CurrentTimeline,
                         t.RealTimeline);
@@ -59,6 +60,10 @@ public static class TaskHierarchyEndpoints
                 Timeline cur = new();
                 Timeline real = new();
                 var statuses = new List<Domain.TaskStatus>(kids.Count);
+                // Only priorities of children that are still in flight feed
+                // the aggregate — once a leaf reaches Done/Cancelled/Dropped
+                // its urgency is no longer a triage signal for the parent.
+                var activePriorities = new List<Domain.TaskPriority>(kids.Count);
                 foreach (var c in kids)
                 {
                     var cc = Compute(c);
@@ -66,10 +71,17 @@ public static class TaskHierarchyEndpoints
                     cur = Union(cur, cc.CurrentTimeline);
                     real = Union(real, cc.RealTimeline);
                     statuses.Add(cc.Status);
+                    if (cc.Status != Domain.TaskStatus.Done
+                        && cc.Status != Domain.TaskStatus.Cancelled
+                        && cc.Status != Domain.TaskStatus.Dropped)
+                    {
+                        activePriorities.Add(cc.Priority);
+                    }
                 }
 
                 var computed = new _Computed(
                     AggregateStatus(statuses),
+                    AggregatePriority(activePriorities),
                     orig,
                     cur,
                     real);
@@ -89,11 +101,13 @@ public static class TaskHierarchyEndpoints
                     Title: t.Title,
                     Description: t.Description,
                     Status: t.Status,
+                    Priority: t.Priority,
                     OriginTimeline: t.OriginTimeline,
                     CurrentTimeline: t.CurrentTimeline,
                     RealTimeline: t.RealTimeline,
                     HasChildren: hasChildren,
                     ComputedStatus: c.Status,
+                    ComputedPriority: c.Priority,
                     ComputedOriginTimeline: c.OriginTimeline,
                     ComputedCurrentTimeline: c.CurrentTimeline,
                     ComputedRealTimeline: c.RealTimeline,
@@ -142,8 +156,21 @@ public static class TaskHierarchyEndpoints
         return Domain.TaskStatus.NotStarted;
     }
 
+    // Caller already filtered out children that are no longer in flight
+    // (Done/Cancelled/Dropped) — what's left is the active triage pool.
+    // The TaskPriority enum is anchored at Normal=0 with Urgent at the
+    // most-negative end and Unset at +100, so a plain Min() naturally
+    // surfaces the most urgent value and falls back to Unset only when
+    // every active child is Unset.
+    private static Domain.TaskPriority AggregatePriority(List<Domain.TaskPriority> activePriorities)
+    {
+        if (activePriorities.Count == 0) return Domain.TaskPriority.Unset;
+        return activePriorities.Min();
+    }
+
     private record _Computed(
         Domain.TaskStatus Status,
+        Domain.TaskPriority Priority,
         Timeline OriginTimeline,
         Timeline CurrentTimeline,
         Timeline RealTimeline);
@@ -156,11 +183,13 @@ public record TaskHierarchyNode(
     string Title,
     string? Description,
     Domain.TaskStatus Status,
+    Domain.TaskPriority Priority,
     Timeline OriginTimeline,
     Timeline CurrentTimeline,
     Timeline RealTimeline,
     bool HasChildren,
     Domain.TaskStatus ComputedStatus,
+    Domain.TaskPriority ComputedPriority,
     Timeline ComputedOriginTimeline,
     Timeline ComputedCurrentTimeline,
     Timeline ComputedRealTimeline,

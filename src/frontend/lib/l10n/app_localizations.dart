@@ -631,6 +631,12 @@ abstract class AppL10n {
   /// **'Done'**
   String get taskStatusDone;
 
+  /// No description provided for @taskStatusInReview.
+  ///
+  /// In en, this message translates to:
+  /// **'In review'**
+  String get taskStatusInReview;
+
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///
   /// In en, this message translates to:

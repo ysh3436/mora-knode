@@ -106,6 +106,7 @@
   "taskStatusInProgress": "진행 중",
   "taskStatusBlocked": "차단됨",
   "taskStatusDone": "완료",
+  "taskStatusInReview": "검토 중",
   "taskStatusAggregatedSuffix": "{label}*",
 
   "actionEdit": "편집",

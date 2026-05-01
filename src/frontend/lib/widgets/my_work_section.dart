@@ -309,6 +309,7 @@ class _Lane extends StatelessWidget {
         TaskStatus.InProgress => Icons.timelapse,
         TaskStatus.Blocked => Icons.block,
         TaskStatus.Done => Icons.check_circle,
+        TaskStatus.InReview => Icons.rate_review_outlined,
       };
 
   Color _statusColor(ThemeData theme, TaskStatus s) => switch (s) {
@@ -316,6 +317,7 @@ class _Lane extends StatelessWidget {
         TaskStatus.InProgress => theme.colorScheme.primary,
         TaskStatus.Blocked => theme.colorScheme.error,
         TaskStatus.Done => theme.colorScheme.tertiary,
+        TaskStatus.InReview => theme.colorScheme.secondary,
       };
 
   String _l2Range(BuildContext context, TaskHierarchyNode n) {

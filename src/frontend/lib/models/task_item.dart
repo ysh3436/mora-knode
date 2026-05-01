@@ -1,7 +1,22 @@
+// Enum values mirror backend Enums.cs TaskStatus exactly (PascalCase) so
+// `status.name` round-trips through JSON without a translation table.
+// ignore_for_file: constant_identifier_names
+
 import 'timeline.dart';
 
-// ignore: constant_identifier_names
-enum TaskStatus { NotStarted, InProgress, Blocked, Done }
+// Mirror of backend Enums.cs TaskStatus. Order is load-bearing — the first
+// four values must keep their original integer mapping (0-3) so existing
+// persisted tasks deserialize unchanged. InReview appended at index 4 is
+// the only agent-host addition (covers any "human review pending" — ADR-002
+// agent plan gate, code review, QA, manager approval). Other agent
+// lifecycle moments fold into the existing four (see backend enum).
+enum TaskStatus {
+  NotStarted,
+  InProgress,
+  Blocked,
+  Done,
+  InReview,
+}
 
 class TaskItem {
   final String? id;

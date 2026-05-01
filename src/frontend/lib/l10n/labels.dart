@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
 import '../models/task_item.dart';
@@ -14,8 +14,20 @@ String taskStatusLabel(BuildContext context, TaskStatus status) {
     TaskStatus.InProgress => l.taskStatusInProgress,
     TaskStatus.Blocked => l.taskStatusBlocked,
     TaskStatus.Done => l.taskStatusDone,
+    TaskStatus.InReview => l.taskStatusInReview,
   };
 }
+
+/// Background tint for status pills / chips. Centralized so the inspector,
+/// task list, and my-work view can't drift apart. InReview uses the
+/// secondary container to draw the eye — the user has a pending decision.
+Color taskStatusBg(ThemeData theme, TaskStatus status) => switch (status) {
+      TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
+      TaskStatus.InProgress => theme.colorScheme.primaryContainer,
+      TaskStatus.Blocked => theme.colorScheme.errorContainer,
+      TaskStatus.Done => theme.colorScheme.tertiaryContainer,
+      TaskStatus.InReview => theme.colorScheme.secondaryContainer,
+    };
 
 /// Same as [taskStatusLabel] but with the "computed from children" marker
 /// when [aggregated] is true.

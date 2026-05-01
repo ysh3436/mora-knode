@@ -295,6 +295,9 @@ class AppL10nEn extends AppL10n {
   String get taskStatusDone => 'Done';
 
   @override
+  String get taskStatusInReview => 'In review';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

@@ -292,6 +292,9 @@ class AppL10nKo extends AppL10n {
   String get taskStatusDone => '완료';
 
   @override
+  String get taskStatusInReview => '검토 중';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

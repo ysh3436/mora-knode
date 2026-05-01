@@ -39,6 +39,7 @@
 - [x] 프로젝트 페이지 탭 (Overview / Tasks / Issues / Initiatives / Documents) — `bc047de`
 - [x] 다크 테마 (기본 시스템) + Settings 의 테마 카드 (System / Light / Dark). 사이드바에는 두지 않음 — 간트 화면에서 토글 시 Material 의 200ms 보간 transition 동안 단일 프레임 비용이 체감되어, 자주 누르지 않는 경로(Settings) 에 격리.
 - [x] Task 우선순위 필드 (Urgent / High / Normal / Low / Unset) — Normal=0 anchor 기준 양/음 정수 매핑, BsonRepresentation.String 저장. 인스펙터 inline picker + Tasks list pill (Unset 은 숨김). 부모 행은 자식 priority 의 Min() 집계 (Done/Cancelled/Dropped 자식 제외) 로 가장 급한 active 자식 priority 를 `*` 로 표시.
+- [x] List + Gantt 정렬 — sortKey (기본 / 우선순위 / 마감일 / 상태) + 방향 토글. tasks_filters 우측 끝 컨트롤. 계층 보존 (sibling 끼리만 정렬). Status 와 Priority 는 hand-crafted "active first" rank 사용 — backend 정수 매핑이 sort 의도와 직접 일치하지 않아 (특히 priority Unset=+100) 별도 표현. "번호순" 은 sequential number (MK-N) 도입 후속 PR 에서 추가 예정.
 
 ### 다크 테마 후속 (in-app Issues 페이지 생기면 옮길 것)
 - [ ] **(follow-up)** 테마 / 언어 선호 영속화 — 새로고침 시 사용자 선택 유지. 현재 둘 다 메모리 only (System / 한국어로 리셋). 클라이언트 저장 (web `localStorage` 또는 `shared_preferences`) 정도면 충분.

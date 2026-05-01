@@ -319,6 +319,27 @@ class AppL10nKo extends AppL10n {
   String get filterPriority => '우선순위';
 
   @override
+  String get sortBy => '정렬';
+
+  @override
+  String get sortKeyDefault => '기본';
+
+  @override
+  String get sortKeyPriority => '우선순위';
+
+  @override
+  String get sortKeyDueDate => '마감일';
+
+  @override
+  String get sortKeyStatus => '상태';
+
+  @override
+  String get sortAscending => '오름차순';
+
+  @override
+  String get sortDescending => '내림차순';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

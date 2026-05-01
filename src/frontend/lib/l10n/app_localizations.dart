@@ -685,6 +685,48 @@ abstract class AppL10n {
   /// **'Priority'**
   String get filterPriority;
 
+  /// No description provided for @sortBy.
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get sortBy;
+
+  /// No description provided for @sortKeyDefault.
+  ///
+  /// In en, this message translates to:
+  /// **'Default'**
+  String get sortKeyDefault;
+
+  /// No description provided for @sortKeyPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get sortKeyPriority;
+
+  /// No description provided for @sortKeyDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Due date'**
+  String get sortKeyDueDate;
+
+  /// No description provided for @sortKeyStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Status'**
+  String get sortKeyStatus;
+
+  /// No description provided for @sortAscending.
+  ///
+  /// In en, this message translates to:
+  /// **'Ascending'**
+  String get sortAscending;
+
+  /// No description provided for @sortDescending.
+  ///
+  /// In en, this message translates to:
+  /// **'Descending'**
+  String get sortDescending;
+
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///
   /// In en, this message translates to:

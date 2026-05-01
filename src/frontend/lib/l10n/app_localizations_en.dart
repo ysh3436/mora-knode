@@ -322,6 +322,27 @@ class AppL10nEn extends AppL10n {
   String get filterPriority => 'Priority';
 
   @override
+  String get sortBy => 'Sort';
+
+  @override
+  String get sortKeyDefault => 'Default';
+
+  @override
+  String get sortKeyPriority => 'Priority';
+
+  @override
+  String get sortKeyDueDate => 'Due date';
+
+  @override
+  String get sortKeyStatus => 'Status';
+
+  @override
+  String get sortAscending => 'Ascending';
+
+  @override
+  String get sortDescending => 'Descending';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../state/providers.dart';
-import '../task_editor.dart';
 import 'tasks_calendar.dart';
 import 'tasks_filters.dart';
 import 'tasks_gantt.dart';
@@ -54,7 +53,13 @@ class TasksWorkspace extends ConsumerWidget {
               FilledButton.icon(
                 icon: const Icon(Icons.add, size: 16),
                 label: Text(l.newTask),
-                onPressed: () => showTaskEditor(context, ref, projectId: scopeProjectId),
+                onPressed: () {
+                  // Open the inspector with an empty draft instead of a
+                  // modal — every editing surface lives in the right pane now.
+                  ref.read(inspectionProvider.notifier).state =
+                      TaskDraftInspection(projectId: scopeProjectId);
+                  ref.read(inspectorOpenProvider.notifier).state = true;
+                },
               ),
             ],
           ),

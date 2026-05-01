@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
 import 'inspector_panels/project_inspector.dart';
+import 'inspector_panels/task_draft_panel.dart';
 import 'inspector_panels/task_inspector.dart';
 
 /// Right pane that shows the detail of whatever the user has selected. Empty
@@ -77,6 +78,8 @@ class _InspectorBody extends StatelessWidget {
     return switch (inspection!) {
       TaskInspection(taskId: final id) => TaskInspectorPanel(taskId: id),
       ProjectInspection(projectId: final id) => ProjectInspectorPanel(projectId: id),
+      TaskDraftInspection(projectId: final pid, parentTaskId: final ptid) =>
+        TaskDraftPanel(projectId: pid, parentTaskId: ptid),
     };
   }
 }

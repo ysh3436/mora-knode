@@ -38,6 +38,7 @@ class Sidebar extends ConsumerWidget {
             ),
           ),
           const Divider(height: 1),
+          const UserSwitcher(),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: 4),
@@ -111,7 +112,6 @@ class Sidebar extends ConsumerWidget {
               ],
             ),
           ),
-          const UserSwitcher(),
         ],
       ),
     );

@@ -6,6 +6,10 @@ obj/
 *.userosscache
 *.sln.docstates
 
+# Local-only config override (per-worktree ports, Mongo DB names, etc).
+# Use appsettings.Local.example.json as the template.
+appsettings.Local.json
+
 # Flutter/Dart
 **/build/
 .dart_tool/

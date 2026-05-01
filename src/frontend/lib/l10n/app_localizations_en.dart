@@ -479,4 +479,51 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get ganttZoomMonth => 'Month';
+
+  @override
+  String get projectsDirectoryTitle => 'Project list';
+
+  @override
+  String get projectsDirectoryEmpty => 'No projects yet.';
+
+  @override
+  String get projectPickPrompt => 'Pick a project from the list on the left.';
+
+  @override
+  String get projectTabOverview => 'Overview';
+
+  @override
+  String get projectTabTasks => 'Tasks';
+
+  @override
+  String get projectTabIssues => 'Issues';
+
+  @override
+  String get projectTabInitiatives => 'Initiatives';
+
+  @override
+  String get projectTabDocuments => 'Documents';
+
+  @override
+  String get projectBackToDirectory => 'Back to list';
+
+  @override
+  String get projectIssuesComing => 'Issue triage';
+
+  @override
+  String get projectInitiativesComing => 'Project initiatives';
+
+  @override
+  String get projectDocumentsComing => 'Project documents';
+
+  @override
+  String projectOverviewCounts(int tasks, int milestones) {
+    return '$tasks tasks · $milestones milestones';
+  }
+
+  @override
+  String get projectTasksEmpty => 'No tasks in this project.';
+
+  @override
+  String get projectTaskOpenInAllWork => 'Open in All work';
 }

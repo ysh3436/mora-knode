@@ -8,12 +8,16 @@ import '../../models/resource.dart';
 import '../../models/task_item.dart';
 import '../../state/providers.dart';
 
-/// Filter row shared across All work subviews. Each multi-select dropdown
-/// has a "Show all (clear)" entry at the top, and a Notion-style pill
-/// strip below renders every active selection with an inline ✕ for one-tap
-/// removal.
-class AllWorkFilters extends ConsumerWidget {
-  const AllWorkFilters({super.key});
+/// Filter row shared across tasks subviews. Each multi-select dropdown has a
+/// "Show all (clear)" entry at the top, and a Notion-style pill strip below
+/// renders every active selection with an inline ✕ for one-tap removal.
+///
+/// When [scopeProjectId] is set (per-project Tasks tab), the Project chip and
+/// project pills are hidden — the project context is implicit from the host
+/// page, and forcing a single value would just be redundant UI.
+class TasksFilters extends ConsumerWidget {
+  final String? scopeProjectId;
+  const TasksFilters({super.key, this.scopeProjectId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -30,7 +34,8 @@ class AllWorkFilters extends ConsumerWidget {
     final humanNames = _uniqueNames(resources);
     final projectsById = {for (final p in projects) if (p.id != null) p.id!: p};
 
-    final hasAny = projectFilter.isNotEmpty ||
+    final scoped = scopeProjectId != null;
+    final hasAny = (!scoped && projectFilter.isNotEmpty) ||
         assigneeFilter.isNotEmpty ||
         statusFilter.isNotEmpty ||
         search.isNotEmpty;
@@ -42,17 +47,19 @@ class AllWorkFilters extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _MultiChip(
-                icon: Icons.folder_outlined,
-                label: l.filterProject,
-                selected: projectFilter,
-                options: projects
-                    .where((p) => p.id != null)
-                    .map((p) => (id: p.id!, label: p.name))
-                    .toList(),
-                onChanged: (s) => ref.read(projectFilterProvider.notifier).state = s,
-              ),
-              const SizedBox(width: 8),
+              if (!scoped) ...[
+                _MultiChip(
+                  icon: Icons.folder_outlined,
+                  label: l.filterProject,
+                  selected: projectFilter,
+                  options: projects
+                      .where((p) => p.id != null)
+                      .map((p) => (id: p.id!, label: p.name))
+                      .toList(),
+                  onChanged: (s) => ref.read(projectFilterProvider.notifier).state = s,
+                ),
+                const SizedBox(width: 8),
+              ],
               _MultiChip(
                 icon: Icons.person_outline,
                 label: l.filterAssignee,
@@ -106,7 +113,9 @@ class AllWorkFilters extends ConsumerWidget {
                   icon: const Icon(Icons.clear_all, size: 16),
                   label: Text(l.filterClearAll),
                   onPressed: () {
-                    ref.read(projectFilterProvider.notifier).state = <String>{};
+                    if (!scoped) {
+                      ref.read(projectFilterProvider.notifier).state = <String>{};
+                    }
                     ref.read(assigneeFilterProvider.notifier).state = <String>{};
                     ref.read(statusFilterProvider.notifier).state = <TaskStatus>{};
                     ref.read(searchQueryProvider.notifier).state = '';
@@ -123,7 +132,7 @@ class AllWorkFilters extends ConsumerWidget {
             const SizedBox(height: 8),
             _ActivePills(
               projectsById: projectsById,
-              projectFilter: projectFilter,
+              projectFilter: scoped ? const <String>{} : projectFilter,
               assigneeFilter: assigneeFilter,
               statusFilter: statusFilter,
               search: search,

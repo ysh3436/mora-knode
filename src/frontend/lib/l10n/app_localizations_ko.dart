@@ -473,4 +473,51 @@ class AppL10nKo extends AppL10n {
 
   @override
   String get ganttZoomMonth => '월';
+
+  @override
+  String get projectsDirectoryTitle => '프로젝트 목록';
+
+  @override
+  String get projectsDirectoryEmpty => '아직 프로젝트가 없습니다.';
+
+  @override
+  String get projectPickPrompt => '왼쪽 목록에서 프로젝트를 선택하세요.';
+
+  @override
+  String get projectTabOverview => '개요';
+
+  @override
+  String get projectTabTasks => '업무';
+
+  @override
+  String get projectTabIssues => '이슈';
+
+  @override
+  String get projectTabInitiatives => '기획';
+
+  @override
+  String get projectTabDocuments => '문서';
+
+  @override
+  String get projectBackToDirectory => '목록으로';
+
+  @override
+  String get projectIssuesComing => '이슈 트리아지';
+
+  @override
+  String get projectInitiativesComing => '프로젝트 기획';
+
+  @override
+  String get projectDocumentsComing => '프로젝트 문서';
+
+  @override
+  String projectOverviewCounts(int tasks, int milestones) {
+    return '업무 $tasks · 마일스톤 $milestones';
+  }
+
+  @override
+  String get projectTasksEmpty => '이 프로젝트에 업무가 없습니다.';
+
+  @override
+  String get projectTaskOpenInAllWork => '전체 업무에서 보기';
 }

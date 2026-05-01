@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
+import '../../data/korean_holidays.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/labels.dart';
 import '../../models/assignment.dart';
@@ -11,14 +12,33 @@ import '../../models/task_item.dart';
 import '../../models/work_calendar.dart';
 import '../../state/providers.dart';
 
+/// Shared Korean weekday/holiday day-text color rule. Holiday wins over
+/// weekday so a holiday-on-Saturday still reads red.
+Color? _koreanDayColor(BuildContext context, DateTime date) {
+  if (KoreanHolidays.forDate(date) != null) return const Color(0xFFE53935);
+  if (date.weekday == DateTime.sunday) return const Color(0xFFE53935);
+  if (date.weekday == DateTime.saturday) return const Color(0xFF1976D2);
+  return null;
+}
+
+/// Bumped by the "Today" button in [TasksCalendar] so the week view's hour
+/// grid scrolls to the current time even when the displayed week was already
+/// "today" (in which case the anchor wouldn't change and a watcher on the
+/// anchor alone would miss the press).
+final _weekScrollNowTickerProvider = StateProvider<int>((_) => 0);
+
 /// Calendar view (wireframes §4.4). Two modes:
 /// - Month: 6×7 grid, all-day tasks render as full-day chips, timed tasks
 ///   show with a clock icon.
 /// - Week: 7-column grid with an all-day band on top + an hourly time-slot
 ///   grid below (option b from §8.1). Hour range follows WorkCalendar
 ///   ±1 hour, with weekend columns dimmed.
-class AllWorkCalendar extends ConsumerWidget {
-  const AllWorkCalendar({super.key});
+///
+/// When [scopeProjectId] is set, events are filtered to that project (the
+/// project filter chip is hidden in TasksFilters in this mode).
+class TasksCalendar extends ConsumerWidget {
+  final String? scopeProjectId;
+  const TasksCalendar({super.key, this.scopeProjectId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -54,6 +74,10 @@ class AllWorkCalendar extends ConsumerWidget {
                   final now = DateTime.now();
                   ref.read(calendarAnchorProvider.notifier).state =
                       DateTime(now.year, now.month, now.day);
+                  // Tell the week view to scroll its hour grid to "now".
+                  // Anchor alone wouldn't fire if the user is already on
+                  // today's week, so we bump an explicit ticker.
+                  ref.read(_weekScrollNowTickerProvider.notifier).update((v) => v + 1);
                 },
                 child: Text(l.actionToday),
               ),
@@ -75,8 +99,8 @@ class AllWorkCalendar extends ConsumerWidget {
         Divider(height: 1, color: theme.dividerColor),
         Expanded(
           child: mode == CalendarMode.month
-              ? const _MonthView()
-              : const _WeekView(),
+              ? _MonthView(scopeProjectId: scopeProjectId)
+              : _WeekView(scopeProjectId: scopeProjectId),
         ),
       ],
     );
@@ -102,7 +126,8 @@ class AllWorkCalendar extends ConsumerWidget {
 // ============================================================================
 
 class _MonthView extends ConsumerWidget {
-  const _MonthView();
+  final String? scopeProjectId;
+  const _MonthView({this.scopeProjectId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -111,7 +136,7 @@ class _MonthView extends ConsumerWidget {
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
     final anchor = ref.watch(calendarAnchorProvider);
-    final filters = _Filters.from(ref);
+    final filters = _Filters.from(ref, scopeProjectId);
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -136,7 +161,13 @@ class _MonthView extends ConsumerWidget {
           Row(
             children: List.generate(7, (i) {
               final d = gridStart.add(Duration(days: i));
-              final label = DateFormat.E(dateLocale(context)).format(d.toLocal());
+              // Full weekday name ("월요일", "Monday") per user feedback —
+              // short form felt cramped given the cell width.
+              final label = DateFormat.EEEE(dateLocale(context)).format(d.toLocal());
+              // Sat blue / Sun (or holiday-on-that-Sun-of-grid-start) red —
+              // header colors weekday columns so the user reads weekday
+              // identity at a glance.
+              final headerColor = _koreanDayColor(context, d);
               return Expanded(
                 child: Center(
                   child: Padding(
@@ -145,7 +176,7 @@ class _MonthView extends ConsumerWidget {
                       label,
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.outline,
+                        color: headerColor ?? theme.colorScheme.outline,
                       ),
                     ),
                   ),
@@ -207,6 +238,8 @@ class _MonthCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dayLabel = day.day.toString();
+    final holiday = KoreanHolidays.forDate(day);
+    final koreanColor = _koreanDayColor(context, day);
     const maxRows = 4;
     final shown = tasks.take(maxRows).toList();
     final overflow = tasks.length - shown.length;
@@ -234,13 +267,34 @@ class _MonthCell extends StatelessWidget {
                   child: Text(
                     dayLabel,
                     style: theme.textTheme.bodySmall?.copyWith(
+                      // Today wins (white-on-primary). Otherwise apply
+                      // Sat/Sun/holiday Korean color when in-month, dim
+                      // grey for out-of-month days.
                       color: isToday
                           ? theme.colorScheme.onPrimary
-                          : (inMonth ? theme.colorScheme.onSurface : theme.colorScheme.outline),
-                      fontWeight: isToday ? FontWeight.w600 : FontWeight.w400,
+                          : (inMonth
+                              ? (koreanColor ?? theme.colorScheme.onSurface)
+                              : theme.colorScheme.outline),
+                      fontWeight:
+                          (isToday || holiday != null) ? FontWeight.w600 : FontWeight.w400,
                     ),
                   ),
                 ),
+                if (holiday != null && inMonth) ...[
+                  const SizedBox(width: 4),
+                  Flexible(
+                    child: Text(
+                      holiday.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        color: const Color(0xFFE53935),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
                 const Spacer(),
                 ...milestones.take(2).map((m) => Padding(
                       padding: const EdgeInsets.only(left: 2),
@@ -327,22 +381,56 @@ class _TaskChip extends StatelessWidget {
 // Week view — option b: time-slot grid with all-day band on top
 // ============================================================================
 
-class _WeekView extends ConsumerWidget {
-  const _WeekView();
+class _WeekView extends ConsumerStatefulWidget {
+  final String? scopeProjectId;
+  const _WeekView({this.scopeProjectId});
 
   static const double _gutterWidth = 64;
   static const double _rowHeight = 36;
   static const double _allDayMaxHeight = 84;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_WeekView> createState() => _WeekViewState();
+}
+
+class _WeekViewState extends ConsumerState<_WeekView> {
+  final ScrollController _hourScroll = ScrollController();
+  bool _initialScrollDone = false;
+
+  @override
+  void dispose() {
+    _hourScroll.dispose();
+    super.dispose();
+  }
+
+  /// Center the hour grid on "now" once the layout settles. No-op if the
+  /// current minute falls outside the rendered hour band (e.g. user is
+  /// browsing at 2 AM but the band is 7–18) — leave the existing scroll
+  /// position alone in that case.
+  void _scheduleScrollToNow(int startHour, int hourCount) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hourScroll.hasClients) return;
+      final now = DateTime.now();
+      final minuteInBand = (now.hour - startHour) * 60 + now.minute;
+      if (minuteInBand < 0 || minuteInBand > hourCount * 60) return;
+      const pixelsPerMinute = _WeekView._rowHeight / 60.0;
+      final viewport = _hourScroll.position.viewportDimension;
+      if (viewport <= 0) return;
+      final target = minuteInBand * pixelsPerMinute - viewport / 2;
+      _hourScroll.jumpTo(target.clamp(0.0, _hourScroll.position.maxScrollExtent));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scopeProjectId = widget.scopeProjectId;
     final theme = Theme.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
     final assignments = ref.watch(allAssignmentsProvider);
     final resources = ref.watch(resourcesProvider);
     final calendar = ref.watch(workCalendarProvider);
     final anchor = ref.watch(calendarAnchorProvider);
-    final filters = _Filters.from(ref);
+    final filters = _Filters.from(ref, scopeProjectId);
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading || calendar.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -366,35 +454,48 @@ class _WeekView extends ConsumerWidget {
     final startHour = cal == null ? 8 : ((cal.dailyStartMinutes - 60) ~/ 60).clamp(0, 22);
     final endHour = cal == null ? 19 : (((cal.dailyEndMinutes + 60) / 60).ceil()).clamp(startHour + 1, 24);
     final hourCount = endHour - startHour;
-    final gridHeight = _rowHeight * hourCount;
-    final pixelsPerMinute = _rowHeight / 60.0;
+    final gridHeight = _WeekView._rowHeight * hourCount;
+    final pixelsPerMinute = _WeekView._rowHeight / 60.0;
+
+    // First successful build with real layout: center the hour grid on now.
+    if (!_initialScrollDone) {
+      _initialScrollDone = true;
+      _scheduleScrollToNow(startHour, hourCount);
+    }
+    // "Today" button bumps this ticker — re-center even if anchor was already
+    // today (in which case the anchor watcher would never fire).
+    ref.listen<int>(_weekScrollNowTickerProvider, (_, _) {
+      _scheduleScrollToNow(startHour, hourCount);
+    });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Header row
-        _WeekHeaderRow(monday: monday, today: today, gutterWidth: _gutterWidth),
+        _WeekHeaderRow(monday: monday, today: today, gutterWidth: _WeekView._gutterWidth),
         Divider(height: 1, color: theme.dividerColor),
         // All-day band
         _AllDayBand(
           monday: monday,
+          today: today,
           ctx: ctx,
-          gutterWidth: _gutterWidth,
-          maxHeight: _allDayMaxHeight,
+          gutterWidth: _WeekView._gutterWidth,
+          maxHeight: _WeekView._allDayMaxHeight,
           onPick: (id) => _select(ref, id),
         ),
         Divider(height: 1, color: theme.dividerColor),
         // Hour grid: gutter (time labels) + day stack
         Expanded(
           child: SingleChildScrollView(
+            controller: _hourScroll,
             child: SizedBox(
               height: gridHeight,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: _gutterWidth,
-                    child: _HourGutter(startHour: startHour, hourCount: hourCount, rowHeight: _rowHeight),
+                    width: _WeekView._gutterWidth,
+                    child: _HourGutter(startHour: startHour, hourCount: hourCount, rowHeight: _WeekView._rowHeight),
                   ),
                   Expanded(
                     child: _DayGrid(
@@ -403,7 +504,7 @@ class _WeekView extends ConsumerWidget {
                       cal: cal,
                       startHour: startHour,
                       hourCount: hourCount,
-                      rowHeight: _rowHeight,
+                      rowHeight: _WeekView._rowHeight,
                       pixelsPerMinute: pixelsPerMinute,
                       onPick: (id) => _select(ref, id),
                     ),
@@ -441,23 +542,62 @@ class _WeekHeaderRow extends StatelessWidget {
               final d = monday.add(Duration(days: i));
               final isToday = _sameDay(d, today);
               final isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+              final holiday = KoreanHolidays.forDate(d);
+              final dayColor = _koreanDayColor(context, d);
               return Container(
-                padding: const EdgeInsets.symmetric(vertical: 6),
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                 decoration: BoxDecoration(
-                  color: isWeekend ? theme.colorScheme.surfaceContainerLow : null,
+                  // Today wins over weekend tint — the same primary tint
+                  // continues through the all-day band and hour grid below
+                  // so the column reads as one block.
+                  color: isToday
+                      ? theme.colorScheme.primary.withValues(alpha: 0.10)
+                      : (isWeekend ? theme.colorScheme.surfaceContainerLow : null),
                   border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(DateFormat.E(dateLocale(context)).format(d.toLocal()),
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),
+                    // Full weekday name to match the month-view header.
                     Text(
-                      d.day.toString(),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
-                        color: isToday ? theme.colorScheme.primary : null,
+                      DateFormat.EEEE(dateLocale(context)).format(d.toLocal()),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: dayColor ?? theme.colorScheme.outline,
                       ),
+                    ),
+                    // Day number + (optional) holiday name beside it — same
+                    // pattern as the month cells.
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Text(
+                          d.day.toString(),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                            // Today (primary blue) overrides; otherwise the
+                            // Sat/Sun/holiday Korean cue.
+                            color: isToday ? theme.colorScheme.primary : dayColor,
+                          ),
+                        ),
+                        if (holiday != null) ...[
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              holiday.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 10,
+                                color: const Color(0xFFE53935),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
@@ -472,12 +612,14 @@ class _WeekHeaderRow extends StatelessWidget {
 
 class _AllDayBand extends StatelessWidget {
   final DateTime monday;
+  final DateTime today;
   final _CalendarContext ctx;
   final double gutterWidth;
   final double maxHeight;
   final void Function(String id) onPick;
   const _AllDayBand({
     required this.monday,
+    required this.today,
     required this.ctx,
     required this.gutterWidth,
     required this.maxHeight,
@@ -506,6 +648,9 @@ class _AllDayBand extends StatelessWidget {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
+                  color: _sameDay(monday.add(Duration(days: i)), today)
+                      ? theme.colorScheme.primary.withValues(alpha: 0.10)
+                      : null,
                   border: Border(left: BorderSide(color: theme.dividerColor.withValues(alpha: 0.4))),
                 ),
                 padding: const EdgeInsets.all(2),
@@ -618,8 +763,47 @@ class _DayGrid extends StatelessWidget {
           }
         }
 
+        // Current-time line: only when "today" lands in the displayed week
+        // and the current minute falls inside the rendered hour band.
+        Widget? nowLine;
+        final now = DateTime.now();
+        final todayLocal = DateTime(now.year, now.month, now.day);
+        final weekEnd = monday.add(const Duration(days: 7));
+        if (!todayLocal.isBefore(monday) && todayLocal.isBefore(weekEnd)) {
+          final dayIndex = todayLocal.difference(monday).inDays;
+          final minuteInBand = (now.hour - startHour) * 60 + now.minute;
+          if (minuteInBand >= 0 && minuteInBand <= hourCount * 60) {
+            final y = minuteInBand * pixelsPerMinute;
+            nowLine = Positioned(
+              top: y - 1,
+              left: dayIndex * colWidth,
+              width: colWidth,
+              height: 2,
+              child: Container(color: theme.colorScheme.error.withValues(alpha: 0.7)),
+            );
+          }
+        }
+
+        // Today column tint — drawn under the grid + bars so the timed-task
+        // boxes stay readable on top. Continues the same primary tint used
+        // by the header and all-day band so the column reads as one block.
+        Widget? todayColumn;
+        if (!todayLocal.isBefore(monday) && todayLocal.isBefore(weekEnd)) {
+          final dayIndex = todayLocal.difference(monday).inDays;
+          todayColumn = Positioned(
+            top: 0,
+            bottom: 0,
+            left: dayIndex * colWidth,
+            width: colWidth,
+            child: Container(
+              color: theme.colorScheme.primary.withValues(alpha: 0.10),
+            ),
+          );
+        }
+
         return Stack(
           children: [
+            ?todayColumn,
             // background grid: hour rows × 7 day cells
             Column(
               children: List.generate(hourCount, (h) {
@@ -636,7 +820,9 @@ class _DayGrid extends StatelessWidget {
                       return Expanded(
                         child: Container(
                           decoration: BoxDecoration(
-                            color: isWeekend
+                            // Skip the weekend tint on today's column so the
+                            // primary tint above doesn't get muddied.
+                            color: isWeekend && !_sameDay(d, todayLocal)
                                 ? theme.colorScheme.surfaceContainerLow.withValues(alpha: 0.3)
                                 : null,
                             border: Border(
@@ -657,6 +843,7 @@ class _DayGrid extends StatelessWidget {
               }),
             ),
             ...timedBoxes,
+            ?nowLine,
           ],
         );
       },
@@ -718,8 +905,13 @@ class _Filters {
     required this.search,
   });
 
-  factory _Filters.from(WidgetRef ref) => _Filters(
-        projectFilter: ref.watch(projectFilterProvider),
+  /// Reads the shared filter providers. When [scopeProjectId] is non-null the
+  /// project filter is forced to that one project regardless of the global
+  /// projectFilterProvider state.
+  factory _Filters.from(WidgetRef ref, String? scopeProjectId) => _Filters(
+        projectFilter: scopeProjectId != null
+            ? <String>{scopeProjectId}
+            : ref.watch(projectFilterProvider),
         assigneeFilter: ref.watch(assigneeFilterProvider),
         statusFilter: ref.watch(statusFilterProvider),
         search: ref.watch(searchQueryProvider).toLowerCase().trim(),

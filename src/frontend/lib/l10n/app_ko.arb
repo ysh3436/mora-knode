@@ -172,5 +172,21 @@
   "ganttColTask": "업무",
   "ganttZoomDay": "일",
   "ganttZoomWeek": "주",
-  "ganttZoomMonth": "월"
+  "ganttZoomMonth": "월",
+
+  "projectsDirectoryTitle": "프로젝트 목록",
+  "projectsDirectoryEmpty": "아직 프로젝트가 없습니다.",
+  "projectPickPrompt": "왼쪽 목록에서 프로젝트를 선택하세요.",
+  "projectTabOverview": "개요",
+  "projectTabTasks": "업무",
+  "projectTabIssues": "이슈",
+  "projectTabInitiatives": "기획",
+  "projectTabDocuments": "문서",
+  "projectBackToDirectory": "목록으로",
+  "projectIssuesComing": "이슈 트리아지",
+  "projectInitiativesComing": "프로젝트 기획",
+  "projectDocumentsComing": "프로젝트 문서",
+  "projectOverviewCounts": "업무 {tasks} · 마일스톤 {milestones}",
+  "projectTasksEmpty": "이 프로젝트에 업무가 없습니다.",
+  "projectTaskOpenInAllWork": "전체 업무에서 보기"
 }

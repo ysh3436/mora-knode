@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
-import '../widgets/all_work/all_work_section.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/matrix_section.dart';
 import '../widgets/my_work_section.dart';
+import '../widgets/projects_section.dart';
 import '../widgets/settings_section.dart';
+import '../widgets/tasks_workspace/tasks_workspace.dart';
 
 /// Top-level screen: the AppShell wraps a section view chosen by
 /// [appSectionProvider]. Each section is a placeholder for now and gets
@@ -24,9 +25,9 @@ class MainScreen extends ConsumerWidget {
       AppSection.myWork =>
         (_HeaderTitle(l.headerMyWork, subtitle: l.headerMyWorkSub), const MyWorkSection()),
       AppSection.allWork =>
-        (_HeaderTitle(l.headerAllWork), const AllWorkSection()),
+        (_HeaderTitle(l.headerAllWork), const TasksWorkspace()),
       AppSection.projects =>
-        (_HeaderTitle(l.headerProjects), _Coming(label: l.comingProjectsDirectory)),
+        (_HeaderTitle(l.headerProjects), const ProjectsSection()),
       AppSection.resources =>
         (_HeaderTitle(l.headerResources), _Coming(label: l.comingResources)),
       AppSection.matrix =>

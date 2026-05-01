@@ -10,13 +10,30 @@ import '../../models/timeline.dart';
 import '../../state/providers.dart';
 import '../gantt_chart.dart';
 
-/// Gantt rendering for All work. Same shared filters as List view, plus a
-/// Day / Week / Month zoom toggle (wireframes §4.3.1).
-class AllWorkGantt extends ConsumerWidget {
-  const AllWorkGantt({super.key});
+/// Gantt rendering. Same shared filters as List view, plus a Day / Week /
+/// Month zoom toggle (wireframes §4.3.1).
+///
+/// When [scopeProjectId] is null, projects are grouped under sticky project
+/// rows. When set, the chart is scoped to one project and the project group
+/// row is skipped (the host page already names the project).
+class TasksGantt extends ConsumerStatefulWidget {
+  final String? scopeProjectId;
+  const TasksGantt({super.key, this.scopeProjectId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TasksGantt> createState() => _TasksGanttState();
+}
+
+class _TasksGanttState extends ConsumerState<TasksGantt> {
+  // Bumping this value tells GanttChart to re-center horizontally. Each press
+  // of "Today" stores a fresh DateTime so the prop comparison in
+  // GanttChart.didUpdateWidget always detects a change (even consecutive
+  // presses within the same minute).
+  DateTime? _centerOn;
+
+  @override
+  Widget build(BuildContext context) {
+    final scopeProjectId = widget.scopeProjectId;
     final theme = Theme.of(context);
     final l = AppL10n.of(context);
     final agg = ref.watch(allHierarchyByProjectProvider);
@@ -41,9 +58,13 @@ class AllWorkGantt extends ConsumerWidget {
     }
     final resourceById = {for (final r in (resources.value ?? const <Resource>[])) r.id!: r};
 
+    final scopeId = scopeProjectId;
+    final effectiveProjectFilter = scopeId != null ? <String>{scopeId} : projectFilter;
+    final showProjectGroups = scopeId == null;
+
     final rows = <GanttRow>[];
     for (final g in groups) {
-      if (projectFilter.isNotEmpty && !projectFilter.contains(g.project.id)) continue;
+      if (effectiveProjectFilter.isNotEmpty && !effectiveProjectFilter.contains(g.project.id)) continue;
 
       // Filter nodes per assignee/status/search; keep ancestors of any match.
       final filtered = _filterNodes(
@@ -56,23 +77,26 @@ class AllWorkGantt extends ConsumerWidget {
       );
       if (filtered.isEmpty) continue;
 
-      // Project group header row spanning the union timeline. Use a synthetic
-      // id so the chevron in the gutter can toggle the project's children.
-      final pkey = 'proj:${g.project.id}';
-      final projCollapsed = collapsed.contains(pkey);
-      final span = _projectSpan(filtered);
-      rows.add(GanttRow(
-        id: pkey,
-        title: '📁 ${g.project.name}',
-        depth: 0,
-        hasChildren: true,
-        origin: const Timeline(),
-        current: span,
-        real: const Timeline(),
-        isStickyHeader: true,
-      ));
-      if (projCollapsed) continue;
+      // Project group header row spans the union timeline. Skipped in scoped
+      // mode since the host page already names the project context.
+      if (showProjectGroups) {
+        final pkey = 'proj:${g.project.id}';
+        final projCollapsed = collapsed.contains(pkey);
+        final span = _projectSpan(filtered);
+        rows.add(GanttRow(
+          id: pkey,
+          title: '📁 ${g.project.name}',
+          depth: 0,
+          hasChildren: true,
+          origin: const Timeline(),
+          current: span,
+          real: const Timeline(),
+          isStickyHeader: true,
+        ));
+        if (projCollapsed) continue;
+      }
 
+      final depthOffset = showProjectGroups ? 1 : 0;
       // Track collapsed-ancestor task ids so we hide their descendants.
       final hiddenAncestor = <String>{};
       for (final entry in flattenHierarchy(filtered)) {
@@ -87,7 +111,7 @@ class AllWorkGantt extends ConsumerWidget {
         rows.add(GanttRow(
           id: node.id,
           title: node.title,
-          depth: entry.$2 + 1,
+          depth: entry.$2 + depthOffset,
           hasChildren: node.hasChildren,
           origin: node.hasChildren ? node.computedOriginTimeline : node.originTimeline,
           current: node.hasChildren ? node.computedCurrentTimeline : node.currentTimeline,
@@ -132,6 +156,12 @@ class AllWorkGantt extends ConsumerWidget {
                 selected: {zoomIdx},
                 onSelectionChanged: (s) => ref.read(ganttZoomProvider.notifier).state = s.first,
               ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.today, size: 16),
+                label: Text(l.actionToday),
+                onPressed: () => setState(() => _centerOn = DateTime.now()),
+              ),
               const SizedBox(width: 16),
               Wrap(
                 spacing: 12,
@@ -151,6 +181,7 @@ class AllWorkGantt extends ConsumerWidget {
             rows: rows,
             zoom: zoom,
             selectedId: selectedTaskId,
+            centerOn: _centerOn,
             onRowTap: (id) {
               // Project group rows use synthetic ids; ignore them for selection.
               if (id.startsWith('proj:')) return;

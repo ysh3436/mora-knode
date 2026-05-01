@@ -972,6 +972,96 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Month'**
   String get ganttZoomMonth;
+
+  /// No description provided for @projectsDirectoryTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Project list'**
+  String get projectsDirectoryTitle;
+
+  /// No description provided for @projectsDirectoryEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No projects yet.'**
+  String get projectsDirectoryEmpty;
+
+  /// No description provided for @projectPickPrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a project from the list on the left.'**
+  String get projectPickPrompt;
+
+  /// No description provided for @projectTabOverview.
+  ///
+  /// In en, this message translates to:
+  /// **'Overview'**
+  String get projectTabOverview;
+
+  /// No description provided for @projectTabTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get projectTabTasks;
+
+  /// No description provided for @projectTabIssues.
+  ///
+  /// In en, this message translates to:
+  /// **'Issues'**
+  String get projectTabIssues;
+
+  /// No description provided for @projectTabInitiatives.
+  ///
+  /// In en, this message translates to:
+  /// **'Initiatives'**
+  String get projectTabInitiatives;
+
+  /// No description provided for @projectTabDocuments.
+  ///
+  /// In en, this message translates to:
+  /// **'Documents'**
+  String get projectTabDocuments;
+
+  /// No description provided for @projectBackToDirectory.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to list'**
+  String get projectBackToDirectory;
+
+  /// No description provided for @projectIssuesComing.
+  ///
+  /// In en, this message translates to:
+  /// **'Issue triage'**
+  String get projectIssuesComing;
+
+  /// No description provided for @projectInitiativesComing.
+  ///
+  /// In en, this message translates to:
+  /// **'Project initiatives'**
+  String get projectInitiativesComing;
+
+  /// No description provided for @projectDocumentsComing.
+  ///
+  /// In en, this message translates to:
+  /// **'Project documents'**
+  String get projectDocumentsComing;
+
+  /// No description provided for @projectOverviewCounts.
+  ///
+  /// In en, this message translates to:
+  /// **'{tasks} tasks · {milestones} milestones'**
+  String projectOverviewCounts(int tasks, int milestones);
+
+  /// No description provided for @projectTasksEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks in this project.'**
+  String get projectTasksEmpty;
+
+  /// No description provided for @projectTaskOpenInAllWork.
+  ///
+  /// In en, this message translates to:
+  /// **'Open in All work'**
+  String get projectTaskOpenInAllWork;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

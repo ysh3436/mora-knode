@@ -151,10 +151,12 @@ final assigneeFilterProvider = StateProvider<Set<String>>((_) => <String>{});
 final statusFilterProvider = StateProvider<Set<TaskStatus>>((_) => <TaskStatus>{});
 final searchQueryProvider = StateProvider<String>((_) => '');
 
-/// All work has multiple subviews (List / Gantt / Calendar). They are kept as
-/// separate widget trees but share the filter state above.
-enum AllWorkSubview { list, gantt, calendar }
-final allWorkSubviewProvider = StateProvider<AllWorkSubview>((_) => AllWorkSubview.list);
+/// Tasks workspace has multiple subviews (List / Gantt / Calendar). They are
+/// kept as separate widget trees but share the filter state above. The same
+/// workspace renders in All work (no scope) and per-project Tasks tabs
+/// (scopeProjectId set) — selection persists across both contexts.
+enum TasksSubview { list, gantt, calendar }
+final tasksSubviewProvider = StateProvider<TasksSubview>((_) => TasksSubview.list);
 
 /// Gantt zoom level. Persists across re-entries to the gantt subview.
 final ganttZoomProvider = StateProvider<int>((_) => 0); // 0=day, 1=week, 2=month

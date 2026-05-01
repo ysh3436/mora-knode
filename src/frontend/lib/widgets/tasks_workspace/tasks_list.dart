@@ -13,17 +13,22 @@ import '../../state/providers.dart';
 
 const double _kRowHeight = 36;
 
-/// Tree-style list of tasks across all projects. Project headers and parent
-/// tasks pin to the top as nested sticky layers — outer scopes stay visible
-/// while their descendants scroll past. Collapse state is shared with Gantt.
-class AllWorkList extends ConsumerStatefulWidget {
-  const AllWorkList({super.key});
+/// Tree-style list of tasks. Project headers and parent tasks pin to the top
+/// as nested sticky layers — outer scopes stay visible while their descendants
+/// scroll past. Collapse state is shared with Gantt.
+///
+/// When [scopeProjectId] is null, projects are grouped under sticky project
+/// headers. When set, the list is scoped to one project and the project header
+/// row is skipped (the host page already names the project).
+class TasksList extends ConsumerStatefulWidget {
+  final String? scopeProjectId;
+  const TasksList({super.key, this.scopeProjectId});
 
   @override
-  ConsumerState<AllWorkList> createState() => _AllWorkListState();
+  ConsumerState<TasksList> createState() => _TasksListState();
 }
 
-class _AllWorkListState extends ConsumerState<AllWorkList> {
+class _TasksListState extends ConsumerState<TasksList> {
   late final ScrollController _vCtrl = ScrollController();
 
   @override
@@ -58,9 +63,15 @@ class _AllWorkListState extends ConsumerState<AllWorkList> {
     }
     final resourceById = {for (final r in (resources.value ?? const <Resource>[])) r.id!: r};
 
+    // Scoped mode: force the project filter to the host project; chip is
+    // hidden in TasksFilters so the user can't override.
+    final scopeId = widget.scopeProjectId;
+    final effectiveProjectFilter = scopeId != null ? <String>{scopeId} : projectFilter;
+    final showProjectHeaders = scopeId == null;
+
     final rows = <_Row>[];
     for (final g in groups) {
-      if (projectFilter.isNotEmpty && !projectFilter.contains(g.project.id)) continue;
+      if (effectiveProjectFilter.isNotEmpty && !effectiveProjectFilter.contains(g.project.id)) continue;
       final taskRows = _buildTaskRowsForProject(
         g,
         assignmentsByTask: assignmentsByTask,
@@ -71,15 +82,19 @@ class _AllWorkListState extends ConsumerState<AllWorkList> {
         collapsed: collapsed,
       );
       if (taskRows.isEmpty) continue;
-      final pkey = 'proj:${g.project.id}';
-      final pCollapsed = collapsed.contains(pkey);
-      rows.add(_ProjectRow(
-        key: pkey,
-        title: g.project.name,
-        taskCount: taskRows.length,
-        isCollapsed: pCollapsed,
-      ));
-      if (!pCollapsed) {
+      if (showProjectHeaders) {
+        final pkey = 'proj:${g.project.id}';
+        final pCollapsed = collapsed.contains(pkey);
+        rows.add(_ProjectRow(
+          key: pkey,
+          title: g.project.name,
+          taskCount: taskRows.length,
+          isCollapsed: pCollapsed,
+        ));
+        if (!pCollapsed) {
+          rows.addAll(taskRows);
+        }
+      } else {
         rows.addAll(taskRows);
       }
     }

@@ -57,12 +57,14 @@ class Sidebar extends ConsumerWidget {
                 _ExpandableProjects(
                   label: l.navProjects,
                   selected: section == AppSection.projects,
-                  onSectionTap: () => ref.read(appSectionProvider.notifier).state = AppSection.projects,
+                  onSectionTap: () {
+                    ref.read(selectedProjectIdProvider.notifier).state = null;
+                    ref.read(appSectionProvider.notifier).state = AppSection.projects;
+                  },
                   projects: projects,
                   onPick: (id) {
+                    ref.read(selectedProjectIdProvider.notifier).state = id;
                     ref.read(appSectionProvider.notifier).state = AppSection.projects;
-                    ref.read(inspectionProvider.notifier).state = ProjectInspection(id);
-                    ref.read(inspectorOpenProvider.notifier).state = true;
                   },
                 ),
                 _NavItem(

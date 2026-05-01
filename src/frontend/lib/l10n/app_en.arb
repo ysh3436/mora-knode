@@ -188,5 +188,22 @@
   "ganttColTask": "Task",
   "ganttZoomDay": "Day",
   "ganttZoomWeek": "Week",
-  "ganttZoomMonth": "Month"
+  "ganttZoomMonth": "Month",
+
+  "projectsDirectoryTitle": "Project list",
+  "projectsDirectoryEmpty": "No projects yet.",
+  "projectPickPrompt": "Pick a project from the list on the left.",
+  "projectTabOverview": "Overview",
+  "projectTabTasks": "Tasks",
+  "projectTabIssues": "Issues",
+  "projectTabInitiatives": "Initiatives",
+  "projectTabDocuments": "Documents",
+  "projectBackToDirectory": "Back to list",
+  "projectIssuesComing": "Issue triage",
+  "projectInitiativesComing": "Project initiatives",
+  "projectDocumentsComing": "Project documents",
+  "projectOverviewCounts": "{tasks} tasks · {milestones} milestones",
+  "@projectOverviewCounts": { "placeholders": { "tasks": { "type": "int" }, "milestones": { "type": "int" } } },
+  "projectTasksEmpty": "No tasks in this project.",
+  "projectTaskOpenInAllWork": "Open in All work"
 }

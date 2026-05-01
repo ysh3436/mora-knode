@@ -1,8 +1,33 @@
+import 'package:flutter/gestures.dart'
+    show
+        GestureBinding,
+        PointerDeviceKind,
+        PointerPanZoomUpdateEvent,
+        PointerScrollEvent,
+        PointerSignalEvent;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
+import '../data/korean_holidays.dart';
 import '../l10n/app_localizations.dart';
 import '../models/timeline.dart';
+
+/// On Flutter Web the default ScrollBehavior excludes mouse and trackpad
+/// from `dragDevices`, so two-finger horizontal trackpad swipes and
+/// click-and-drag on the timeline don't initiate a scroll until something
+/// inside the scroll surface has been clicked once. Re-adding both here
+/// makes horizontal panning work from first paint without needing focus.
+class _GanttScrollBehavior extends MaterialScrollBehavior {
+  const _GanttScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => const {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+        PointerDeviceKind.stylus,
+      };
+}
 
 enum GanttZoom { day, week, month }
 
@@ -52,6 +77,13 @@ class GanttChart extends StatefulWidget {
   final Set<String>? collapsed;
   final void Function(String id)? onToggleCollapse;
 
+  /// Date to horizontally center after layout. The chart scrolls so this
+  /// date lands at the viewport midpoint on first layout and whenever this
+  /// value changes (parent passes a fresh DateTime when the user requests
+  /// a re-center, e.g. by pressing "Today"). Defaults to "today" when null
+  /// on first mount so the user lands near current work without panning.
+  final DateTime? centerOn;
+
   static const double rowHeight = 32;
   static const double headerTopHeight = 22;
   static const double headerBottomHeight = 22;
@@ -67,6 +99,7 @@ class GanttChart extends StatefulWidget {
     this.onRowTap,
     this.collapsed,
     this.onToggleCollapse,
+    this.centerOn,
   });
 
   @override
@@ -78,6 +111,13 @@ class _GanttChartState extends State<GanttChart> {
   late final ScrollController _hBodyCtrl;
   late final ScrollController _vCtrl;
   bool _syncing = false;
+  bool _initialCenterDone = false;
+
+  // Tracks the date the cursor is over within the header strip. Only set when
+  // the date is a Korean holiday — otherwise null so the tooltip overlay
+  // stays hidden. The cell-x position is recomputed on every hover, so the
+  // tooltip follows the pointer across days.
+  ({DateTime date, double cellLeftPx, KoreanHoliday holiday})? _hoverHoliday;
 
   @override
   void initState() {
@@ -91,6 +131,65 @@ class _GanttChartState extends State<GanttChart> {
     _hBodyCtrl.addListener(() => _mirror(from: _hBodyCtrl, to: _hHeaderCtrl));
   }
 
+  @override
+  void didUpdateWidget(GanttChart old) {
+    super.didUpdateWidget(old);
+    final centerChanged = widget.centerOn != null && widget.centerOn != old.centerOn;
+    final zoomChanged = widget.zoom != old.zoom;
+
+    if (centerChanged) {
+      // Today button (or any explicit centerOn caller) wins outright.
+      _scheduleCenter(widget.centerOn!);
+      return;
+    }
+    if (zoomChanged) {
+      // Anchor the viewport-center date across zoom changes — feels stable
+      // because the spot the user was looking at stays put. Without this
+      // the same pixel offset would map to a different date under the new
+      // cellWidth, snapping the view to a random region.
+      final centerDate = _viewportCenterDate(old.zoom);
+      if (centerDate != null) {
+        _scheduleCenter(centerDate);
+      }
+    }
+  }
+
+  /// Date currently sitting at the horizontal center of the viewport,
+  /// computed using the supplied [zoom] (so callers in [didUpdateWidget]
+  /// can pass the *previous* zoom before the new cellWidth applies).
+  /// Returns null when the controller hasn't laid out yet.
+  DateTime? _viewportCenterDate(GanttZoom zoom) {
+    if (!_hBodyCtrl.hasClients) return null;
+    final position = _hBodyCtrl.position;
+    if (!position.haveDimensions) return null;
+    final viewport = position.viewportDimension;
+    if (viewport <= 0) return null;
+    final centerPx = _hBodyCtrl.offset + viewport / 2;
+    final pixelsPerDay = _cellWidthFor(zoom) / _cellDaysFor(zoom);
+    if (pixelsPerDay <= 0) return null;
+    final virtual = _virtualRange(_resolveDataRange());
+    final daysFromStart = centerPx / pixelsPerDay;
+    return virtual.from.add(Duration(seconds: (daysFromStart * 86400).round()));
+  }
+
+  /// Scrolls the timeline body horizontally so [target] lands at the viewport
+  /// midpoint. Computed against the virtual range (today ±5y, expanded for
+  /// data outliers) so any reasonable date sits inside the scrollable extent.
+  void _scheduleCenter(DateTime target) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_hBodyCtrl.hasClients) return;
+      final virtual = _virtualRange(_resolveDataRange());
+      final viewport = _hBodyCtrl.position.viewportDimension;
+      if (viewport <= 0) return;
+      final maxOffset = _hBodyCtrl.position.maxScrollExtent;
+
+      final daysFromStart = target.difference(virtual.from).inDays.toDouble();
+      final x = (daysFromStart / _cellDays) * _cellWidth;
+      final offset = (x - viewport / 2).clamp(0.0, maxOffset);
+      _hBodyCtrl.jumpTo(offset);
+    });
+  }
+
   void _mirror({required ScrollController from, required ScrollController to}) {
     if (_syncing || !to.hasClients) return;
     if (from.offset == to.offset) return;
@@ -102,6 +201,73 @@ class _GanttChartState extends State<GanttChart> {
     _syncing = false;
   }
 
+  /// Routes horizontal-dominant pointer scroll events (trackpad two-finger
+  /// horizontal swipe, shift+wheel) to `_hBodyCtrl`. On Flutter Web the
+  /// outer vertical SingleChildScrollView often absorbs these events before
+  /// the inner horizontal one can, leaving panning unresponsive until the
+  /// widget tree gets rebuilt by an unrelated button press.
+  ///
+  /// Claims the event via [PointerSignalResolver] so the parent Scrollable
+  /// can't also act on the same delta — prevents double-scroll when both
+  /// the workaround and Flutter's default routing happen to fire.
+  void _routeHorizontalScroll(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    if (!_hBodyCtrl.hasClients) return;
+    final dx = event.scrollDelta.dx;
+    final dy = event.scrollDelta.dy;
+    if (dx.abs() <= dy.abs()) return; // vertical-dominant; let outer handle.
+    GestureBinding.instance.pointerSignalResolver.register(event, (e) {
+      final pe = e as PointerScrollEvent;
+      final next = (_hBodyCtrl.offset + pe.scrollDelta.dx)
+          .clamp(0.0, _hBodyCtrl.position.maxScrollExtent);
+      _hBodyCtrl.jumpTo(next);
+    });
+  }
+
+  /// Trackpad pan-zoom updates arrive as a separate event stream from
+  /// pointer signals. Some Flutter Web setups deliver horizontal trackpad
+  /// gestures as PointerPanZoom rather than PointerScroll, so we route
+  /// them too. `panDelta.dx > 0` means the user moved fingers right, which
+  /// in scroll terms means "show what's to the left" → offset decreases.
+  void _routePanZoom(PointerPanZoomUpdateEvent event) {
+    if (!_hBodyCtrl.hasClients) return;
+    final dx = event.panDelta.dx;
+    final dy = event.panDelta.dy;
+    if (dx.abs() <= dy.abs()) return;
+    final next = (_hBodyCtrl.offset - dx)
+        .clamp(0.0, _hBodyCtrl.position.maxScrollExtent);
+    _hBodyCtrl.jumpTo(next);
+  }
+
+  /// Updates `_hoverHoliday` based on the cursor's local x inside the header
+  /// strip. Only triggers a rebuild when the hovered holiday actually
+  /// changes — moving across a non-holiday cell is a no-op so we don't
+  /// rebuild on every mouse-move pixel.
+  void _onHeaderHover(double localX, DateTime virtualFrom) {
+    final pixelsPerDay = _cellWidth / _cellDays;
+    if (pixelsPerDay <= 0) return;
+    final daysFromStart = (localX / pixelsPerDay).floor();
+    final date = virtualFrom.add(Duration(days: daysFromStart));
+    final holiday = KoreanHolidays.forDate(date);
+    if (holiday == null) {
+      if (_hoverHoliday != null) {
+        setState(() => _hoverHoliday = null);
+      }
+      return;
+    }
+    final cellLeftPx = (daysFromStart / _cellDays) * _cellWidth;
+    if (_hoverHoliday?.date == date) return; // same cell, no rebuild
+    setState(() => _hoverHoliday = (
+          date: date,
+          cellLeftPx: cellLeftPx,
+          holiday: holiday,
+        ));
+  }
+
+  void _clearHover() {
+    if (_hoverHoliday != null) setState(() => _hoverHoliday = null);
+  }
+
   @override
   void dispose() {
     _hHeaderCtrl.dispose();
@@ -110,19 +276,27 @@ class _GanttChartState extends State<GanttChart> {
     super.dispose();
   }
 
-  double get _cellWidth => switch (widget.zoom) {
+  double get _cellWidth => _cellWidthFor(widget.zoom);
+  double get _cellDays => _cellDaysFor(widget.zoom);
+
+  // Standalone variants so `didUpdateWidget` can resolve cell metrics for
+  // the *previous* zoom (needed to translate the user's pre-rebuild scroll
+  // offset back to a date).
+  static double _cellWidthFor(GanttZoom z) => switch (z) {
         GanttZoom.day => 28,
         GanttZoom.week => 80,
         GanttZoom.month => 120,
       };
 
-  double get _cellDays => switch (widget.zoom) {
+  static double _cellDaysFor(GanttZoom z) => switch (z) {
         GanttZoom.day => 1,
         GanttZoom.week => 7,
         GanttZoom.month => 30.4375,
       };
 
-  ({DateTime from, DateTime to})? _resolveRange() {
+  /// Full union of all task timelines. Used to expand the virtual range so
+  /// any data outlier sits inside the always-scrollable area.
+  ({DateTime from, DateTime to})? _resolveDataRange() {
     if (widget.from != null && widget.to != null) return (from: widget.from!, to: widget.to!);
 
     DateTime? min;
@@ -139,13 +313,105 @@ class _GanttChartState extends State<GanttChart> {
     return (from: f, to: t);
   }
 
+  /// Far bounds of the always-scrollable timeline. Always covers ±5 years
+  /// from today, expanded so any task data sits inside. Replaces the prior
+  /// "window + extend on edge" model — the user pans freely throughout this
+  /// range from first paint without needing to trigger window growth.
+  ({DateTime from, DateTime to}) _virtualRange(({DateTime from, DateTime to})? data) {
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
+    var from = today.subtract(const Duration(days: 365 * 5));
+    var to = today.add(const Duration(days: 365 * 5));
+    if (data != null) {
+      if (data.from.isBefore(from)) from = data.from.subtract(const Duration(days: 365));
+      if (data.to.isAfter(to)) to = data.to.add(const Duration(days: 365));
+    }
+    return (from: from, to: to);
+  }
+
+  /// Per-row off-screen markers — one or two `_RowArrow` widgets per row
+  /// when its currentTimeline lies entirely past the *visible viewport*
+  /// (not the rendered window). Updates as the user pans horizontally so
+  /// arrows appear when a bar scrolls out of view and disappear when it
+  /// scrolls back in. Tap pans the viewport one screenful in that
+  /// direction; the auto-extend listener grows the window if the user
+  /// reaches its edge.
+  List<Widget> _rowOffScreenArrows(
+    GanttRow row,
+    int index,
+    double vOff,
+    ({DateTime from, DateTime to}) viewport,
+  ) {
+    final t = row.current;
+    final hasLeft = t.end != null && t.end!.isBefore(viewport.from);
+    final hasRight = t.start != null && t.start!.isAfter(viewport.to);
+    if (!hasLeft && !hasRight) return const [];
+
+    final y = GanttChart.rowHeight * index - vOff;
+    // Cull rows the user can't see anyway.
+    if (y < -GanttChart.rowHeight || y > 4000) return const [];
+    final centerY = y + (GanttChart.rowHeight - 18) / 2;
+
+    final out = <Widget>[];
+    if (hasLeft) {
+      out.add(Positioned(
+        left: 8,
+        top: centerY,
+        child: _RowArrow(
+          toLeft: true,
+          onTap: () => _scrollToRowBar(row),
+        ),
+      ));
+    }
+    if (hasRight) {
+      // Inset further on the right so the arrow doesn't sit underneath
+      // the vertical scrollbar's gutter (~12px on most platforms).
+      out.add(Positioned(
+        right: 18,
+        top: centerY,
+        child: _RowArrow(
+          toLeft: false,
+          onTap: () => _scrollToRowBar(row),
+        ),
+      ));
+    }
+    return out;
+  }
+
+  /// Jumps the timeline so this row's bar lands centered in the viewport.
+  /// The virtual range already covers any reasonable date, so no window
+  /// extension dance — just convert the bar's date to a pixel offset and
+  /// animate.
+  void _scrollToRowBar(GanttRow row) {
+    if (!_hBodyCtrl.hasClients) return;
+    final t = row.current;
+    final barDate = t.start ?? t.end;
+    if (barDate == null) return;
+    final virtual = _virtualRange(_resolveDataRange());
+    final viewport = _hBodyCtrl.position.viewportDimension;
+    if (viewport <= 0) return;
+    final daysFromStart = barDate.difference(virtual.from).inDays.toDouble();
+    final x = (daysFromStart / _cellDays) * _cellWidth;
+    final target =
+        (x - viewport / 2).clamp(0.0, _hBodyCtrl.position.maxScrollExtent);
+    _hBodyCtrl.animateTo(
+      target,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOut,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l = AppL10n.of(context);
     if (widget.rows.isEmpty) return Center(child: Text(l.ganttNoTasks));
-    final range = _resolveRange();
-    if (range == null) {
-      return Center(child: Text(l.ganttNoTimeline));
+    final data = _resolveDataRange();
+    final range = _virtualRange(data);
+    // First non-empty build: center on the requested date (or today) once
+    // layout settles. Subsequent re-centers go through didUpdateWidget.
+    if (!_initialCenterDone) {
+      _initialCenterDone = true;
+      _scheduleCenter(widget.centerOn ?? DateTime.now());
     }
 
     final theme = Theme.of(context);
@@ -154,8 +420,14 @@ class _GanttChartState extends State<GanttChart> {
     final headerHeight = GanttChart.headerTopHeight + GanttChart.headerBottomHeight;
     final bodyHeight = GanttChart.rowHeight * widget.rows.length;
     final palette = _Palette.from(theme);
+    final now = DateTime.now();
+    final today = DateTime.utc(now.year, now.month, now.day);
 
-    return LayoutBuilder(
+    return Focus(
+      autofocus: true,
+      child: ScrollConfiguration(
+      behavior: const _GanttScrollBehavior(),
+      child: LayoutBuilder(
       builder: (context, constraints) {
         final timelineAreaWidth = constraints.maxWidth - GanttChart.labelWidth;
         final effectiveTimelineWidth =
@@ -187,26 +459,87 @@ class _GanttChartState extends State<GanttChart> {
                     ),
                   ),
                   Expanded(
-                    child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      controller: _hHeaderCtrl,
-                      child: SizedBox(
-                        width: effectiveTimelineWidth,
-                        height: headerHeight,
-                        child: CustomPaint(
-                          painter: _GanttHeaderPainter(
-                            from: range.from,
-                            to: range.to,
-                            zoom: widget.zoom,
-                            cellDays: _cellDays,
-                            cellWidth: _cellWidth,
-                            headerTopHeight: GanttChart.headerTopHeight,
-                            headerBottomHeight: GanttChart.headerBottomHeight,
-                            palette: palette,
-                            locale: Localizations.localeOf(context).toLanguageTag(),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          controller: _hHeaderCtrl,
+                          child: Listener(
+                            onPointerSignal: _routeHorizontalScroll,
+                            onPointerPanZoomUpdate: _routePanZoom,
+                            child: MouseRegion(
+                              onHover: (e) => _onHeaderHover(e.localPosition.dx, range.from),
+                              onExit: (_) => _clearHover(),
+                              child: SizedBox(
+                                width: effectiveTimelineWidth,
+                                height: headerHeight,
+                                child: AnimatedBuilder(
+                                  animation: _hHeaderCtrl,
+                                  builder: (ctx, _) {
+                                    final ready = _hHeaderCtrl.hasClients &&
+                                        _hHeaderCtrl.position.haveDimensions;
+                                    final off = ready ? _hHeaderCtrl.offset : 0.0;
+                                    final viewport = ready
+                                        ? _hHeaderCtrl.position.viewportDimension
+                                        : effectiveTimelineWidth;
+                                    return CustomPaint(
+                                      painter: _GanttHeaderPainter(
+                                        from: range.from,
+                                        to: range.to,
+                                        zoom: widget.zoom,
+                                        cellDays: _cellDays,
+                                        cellWidth: _cellWidth,
+                                        headerTopHeight: GanttChart.headerTopHeight,
+                                        headerBottomHeight: GanttChart.headerBottomHeight,
+                                        palette: palette,
+                                        locale: Localizations.localeOf(context).toLanguageTag(),
+                                        today: today,
+                                        visibleFromPx: off,
+                                        visibleToPx: off + viewport,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        // Holiday name tooltip — overlays into the top row of
+                        // the header strip (the month-name area) which is
+                        // mostly empty, instead of sitting below the header.
+                        // Sits outside the SingleChildScrollView so it
+                        // doesn't scroll horizontally; we compute its
+                        // absolute x from the cursor's day cell minus the
+                        // current scroll.
+                        if (_hoverHoliday != null)
+                          AnimatedBuilder(
+                            animation: _hHeaderCtrl,
+                            builder: (ctx, _) {
+                              final hOff = _hHeaderCtrl.hasClients
+                                  ? _hHeaderCtrl.offset
+                                  : 0.0;
+                              final hover = _hoverHoliday!;
+                              final cellPx = _cellWidth / _cellDays;
+                              // Center of the hovered day cell, in viewport
+                              // pixels. FractionalTranslation shifts the
+                              // tooltip left by half its own width so the
+                              // tooltip is truly centered regardless of how
+                              // long the holiday name is.
+                              final cellCenter = hover.cellLeftPx - hOff + cellPx / 2;
+                              return Positioned(
+                                top: 0,
+                                left: cellCenter,
+                                child: FractionalTranslation(
+                                  translation: const Offset(-0.5, 0),
+                                  child: IgnorePointer(
+                                    child: _HolidayTooltip(name: hover.holiday.name),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -241,18 +574,36 @@ class _GanttChartState extends State<GanttChart> {
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               controller: _hBodyCtrl,
-                              child: SizedBox(
-                                width: effectiveTimelineWidth,
-                                height: bodyHeight,
-                                child: CustomPaint(
-                                  painter: _GanttBodyPainter(
-                                    rows: widget.rows,
-                                    from: range.from,
-                                    to: range.to,
-                                    cellDays: _cellDays,
-                                    cellWidth: _cellWidth,
-                                    rowHeight: GanttChart.rowHeight,
-                                    palette: palette,
+                              child: Listener(
+                                onPointerSignal: _routeHorizontalScroll,
+                                onPointerPanZoomUpdate: _routePanZoom,
+                                child: SizedBox(
+                                  width: effectiveTimelineWidth,
+                                  height: bodyHeight,
+                                  child: AnimatedBuilder(
+                                    animation: _hBodyCtrl,
+                                    builder: (ctx, _) {
+                                      final ready = _hBodyCtrl.hasClients &&
+                                          _hBodyCtrl.position.haveDimensions;
+                                      final off = ready ? _hBodyCtrl.offset : 0.0;
+                                      final viewport = ready
+                                          ? _hBodyCtrl.position.viewportDimension
+                                          : effectiveTimelineWidth;
+                                      return CustomPaint(
+                                        painter: _GanttBodyPainter(
+                                          rows: widget.rows,
+                                          from: range.from,
+                                          to: range.to,
+                                          cellDays: _cellDays,
+                                          cellWidth: _cellWidth,
+                                          rowHeight: GanttChart.rowHeight,
+                                          palette: palette,
+                                          today: today,
+                                          visibleFromPx: off,
+                                          visibleToPx: off + viewport,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ),
                               ),
@@ -283,12 +634,68 @@ class _GanttChartState extends State<GanttChart> {
                       },
                     ),
                   ),
+                  // Per-row off-screen arrows — anchored at the timeline area
+                  // edges (not inside the horizontal scroll, so they stay
+                  // visible as the user pans). Vertical position mirrors
+                  // `_vCtrl`; horizontal scroll updates the visible date
+                  // range so arrows appear/disappear as the user pans across
+                  // the timeline (not just when extending the window).
+                  Positioned(
+                    left: GanttChart.labelWidth,
+                    top: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: ClipRect(
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge([_vCtrl, _hBodyCtrl]),
+                        builder: (ctx, _) {
+                          // Both controllers must be attached AND measured
+                          // before we can compute scroll offsets / viewport
+                          // size. Otherwise `.offset` and
+                          // `.viewportDimension` throw "accessed before set"
+                          // on the very first frame after attach.
+                          final hReady = _hBodyCtrl.hasClients &&
+                              _hBodyCtrl.position.haveDimensions;
+                          final vReady = _vCtrl.hasClients &&
+                              _vCtrl.position.haveDimensions;
+                          if (!hReady && !vReady) {
+                            return const SizedBox.shrink();
+                          }
+                          final vOff = vReady ? _vCtrl.offset : 0.0;
+                          final hOff = hReady ? _hBodyCtrl.offset : 0.0;
+                          final viewportPx =
+                              hReady ? _hBodyCtrl.position.viewportDimension : 0.0;
+                          // Translate scroll offset → date range visible to
+                          // the user right now. Used in place of the static
+                          // window range so arrows follow horizontal panning.
+                          final pixelsPerDay = _cellWidth / _cellDays;
+                          final viewport = pixelsPerDay > 0 && viewportPx > 0
+                              ? (
+                                  from: range.from.add(Duration(
+                                      seconds: (hOff / pixelsPerDay * 86400).round())),
+                                  to: range.from.add(Duration(
+                                      seconds:
+                                          ((hOff + viewportPx) / pixelsPerDay * 86400).round())),
+                                )
+                              : range;
+                          return Stack(
+                            children: [
+                              for (var i = 0; i < widget.rows.length; i++)
+                                ..._rowOffScreenArrows(widget.rows[i], i, vOff, viewport),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         );
       },
+    ),
+    ),
     );
   }
 }
@@ -551,6 +958,11 @@ class _Palette {
   final Color summary;
   final Color text;
   final Color textMuted;
+  final Color today;
+  /// Saturday day-number color — Korean convention uses a distinct blue.
+  final Color saturday;
+  /// Sunday + Korean public holiday day-number color — red, the cultural cue.
+  final Color holiday;
 
   _Palette({
     required this.grid,
@@ -561,6 +973,9 @@ class _Palette {
     required this.summary,
     required this.text,
     required this.textMuted,
+    required this.today,
+    required this.saturday,
+    required this.holiday,
   });
 
   factory _Palette.from(ThemeData theme) {
@@ -574,6 +989,15 @@ class _Palette {
       summary: cs.secondary.withValues(alpha: 0.75),
       text: cs.onSurface,
       textMuted: cs.outline,
+      // Soft primary tint covers the full day-column under today — same idiom
+      // as GitHub Projects / Linear. Distinct from current/real bar fills
+      // (which use the same primary at higher opacity).
+      today: cs.primary.withValues(alpha: 0.14),
+      // Korean calendar idiom: blue for Saturday, red for Sunday + holidays.
+      // Picked direct CSS colors instead of theme channels so the cue stays
+      // recognizable even under tinted theme variants.
+      saturday: const Color(0xFF1976D2),
+      holiday: const Color(0xFFE53935),
     );
   }
 }
@@ -588,6 +1012,13 @@ class _GanttHeaderPainter extends CustomPainter {
   final double headerBottomHeight;
   final _Palette palette;
   final String locale;
+  final DateTime today;
+  // Pixel bounds of the user's currently visible viewport into the
+  // (potentially huge) virtual timeline. The painter only iterates cells
+  // inside this slice (+ a small buffer) instead of the entire ±5y span,
+  // keeping per-frame work proportional to viewport size.
+  final double visibleFromPx;
+  final double visibleToPx;
 
   _GanttHeaderPainter({
     required this.from,
@@ -599,6 +1030,9 @@ class _GanttHeaderPainter extends CustomPainter {
     required this.headerBottomHeight,
     required this.palette,
     required this.locale,
+    required this.today,
+    required this.visibleFromPx,
+    required this.visibleToPx,
   });
 
   @override
@@ -622,10 +1056,40 @@ class _GanttHeaderPainter extends CustomPainter {
         break;
     }
 
+    // Today highlight — full day-column tint under the date header. Width is
+    // always one day's pixels regardless of zoom (so coarse zooms get a
+    // narrow precise band, fine zooms get a full-cell tint).
+    final todayX = _todayX(size);
+    if (todayX != null) {
+      final dayPx = cellWidth / cellDays;
+      canvas.drawRect(
+        Rect.fromLTWH(todayX, 0, dayPx, headerHeight),
+        Paint()..color = palette.today,
+      );
+    }
+
     // Top/bottom dividers.
     canvas.drawLine(Offset(0, headerTopHeight), Offset(size.width, headerTopHeight), gridPaint);
     canvas.drawLine(Offset(0, headerHeight - 0.5), Offset(size.width, headerHeight - 0.5),
         Paint()..color = palette.grid.withValues(alpha: 1)..strokeWidth = 1);
+  }
+
+  /// Pixel x of today's column inside this painter, or null if today is
+  /// outside [from, to). Compares UTC y/m/d to match how `from` is computed.
+  double? _todayX(Size size) {
+    final daysFromStart = today.difference(from).inDays.toDouble();
+    if (daysFromStart < 0) return null;
+    final x = (daysFromStart / cellDays) * cellWidth;
+    if (x < 0 || x > size.width) return null;
+    return x;
+  }
+
+  /// Inclusive cell-index bounds of the current viewport. Buffer of 2 cells
+  /// each side hides the seam during fling momentum without inflating cost.
+  ({int start, int end}) _visibleCells(int totalCells) {
+    final visStart = ((visibleFromPx / cellWidth).floor() - 2).clamp(0, totalCells);
+    final visEnd = ((visibleToPx / cellWidth).ceil() + 2).clamp(0, totalCells);
+    return (start: visStart, end: visEnd);
   }
 
   void _drawDay(Canvas canvas, Size size, Paint gridPaint) {
@@ -639,9 +1103,10 @@ class _GanttHeaderPainter extends CustomPainter {
     final dfMonth = DateFormat('MMM', locale);
     final dayFmt = NumberFormat.decimalPattern(locale);
     final spanDays = to.difference(from).inDays;
+    final vis = _visibleCells(spanDays);
 
     DateTime? lastMonthDrawn;
-    for (var i = 0; i <= spanDays; i++) {
+    for (var i = vis.start; i <= vis.end; i++) {
       final x = (i / cellDays) * cellWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
       if (i < spanDays) {
@@ -651,22 +1116,30 @@ class _GanttHeaderPainter extends CustomPainter {
               fontSize: 11, weight: FontWeight.w600);
           lastMonthDrawn = date;
         }
-        final dayColor = (date.weekday == DateTime.saturday || date.weekday == DateTime.sunday)
-            ? palette.textMuted
-            : palette.text;
+        final dayColor = _dayColor(date);
         _text(canvas, dayFmt.format(date.toLocal().day), x + 4, headerTopHeight + 4,
             fontSize: 11, color: dayColor);
       }
     }
   }
 
+  /// Korean calendar coloring: holiday and Sunday → red, Saturday → blue.
+  /// Holiday wins over weekday so a holiday-on-Saturday still reads red.
+  Color _dayColor(DateTime date) {
+    if (KoreanHolidays.forDate(date) != null) return palette.holiday;
+    if (date.weekday == DateTime.sunday) return palette.holiday;
+    if (date.weekday == DateTime.saturday) return palette.saturday;
+    return palette.text;
+  }
+
   void _drawWeek(Canvas canvas, Size size, Paint gridPaint) {
     final dfMonth = DateFormat('MMM', locale);
     final spanDays = to.difference(from).inDays;
     final cellCount = (spanDays / cellDays).ceil();
+    final vis = _visibleCells(cellCount);
 
     DateTime? lastMonthDrawn;
-    for (var i = 0; i <= cellCount; i++) {
+    for (var i = vis.start; i <= vis.end; i++) {
       final x = i * cellWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
       if (i < cellCount) {
@@ -687,9 +1160,10 @@ class _GanttHeaderPainter extends CustomPainter {
     final spanDays = to.difference(from).inDays;
     final cellCount = (spanDays / cellDays).ceil();
 
+    final vis = _visibleCells(cellCount);
     int? lastQuarter;
     int? lastQuarterYear;
-    for (var i = 0; i <= cellCount; i++) {
+    for (var i = vis.start; i <= vis.end; i++) {
       final x = i * cellWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
       if (i < cellCount) {
@@ -745,7 +1219,10 @@ class _GanttHeaderPainter extends CustomPainter {
       old.to != to ||
       old.zoom != zoom ||
       old.cellWidth != cellWidth ||
-      old.locale != locale;
+      old.locale != locale ||
+      old.today != today ||
+      old.visibleFromPx != visibleFromPx ||
+      old.visibleToPx != visibleToPx;
 }
 
 class _GanttBodyPainter extends CustomPainter {
@@ -756,6 +1233,13 @@ class _GanttBodyPainter extends CustomPainter {
   final double cellWidth;
   final double rowHeight;
   final _Palette palette;
+  final DateTime today;
+  // Pixel bounds of the user's currently visible viewport into the virtual
+  // timeline. Painter only iterates cells + draws bars within this slice
+  // (plus a small buffer) so a 10-year virtual extent doesn't cost 3650
+  // grid-line draws and bar-bound checks per frame.
+  final double visibleFromPx;
+  final double visibleToPx;
 
   _GanttBodyPainter({
     required this.rows,
@@ -765,6 +1249,9 @@ class _GanttBodyPainter extends CustomPainter {
     required this.cellWidth,
     required this.rowHeight,
     required this.palette,
+    required this.today,
+    required this.visibleFromPx,
+    required this.visibleToPx,
   });
 
   double _xFromDate(DateTime d) {
@@ -778,12 +1265,29 @@ class _GanttBodyPainter extends CustomPainter {
       ..color = palette.grid
       ..strokeWidth = 1;
 
-    // Vertical column grid lines at every cell. Reuse the date math from header.
+    // Vertical column grid lines — only the cells inside the viewport
+    // (with a 2-cell buffer) get drawn.
     final spanDays = to.difference(from).inDays;
     final cellCount = (spanDays / cellDays).ceil();
-    for (var i = 0; i <= cellCount; i++) {
+    final visStart = ((visibleFromPx / cellWidth).floor() - 2).clamp(0, cellCount);
+    final visEnd = ((visibleToPx / cellWidth).ceil() + 2).clamp(0, cellCount);
+    for (var i = visStart; i <= visEnd; i++) {
       final x = i * cellWidth;
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+
+    // Today highlight — full day-column tint under bars so they stay readable
+    // on top. Width matches one day's pixels (same as header).
+    final daysFromStart = today.difference(from).inDays.toDouble();
+    if (daysFromStart >= 0) {
+      final todayX = (daysFromStart / cellDays) * cellWidth;
+      if (todayX >= 0 && todayX <= size.width) {
+        final dayPx = cellWidth / cellDays;
+        canvas.drawRect(
+          Rect.fromLTWH(todayX, 0, dayPx, size.height),
+          Paint()..color = palette.today,
+        );
+      }
     }
 
     for (var r = 0; r < rows.length; r++) {
@@ -817,7 +1321,9 @@ class _GanttBodyPainter extends CustomPainter {
     if (start == null || end == null) return;
     final left = _xFromDate(start);
     final right = _xFromDate(end);
-    if (right <= 0) return;
+    // Cull bars entirely outside the current viewport — biggest savings
+    // since the virtual timeline spans years.
+    if (right < visibleFromPx - 100 || left > visibleToPx + 100) return;
     final width = (right - left).clamp(4.0, double.infinity);
     final rect = RRect.fromRectAndRadius(
       Rect.fromLTRB(left, top, left + width, top + height),
@@ -831,5 +1337,75 @@ class _GanttBodyPainter extends CustomPainter {
       old.rows != rows ||
       old.from != from ||
       old.to != to ||
-      old.cellWidth != cellWidth;
+      old.visibleFromPx != visibleFromPx ||
+      old.visibleToPx != visibleToPx ||
+      old.cellWidth != cellWidth ||
+      old.today != today;
+}
+
+/// Floating chip that surfaces the Korean holiday name for the cell the
+/// cursor is currently hovering. Mirrors the visual weight of a Material
+/// Tooltip — opaque background, single-line text — without the built-in
+/// hover-delay (we want it to follow the pointer immediately).
+class _HolidayTooltip extends StatelessWidget {
+  final String name;
+  const _HolidayTooltip({required this.name});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.inverseSurface,
+      borderRadius: BorderRadius.circular(4),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 160),
+          child: Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onInverseSurface,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Per-row off-screen marker. Sits at the left or right edge of the
+/// timeline area on a row whose bar lies entirely outside the active
+/// display window. The chevron tells the user "your task is this way";
+/// tapping extends the window one unit in that direction so the next
+/// batch of off-screen tasks comes into view.
+class _RowArrow extends StatelessWidget {
+  final bool toLeft;
+  final VoidCallback onTap;
+  const _RowArrow({required this.toLeft, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.92),
+      shape: const CircleBorder(),
+      elevation: 1,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(2),
+          child: Icon(
+            toLeft ? Icons.chevron_left : Icons.chevron_right,
+            size: 14,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
 }

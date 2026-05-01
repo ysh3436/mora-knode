@@ -182,6 +182,7 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
             zoom: zoom,
             selectedId: selectedTaskId,
             centerOn: _centerOn,
+            holidays: ref.watch(holidaysProvider).asData?.value ?? const {},
             onRowTap: (id) {
               // Project group rows use synthetic ids; ignore them for selection.
               if (id.startsWith('proj:')) return;

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../api/api_client.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
+import '../models/holiday.dart';
 import '../models/milestone.dart';
 import '../models/project.dart';
 import '../models/resource.dart';
@@ -121,6 +122,52 @@ final allAssignmentsProvider = FutureProvider<List<Assignment>>((ref) async {
 /// configured" state.
 final workCalendarProvider = FutureProvider<WorkCalendarResponse>((ref) async {
   return ref.watch(apiClientProvider).getWorkCalendar();
+});
+
+/// Subscribed iCalendar holiday sources — drives the settings UI for
+/// add/edit/delete/refresh of holiday subscriptions.
+final holidaySourcesProvider = FutureProvider<List<HolidaySource>>((ref) async {
+  return ref.watch(apiClientProvider).listHolidaySources();
+});
+
+/// Integer key for fast date → Holiday map lookup (year*10000 + month*100 + day).
+/// Compares UTC y/m/d so callers don't have to worry about timezone offsets.
+int holidayKey(DateTime d) => d.year * 10000 + d.month * 100 + d.day;
+
+/// Aggregated holiday map covering today ± 5 years — same span as the gantt
+/// virtual range so a single fetch services every caller (gantt + month
+/// calendar + week calendar). Backend returns from cache so this is cheap.
+final holidaysProvider = FutureProvider<Map<int, Holiday>>((ref) async {
+  // Watching sources invalidates this map when the user adds / removes /
+  // toggles a subscription, so the next paint reflects their change.
+  await ref.watch(holidaySourcesProvider.future);
+  final now = DateTime.now();
+  final from = DateTime.utc(now.year - 5, now.month, now.day);
+  final to = DateTime.utc(now.year + 5, now.month, now.day);
+  final list = await ref.watch(apiClientProvider).listHolidays(from: from, to: to);
+  return {for (final h in list) holidayKey(h.date): h};
+});
+
+/// One-shot first-run seed. Watched at MoraKnodeApp root so the very first
+/// frame asks the backend "if no holiday subscriptions exist yet, add the
+/// one matching my locale." Idempotent on the backend (gated by an AppMeta
+/// flag), so re-watching this provider after a hot restart does no harm —
+/// and a user who deletes the auto-added source won't see it reappear.
+/// Failures (backend not running, network blip) are silently swallowed so
+/// the rest of the UI still mounts.
+final autoSeedHolidaysProvider = FutureProvider<bool>((ref) async {
+  final locale = ref.read(localeProvider).languageCode;
+  try {
+    final seeded =
+        await ref.read(apiClientProvider).autoSeedHolidaySources(locale: locale);
+    if (seeded) {
+      ref.invalidate(holidaySourcesProvider);
+      ref.invalidate(holidaysProvider);
+    }
+    return seeded;
+  } catch (_) {
+    return false;
+  }
 });
 
 /// The currently selected user, resolved against resourcesProvider. Null

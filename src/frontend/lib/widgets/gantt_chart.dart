@@ -8,8 +8,8 @@ import 'package:flutter/gestures.dart'
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' show DateFormat, NumberFormat;
 
-import '../data/korean_holidays.dart';
 import '../l10n/app_localizations.dart';
+import '../models/holiday.dart';
 import '../models/timeline.dart';
 
 /// On Flutter Web the default ScrollBehavior excludes mouse and trackpad
@@ -84,6 +84,11 @@ class GanttChart extends StatefulWidget {
   /// on first mount so the user lands near current work without panning.
   final DateTime? centerOn;
 
+  /// Holiday lookup map keyed by `holidayKey(date)` — supplied by the parent
+  /// (TasksGantt) which watches `holidaysProvider`. Empty map means "no
+  /// holidays registered"; the chart renders weekend colors only.
+  final Map<int, Holiday> holidays;
+
   static const double rowHeight = 32;
   static const double headerTopHeight = 22;
   static const double headerBottomHeight = 22;
@@ -100,6 +105,7 @@ class GanttChart extends StatefulWidget {
     this.collapsed,
     this.onToggleCollapse,
     this.centerOn,
+    this.holidays = const {},
   });
 
   @override
@@ -117,7 +123,7 @@ class _GanttChartState extends State<GanttChart> {
   // the date is a Korean holiday — otherwise null so the tooltip overlay
   // stays hidden. The cell-x position is recomputed on every hover, so the
   // tooltip follows the pointer across days.
-  ({DateTime date, double cellLeftPx, KoreanHoliday holiday})? _hoverHoliday;
+  ({DateTime date, double cellLeftPx, Holiday holiday})? _hoverHoliday;
 
   @override
   void initState() {
@@ -248,7 +254,7 @@ class _GanttChartState extends State<GanttChart> {
     if (pixelsPerDay <= 0) return;
     final daysFromStart = (localX / pixelsPerDay).floor();
     final date = virtualFrom.add(Duration(days: daysFromStart));
-    final holiday = KoreanHolidays.forDate(date);
+    final holiday = widget.holidays[date.year * 10000 + date.month * 100 + date.day];
     if (holiday == null) {
       if (_hoverHoliday != null) {
         setState(() => _hoverHoliday = null);
@@ -497,6 +503,7 @@ class _GanttChartState extends State<GanttChart> {
                                         today: today,
                                         visibleFromPx: off,
                                         visibleToPx: off + viewport,
+                                        holidays: widget.holidays,
                                       ),
                                     );
                                   },
@@ -1019,6 +1026,9 @@ class _GanttHeaderPainter extends CustomPainter {
   // keeping per-frame work proportional to viewport size.
   final double visibleFromPx;
   final double visibleToPx;
+  /// Date → Holiday lookup (key = year*10000+month*100+day). Empty when no
+  /// subscriptions are configured.
+  final Map<int, Holiday> holidays;
 
   _GanttHeaderPainter({
     required this.from,
@@ -1033,6 +1043,7 @@ class _GanttHeaderPainter extends CustomPainter {
     required this.today,
     required this.visibleFromPx,
     required this.visibleToPx,
+    required this.holidays,
   });
 
   @override
@@ -1126,7 +1137,8 @@ class _GanttHeaderPainter extends CustomPainter {
   /// Korean calendar coloring: holiday and Sunday → red, Saturday → blue.
   /// Holiday wins over weekday so a holiday-on-Saturday still reads red.
   Color _dayColor(DateTime date) {
-    if (KoreanHolidays.forDate(date) != null) return palette.holiday;
+    final key = date.year * 10000 + date.month * 100 + date.day;
+    if (holidays.containsKey(key)) return palette.holiday;
     if (date.weekday == DateTime.sunday) return palette.holiday;
     if (date.weekday == DateTime.saturday) return palette.saturday;
     return palette.text;
@@ -1222,7 +1234,8 @@ class _GanttHeaderPainter extends CustomPainter {
       old.locale != locale ||
       old.today != today ||
       old.visibleFromPx != visibleFromPx ||
-      old.visibleToPx != visibleToPx;
+      old.visibleToPx != visibleToPx ||
+      !identical(old.holidays, holidays);
 }
 
 class _GanttBodyPainter extends CustomPainter {

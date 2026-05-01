@@ -15,6 +15,11 @@ class MoraKnodeApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final locale = ref.watch(localeProvider);
+    // Fire the one-shot first-run holiday auto-seed. We don't await or
+    // surface its result — the UI mounts regardless and the backend gates
+    // on its own AppMeta flag so this is safe to re-trigger on every
+    // app start / hot restart.
+    ref.watch(autoSeedHolidaysProvider);
     return MaterialApp(
       title: 'Mora Knode',
       theme: ThemeData(

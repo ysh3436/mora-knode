@@ -22,6 +22,10 @@ builder.Services.AddSingleton<ResourceRepository>();
 builder.Services.AddSingleton<AssignmentRepository>();
 builder.Services.AddSingleton<MilestoneRepository>();
 builder.Services.AddSingleton<WorkCalendarRepository>();
+builder.Services.AddSingleton<HolidaySourceRepository>();
+builder.Services.AddSingleton<AppMetaRepository>();
+builder.Services.AddHttpClient("ics");
+builder.Services.AddSingleton<IcsFetcherService>();
 builder.Services.AddSingleton<Seeder>();
 
 // Per-request user context (populated by UserContextMiddleware) and scope
@@ -60,6 +64,8 @@ app.MapAssignmentEndpoints();
 app.MapMatrixEndpoints();
 app.MapMilestoneEndpoints();
 app.MapWorkCalendarEndpoints();
+app.MapHolidaySourceEndpoints();
+app.MapHolidayEndpoints();
 
 if (app.Environment.IsDevelopment())
 {

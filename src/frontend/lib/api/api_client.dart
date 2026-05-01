@@ -10,6 +10,7 @@ import '../models/resource.dart';
 import '../models/resource_load.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
+import '../models/holiday.dart';
 import '../models/work_calendar.dart';
 import 'api_config.dart';
 
@@ -212,6 +213,68 @@ class ApiClient {
       body: jsonEncode(cal.toJson()),
     ));
     return WorkCalendar.fromJson(data as Map<String, dynamic>);
+  }
+
+  // --- Holiday subscriptions ---
+
+  Future<List<HolidaySource>> listHolidaySources() async {
+    final data = await _decode(await _http.get(_uri('/api/holiday-sources/'), headers: _headers()));
+    return (data as List).cast<Map<String, dynamic>>().map(HolidaySource.fromJson).toList();
+  }
+
+  Future<HolidaySource> createHolidaySource(HolidaySource src) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/holiday-sources/'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode(src.toJson()),
+    ));
+    return HolidaySource.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<HolidaySource> updateHolidaySource(String id, HolidaySource patch) async {
+    final data = await _decode(await _http.patch(
+      _uri('/api/holiday-sources/$id'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode(patch.toJson()),
+    ));
+    return HolidaySource.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteHolidaySource(String id) async {
+    await _decode(await _http.delete(_uri('/api/holiday-sources/$id'), headers: _headers()));
+  }
+
+  Future<HolidaySource> refreshHolidaySource(String id) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/holiday-sources/$id/refresh'),
+      headers: _headers(),
+    ));
+    return HolidaySource.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Aggregated holiday list across all enabled sources within [from, to).
+  Future<List<Holiday>> listHolidays({required DateTime from, required DateTime to}) async {
+    final data = await _decode(await _http.get(
+      _uri('/api/holidays', {
+        'from': from.toUtc().toIso8601String(),
+        'to': to.toUtc().toIso8601String(),
+      }),
+      headers: _headers(),
+    ));
+    return (data as List).cast<Map<String, dynamic>>().map(Holiday.fromJson).toList();
+  }
+
+  /// First-run helper: backend inserts one default subscription matching the
+  /// user's locale (when no subscriptions exist yet) and marks it done so
+  /// repeat calls are no-ops. Returns whether seeding actually happened —
+  /// the caller can use that to decide whether to invalidate downstream
+  /// holiday providers.
+  Future<bool> autoSeedHolidaySources({required String locale}) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/holiday-sources/auto-seed', {'locale': locale}),
+      headers: _headers(),
+    ));
+    return (data as Map<String, dynamic>)['seeded'] as bool? ?? false;
   }
 
   // --- Change Logs ---

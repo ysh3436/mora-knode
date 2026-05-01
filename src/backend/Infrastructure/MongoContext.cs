@@ -22,9 +22,19 @@ public class MongoContext
     public IMongoCollection<Assignment> Assignments => _db.GetCollection<Assignment>("assignments");
     public IMongoCollection<ScheduleChangeLog> ChangeLogs => _db.GetCollection<ScheduleChangeLog>("change_logs");
     public IMongoCollection<WorkCalendar> WorkCalendars => _db.GetCollection<WorkCalendar>("work_calendar");
+    public IMongoCollection<HolidaySource> HolidaySources => _db.GetCollection<HolidaySource>("holiday_sources");
+    public IMongoCollection<HolidayCacheEntry> HolidayCache => _db.GetCollection<HolidayCacheEntry>("holiday_cache");
+    public IMongoCollection<AppMeta> AppMeta => _db.GetCollection<AppMeta>("app_meta");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {
+        await HolidayCache.Indexes.CreateOneAsync(
+            new CreateIndexModel<HolidayCacheEntry>(Builders<HolidayCacheEntry>.IndexKeys.Ascending(x => x.Date)),
+            cancellationToken: ct);
+        await HolidayCache.Indexes.CreateOneAsync(
+            new CreateIndexModel<HolidayCacheEntry>(Builders<HolidayCacheEntry>.IndexKeys.Ascending(x => x.SourceId)),
+            cancellationToken: ct);
+
         await Tasks.Indexes.CreateOneAsync(
             new CreateIndexModel<TaskItem>(Builders<TaskItem>.IndexKeys.Ascending(x => x.ProjectId)),
             cancellationToken: ct);

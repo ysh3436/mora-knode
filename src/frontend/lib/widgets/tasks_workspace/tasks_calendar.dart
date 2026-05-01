@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' show DateFormat;
 
-import '../../data/korean_holidays.dart';
 import '../../l10n/app_localizations.dart';
 import '../../l10n/labels.dart';
 import '../../models/assignment.dart';
+import '../../models/holiday.dart';
 import '../../models/milestone.dart';
 import '../../models/resource.dart';
 import '../../models/task_item.dart';
@@ -14,8 +14,8 @@ import '../../state/providers.dart';
 
 /// Shared Korean weekday/holiday day-text color rule. Holiday wins over
 /// weekday so a holiday-on-Saturday still reads red.
-Color? _koreanDayColor(BuildContext context, DateTime date) {
-  if (KoreanHolidays.forDate(date) != null) return const Color(0xFFE53935);
+Color? _koreanDayColor(DateTime date, Map<int, Holiday> holidays) {
+  if (holidays.containsKey(holidayKey(date))) return const Color(0xFFE53935);
   if (date.weekday == DateTime.sunday) return const Color(0xFFE53935);
   if (date.weekday == DateTime.saturday) return const Color(0xFF1976D2);
   return null;
@@ -137,6 +137,7 @@ class _MonthView extends ConsumerWidget {
     final resources = ref.watch(resourcesProvider);
     final anchor = ref.watch(calendarAnchorProvider);
     final filters = _Filters.from(ref, scopeProjectId);
+    final holidays = ref.watch(holidaysProvider).asData?.value ?? const <int, Holiday>{};
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -167,7 +168,7 @@ class _MonthView extends ConsumerWidget {
               // Sat blue / Sun (or holiday-on-that-Sun-of-grid-start) red —
               // header colors weekday columns so the user reads weekday
               // identity at a glance.
-              final headerColor = _koreanDayColor(context, d);
+              final headerColor = _koreanDayColor(d, holidays);
               return Expanded(
                 child: Center(
                   child: Padding(
@@ -199,6 +200,7 @@ class _MonthView extends ConsumerWidget {
                           inMonth: inMonth,
                           tasks: ctx.tasksOn(day),
                           milestones: ctx.milestonesOn(day),
+                          holidays: holidays,
                           onPick: (taskId) {
                             ref.read(inspectionProvider.notifier).state = TaskInspection(taskId);
                             ref.read(inspectorOpenProvider.notifier).state = true;
@@ -223,6 +225,7 @@ class _MonthCell extends StatelessWidget {
   final bool inMonth;
   final List<_DayTask> tasks;
   final List<Milestone> milestones;
+  final Map<int, Holiday> holidays;
   final void Function(String taskId) onPick;
 
   const _MonthCell({
@@ -231,6 +234,7 @@ class _MonthCell extends StatelessWidget {
     required this.inMonth,
     required this.tasks,
     required this.milestones,
+    required this.holidays,
     required this.onPick,
   });
 
@@ -238,8 +242,8 @@ class _MonthCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dayLabel = day.day.toString();
-    final holiday = KoreanHolidays.forDate(day);
-    final koreanColor = _koreanDayColor(context, day);
+    final holiday = holidays[holidayKey(day)];
+    final koreanColor = _koreanDayColor(day, holidays);
     const maxRows = 4;
     final shown = tasks.take(maxRows).toList();
     final overflow = tasks.length - shown.length;
@@ -431,6 +435,7 @@ class _WeekViewState extends ConsumerState<_WeekView> {
     final calendar = ref.watch(workCalendarProvider);
     final anchor = ref.watch(calendarAnchorProvider);
     final filters = _Filters.from(ref, scopeProjectId);
+    final holidays = ref.watch(holidaysProvider).asData?.value ?? const <int, Holiday>{};
 
     if (agg.isLoading || assignments.isLoading || resources.isLoading || calendar.isLoading) {
       return const Center(child: CircularProgressIndicator());
@@ -472,7 +477,7 @@ class _WeekViewState extends ConsumerState<_WeekView> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Header row
-        _WeekHeaderRow(monday: monday, today: today, gutterWidth: _WeekView._gutterWidth),
+        _WeekHeaderRow(monday: monday, today: today, gutterWidth: _WeekView._gutterWidth, holidays: holidays),
         Divider(height: 1, color: theme.dividerColor),
         // All-day band
         _AllDayBand(
@@ -528,7 +533,13 @@ class _WeekHeaderRow extends StatelessWidget {
   final DateTime monday;
   final DateTime today;
   final double gutterWidth;
-  const _WeekHeaderRow({required this.monday, required this.today, required this.gutterWidth});
+  final Map<int, Holiday> holidays;
+  const _WeekHeaderRow({
+    required this.monday,
+    required this.today,
+    required this.gutterWidth,
+    required this.holidays,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -542,8 +553,8 @@ class _WeekHeaderRow extends StatelessWidget {
               final d = monday.add(Duration(days: i));
               final isToday = _sameDay(d, today);
               final isWeekend = d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
-              final holiday = KoreanHolidays.forDate(d);
-              final dayColor = _koreanDayColor(context, d);
+              final holiday = holidays[holidayKey(d)];
+              final dayColor = _koreanDayColor(d, holidays);
               return Container(
                 padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                 decoration: BoxDecoration(

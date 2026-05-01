@@ -6,6 +6,13 @@ using MoraKnode.Seeders;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Local-only override layer. Loaded after appsettings.{Env}.json so values
+// here win, but before env vars / command-line so CI / launch scripts can
+// still override Local. Gitignored — used for per-worktree port + Mongo
+// database overrides when running parallel dev instances on one machine.
+// Copy appsettings.Local.example.json to appsettings.Local.json to start.
+builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true);
+
 builder.Services.AddOpenApi();
 
 builder.Services.ConfigureHttpJsonOptions(o =>

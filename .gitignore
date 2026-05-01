@@ -10,6 +10,12 @@ obj/
 # Use appsettings.Local.example.json as the template.
 appsettings.Local.json
 
+# One-shot migration script backups (raw mongo dumps). Local only.
+tools/backups/
+
+# Per-machine Claude Code settings
+.claude/
+
 # Flutter/Dart
 **/build/
 .dart_tool/

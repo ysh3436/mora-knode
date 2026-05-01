@@ -9,21 +9,30 @@ namespace MoraKnode.Domain;
 public static class StatusAggregator
 {
     /// <summary>
-    /// All-terminal → Done. Any Blocked → Blocked. Any active or Done
-    /// (mixed-progress) → InProgress. All NotStarted → NotStarted. Any
-    /// awaiting review → InReview. Empty → NotStarted (defensive).
+    /// Rules in priority order:
+    ///   1. All terminal (Done/Cancelled/Dropped) → Done
+    ///   2. Any OnHold child → OnHold (sidelined dominates)
+    ///   3. Any review-waiting (PlanReview/WorkReview) → that value
+    ///      (surfaces "manager action needed" up the tree)
+    ///   4. Any active (Planning/InProgress) or Done (mixed) → InProgress
+    ///   5. All Created → Created
+    ///   6. Default → Created (defensive, also covers empty)
+    /// IsWaiting is orthogonal and not aggregated here.
     /// </summary>
     public static TaskStatus Aggregate(IReadOnlyList<TaskStatus> statuses)
     {
-        if (statuses.Count == 0) return TaskStatus.NotStarted;
+        if (statuses.Count == 0) return TaskStatus.Created;
         if (statuses.All(s => s == TaskStatus.Done
                            || s == TaskStatus.Cancelled
                            || s == TaskStatus.Dropped))
             return TaskStatus.Done;
-        if (statuses.Any(s => s == TaskStatus.Blocked)) return TaskStatus.Blocked;
-        if (statuses.Any(s => s == TaskStatus.InProgress || s == TaskStatus.Done))
+        if (statuses.Any(s => s == TaskStatus.OnHold)) return TaskStatus.OnHold;
+        if (statuses.Any(s => s == TaskStatus.PlanReview)) return TaskStatus.PlanReview;
+        if (statuses.Any(s => s == TaskStatus.WorkReview)) return TaskStatus.WorkReview;
+        if (statuses.Any(s => s == TaskStatus.Planning
+                           || s == TaskStatus.InProgress
+                           || s == TaskStatus.Done))
             return TaskStatus.InProgress;
-        if (statuses.Any(s => s == TaskStatus.InReview)) return TaskStatus.InReview;
-        return TaskStatus.NotStarted;
+        return TaskStatus.Created;
     }
 }

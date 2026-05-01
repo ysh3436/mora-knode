@@ -691,17 +691,23 @@ abstract class AppL10n {
   /// **'Sort'**
   String get sortBy;
 
-  /// No description provided for @sortKeyDefault.
+  /// No description provided for @sortAddStep.
   ///
   /// In en, this message translates to:
-  /// **'Default'**
-  String get sortKeyDefault;
+  /// **'Add sort'**
+  String get sortAddStep;
 
   /// No description provided for @sortKeyPriority.
   ///
   /// In en, this message translates to:
   /// **'Priority'**
   String get sortKeyPriority;
+
+  /// No description provided for @sortKeyStartDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Start date'**
+  String get sortKeyStartDate;
 
   /// No description provided for @sortKeyDueDate.
   ///
@@ -715,17 +721,53 @@ abstract class AppL10n {
   /// **'Status'**
   String get sortKeyStatus;
 
-  /// No description provided for @sortAscending.
+  /// No description provided for @sortPriorityUrgentFirst.
   ///
   /// In en, this message translates to:
-  /// **'Ascending'**
-  String get sortAscending;
+  /// **'Urgent first'**
+  String get sortPriorityUrgentFirst;
 
-  /// No description provided for @sortDescending.
+  /// No description provided for @sortPriorityUnsetFirst.
   ///
   /// In en, this message translates to:
-  /// **'Descending'**
-  String get sortDescending;
+  /// **'Unset first'**
+  String get sortPriorityUnsetFirst;
+
+  /// No description provided for @sortStartDateEarliestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Earliest start first'**
+  String get sortStartDateEarliestFirst;
+
+  /// No description provided for @sortStartDateLatestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest start first'**
+  String get sortStartDateLatestFirst;
+
+  /// No description provided for @sortDueDateSoonestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Soonest first'**
+  String get sortDueDateSoonestFirst;
+
+  /// No description provided for @sortDueDateLatestFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest first'**
+  String get sortDueDateLatestFirst;
+
+  /// No description provided for @sortStatusActiveFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Active first'**
+  String get sortStatusActiveFirst;
+
+  /// No description provided for @sortStatusDoneFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Done first'**
+  String get sortStatusDoneFirst;
 
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///

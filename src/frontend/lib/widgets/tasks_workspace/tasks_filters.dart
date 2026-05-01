@@ -5,7 +5,7 @@ import '../../l10n/app_localizations.dart';
 import '../../l10n/labels.dart';
 import '../../models/project.dart';
 import '../../models/resource.dart';
-import '../../models/task_hierarchy.dart' show TaskSortKey;
+import '../../models/task_hierarchy.dart' show TaskSortKey, TaskSortStep;
 import '../../models/task_item.dart';
 import '../../state/providers.dart';
 
@@ -165,56 +165,170 @@ class TasksFilters extends ConsumerWidget {
   }
 }
 
-/// Sort key picker + direction toggle. Sits in the filter row alongside
-/// the multi-chips. Direction button is a single tap that flips ASC/DESC
-/// for the active key — quick and discoverable.
+/// Notion-style multi-level sort control. Each step is a chip with the
+/// key label, a tap-to-flip direction arrow, and an inline ✕ to drop
+/// the step. The trailing "+ add sort" button only offers keys not
+/// already in the chain. Empty chain = default order (creation /
+/// hierarchy position) — no chip is shown in that case.
 class _SortControl extends ConsumerWidget {
   const _SortControl();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l = AppL10n.of(context);
-    final theme = Theme.of(context);
-    final key = ref.watch(taskSortKeyProvider);
-    final asc = ref.watch(taskSortAscProvider);
+    final chain = ref.watch(taskSortChainProvider);
+    final used = {for (final s in chain) s.key};
+    final available = TaskSortKey.values.where((k) => !used.contains(k)).toList();
 
     String labelOf(TaskSortKey k) => switch (k) {
-          TaskSortKey.defaultOrder => l.sortKeyDefault,
           TaskSortKey.priority => l.sortKeyPriority,
+          TaskSortKey.startDate => l.sortKeyStartDate,
           TaskSortKey.dueDate => l.sortKeyDueDate,
           TaskSortKey.status => l.sortKeyStatus,
         };
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+    void replaceChain(List<TaskSortStep> next) =>
+        ref.read(taskSortChainProvider.notifier).state = next;
+
+    return Wrap(
+      spacing: 4,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
       children: [
-        PopupMenuButton<TaskSortKey>(
-          tooltip: l.sortBy,
-          itemBuilder: (ctx) => [
-            for (final k in TaskSortKey.values)
-              CheckedPopupMenuItem<TaskSortKey>(
-                value: k,
-                checked: k == key,
-                child: Text(labelOf(k)),
-              ),
-          ],
-          onSelected: (k) => ref.read(taskSortKeyProvider.notifier).state = k,
-          child: InputChip(
-            avatar: const Icon(Icons.sort, size: 14),
-            label: Text('${l.sortBy}: ${labelOf(key)}'),
+        for (var i = 0; i < chain.length; i++)
+          _SortStepChip(
+            index: i + 1,
+            label: labelOf(chain[i].key),
+            step: chain[i],
+            onToggleDir: () {
+              final next = List<TaskSortStep>.from(chain);
+              next[i] = chain[i].withAsc(!chain[i].asc);
+              replaceChain(next);
+            },
+            onRemove: () {
+              final next = List<TaskSortStep>.from(chain)..removeAt(i);
+              replaceChain(next);
+            },
           ),
-        ),
-        const SizedBox(width: 4),
-        // Direction toggle is hidden for the default order — direction has
-        // no semantic meaning when the sort key is the implicit fallback.
-        if (key != TaskSortKey.defaultOrder)
-          IconButton(
-            tooltip: asc ? l.sortAscending : l.sortDescending,
-            iconSize: 18,
-            icon: Icon(asc ? Icons.arrow_upward : Icons.arrow_downward, color: theme.colorScheme.outline),
-            onPressed: () => ref.read(taskSortAscProvider.notifier).state = !asc,
+        if (available.isNotEmpty)
+          PopupMenuButton<TaskSortKey>(
+            tooltip: l.sortAddStep,
+            itemBuilder: (ctx) => [
+              for (final k in available)
+                PopupMenuItem<TaskSortKey>(value: k, child: Text(labelOf(k))),
+            ],
+            onSelected: (k) => replaceChain([...chain, TaskSortStep(k)]),
+            child: ActionChip(
+              avatar: const Icon(Icons.add, size: 14),
+              label: Text(chain.isEmpty ? l.sortBy : l.sortAddStep),
+              onPressed: null,
+            ),
           ),
       ],
+    );
+  }
+}
+
+/// One step in the sort chain. Shows the priority index (1, 2, …) so
+/// the user knows tie-break order at a glance, the key label, a filled
+/// triangle whose wide edge points to where the *largest semantic value*
+/// ends up in the sorted list (▼ = big at top, ▲ = big at bottom — the
+/// width-as-magnitude metaphor reads more naturally than a generic
+/// ↑/↓ for keys with no obvious "small-to-large" axis like priority),
+/// and an ✕ to drop the step.
+class _SortStepChip extends StatelessWidget {
+  final int index;
+  final String label;
+  final TaskSortStep step;
+  final VoidCallback onToggleDir;
+  final VoidCallback onRemove;
+  const _SortStepChip({
+    required this.index,
+    required this.label,
+    required this.step,
+    required this.onToggleDir,
+    required this.onRemove,
+  });
+
+  /// True when the current direction puts the largest semantic value at
+  /// the top of the list. Per-key because asc=true means different things
+  /// per [TaskSortKey] (priority asc=Urgent first vs dueDate asc=Soonest
+  /// first vs status asc=Active first).
+  static bool _largeAtTop(TaskSortStep s) => switch ((s.key, s.asc)) {
+        (TaskSortKey.priority, true) => true,
+        (TaskSortKey.priority, false) => false,
+        (TaskSortKey.startDate, true) => false,
+        (TaskSortKey.startDate, false) => true,
+        (TaskSortKey.dueDate, true) => false,
+        (TaskSortKey.dueDate, false) => true,
+        (TaskSortKey.status, true) => false,
+        (TaskSortKey.status, false) => true,
+      };
+
+  static String _directionTooltip(AppL10n l, TaskSortStep s) => switch ((s.key, s.asc)) {
+        (TaskSortKey.priority, true) => l.sortPriorityUrgentFirst,
+        (TaskSortKey.priority, false) => l.sortPriorityUnsetFirst,
+        (TaskSortKey.startDate, true) => l.sortStartDateEarliestFirst,
+        (TaskSortKey.startDate, false) => l.sortStartDateLatestFirst,
+        (TaskSortKey.dueDate, true) => l.sortDueDateSoonestFirst,
+        (TaskSortKey.dueDate, false) => l.sortDueDateLatestFirst,
+        (TaskSortKey.status, true) => l.sortStatusActiveFirst,
+        (TaskSortKey.status, false) => l.sortStatusDoneFirst,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l = AppL10n.of(context);
+    final bigAtTop = _largeAtTop(step);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.fromLTRB(8, 3, 4, 3),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '$index.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSecondaryContainer,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSecondaryContainer),
+          ),
+          const SizedBox(width: 2),
+          InkWell(
+            onTap: onToggleDir,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 1),
+              child: Tooltip(
+                message: _directionTooltip(l, step),
+                child: Icon(
+                  // Wide-end-up = larger values at top.
+                  bigAtTop ? Icons.arrow_drop_down : Icons.arrow_drop_up,
+                  size: 18,
+                  color: theme.colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: onRemove,
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.all(2),
+              child: Icon(Icons.close, size: 12, color: theme.colorScheme.onSecondaryContainer),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

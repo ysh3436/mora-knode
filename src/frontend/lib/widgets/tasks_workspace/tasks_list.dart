@@ -48,8 +48,7 @@ class _TasksListState extends ConsumerState<TasksList> {
     final assigneeFilter = ref.watch(assigneeFilterProvider);
     final statusFilter = ref.watch(statusFilterProvider);
     final search = ref.watch(searchQueryProvider).toLowerCase().trim();
-    final sortKey = ref.watch(taskSortKeyProvider);
-    final sortAsc = ref.watch(taskSortAscProvider);
+    final sortChain = ref.watch(taskSortChainProvider);
     final selected = ref.watch(inspectionProvider);
     final collapsed = ref.watch(collapsedNodesProvider);
 
@@ -82,8 +81,7 @@ class _TasksListState extends ConsumerState<TasksList> {
         statusFilter: statusFilter,
         search: search,
         collapsed: collapsed,
-        sortKey: sortKey,
-        sortAsc: sortAsc,
+        sortChain: sortChain,
       );
       if (taskRows.isEmpty) continue;
       if (showProjectHeaders) {
@@ -187,11 +185,10 @@ class _TasksListState extends ConsumerState<TasksList> {
     required Set<TaskStatus> statusFilter,
     required String search,
     required Set<String> collapsed,
-    required TaskSortKey sortKey,
-    required bool sortAsc,
+    required List<TaskSortStep> sortChain,
   }) {
     final out = <_TaskListRow>[];
-    final flat = flattenHierarchy(g.nodes, compare: taskSortComparator(sortKey, asc: sortAsc));
+    final flat = flattenHierarchy(g.nodes, compare: taskSortComparator(sortChain));
     final hiddenAncestor = <String>{};
     for (final entry in flat) {
       final node = entry.$1;

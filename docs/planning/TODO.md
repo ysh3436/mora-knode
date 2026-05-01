@@ -37,7 +37,11 @@
 - [x] .ics 캘린더 구독 시스템 — auto-seed + 편집 + 활성화 토글 + 즉시 갱신 + 다중 등록 — `4486fc5`
 - [x] Holiday / Observance kind 분리 (휴일=빨강 셀 / 절기·기념일=회색 라벨) — `a01ecd1`
 - [x] 프로젝트 페이지 탭 (Overview / Tasks / Issues / Initiatives / Documents) — `bc047de`
-- [x] 다크 테마 (기본 다크) + Settings 의 테마 카드 (System / Light / Dark). 사이드바에는 두지 않음 — 간트 화면에서 토글 시 Material 의 200ms 보간 transition 동안 단일 프레임 비용이 체감되어, 자주 누르지 않는 경로(Settings) 에 격리. 영속화 / 성능 추가 개선은 in-app task 로 후속.
+- [x] 다크 테마 (기본 시스템) + Settings 의 테마 카드 (System / Light / Dark). 사이드바에는 두지 않음 — 간트 화면에서 토글 시 Material 의 200ms 보간 transition 동안 단일 프레임 비용이 체감되어, 자주 누르지 않는 경로(Settings) 에 격리.
+
+### 다크 테마 후속 (in-app Issues 페이지 생기면 옮길 것)
+- [ ] **(follow-up)** 테마 / 언어 선호 영속화 — 새로고침 시 사용자 선택 유지. 현재 둘 다 메모리 only (System / 한국어로 리셋). 클라이언트 저장 (web `localStorage` 또는 `shared_preferences`) 정도면 충분.
+- [ ] **(bug)** Settings 카드들의 vertical 위치가 ko ↔ en 토글 시 미세하게 흔들림. Typography 통일 (`tall2021`) 로 80% 잡았으나 잔존. 본질은 CJK ↔ Latin 폰트의 ascent/descent metric 차이. 재현: Settings 열고 언어 토글 — Language/Theme 카드 아래 WorkCalendar / Holiday Sources 가 미세하게 위아래로 이동.
 
 ### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-08 ~ 2026-05-21)
 M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md)

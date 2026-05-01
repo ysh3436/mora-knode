@@ -33,10 +33,11 @@ final inspectorWidthProvider = StateProvider<double>((_) => 520);
 /// the platform locale, which we intentionally avoid here.
 final localeProvider = StateProvider<Locale>((_) => const Locale('ko'));
 
-/// Active color scheme. Default Dark for long dev sessions (눈 피로 완화).
-/// Sidebar exposes a quick switcher next to the language dropdown. Not yet
-/// persisted across reloads — same memory-only pattern as [localeProvider].
-final themeModeProvider = StateProvider<ThemeMode>((_) => ThemeMode.dark);
+/// Active color scheme. Defaults to System so the app honors the OS's
+/// light/dark preference out of the box; Settings exposes an explicit
+/// override (System / Light / Dark). Not yet persisted across reloads —
+/// same memory-only pattern as [localeProvider].
+final themeModeProvider = StateProvider<ThemeMode>((_) => ThemeMode.system);
 
 enum AppSection { myWork, allWork, projects, resources, matrix, plans, audit, agents, settings }
 

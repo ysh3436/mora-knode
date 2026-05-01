@@ -37,6 +37,35 @@ public static class TaskHierarchyEndpoints
                 .GroupBy(a => a.TaskId)
                 .ToDictionary(g => g.Key, g => g.Count());
 
+            // Derive a Notion/MS-Project-style outline number ("1.2.3") from
+            // current tree position. Per-sibling order = ascending Number, so
+            // the WBS reads stably across requests as long as the underlying
+            // MK-N values don't change. WBS itself is *derived per request*
+            // — never stored, never persisted — because tree edits would
+            // otherwise leave dangling values around. Stable identifier =
+            // Number. Positional label = Wbs.
+            var roots = list.Where(t => t.ParentTaskId == null)
+                            .OrderBy(t => t.Number)
+                            .ThenBy(t => t.CreatedAt)
+                            .ToList();
+            var wbsById = new Dictionary<string, string>(list.Count);
+
+            void AssignWbs(IEnumerable<TaskItem> siblings, string prefix)
+            {
+                var i = 1;
+                foreach (var sib in siblings)
+                {
+                    var code = prefix.Length == 0 ? i.ToString() : $"{prefix}.{i}";
+                    wbsById[sib.Id] = code;
+                    if (childrenByParent.TryGetValue(sib.Id, out var kids))
+                    {
+                        AssignWbs(kids.OrderBy(k => k.Number).ThenBy(k => k.CreatedAt), code);
+                    }
+                    i++;
+                }
+            }
+            AssignWbs(roots, string.Empty);
+
             // Cache computed values to avoid recomputing shared subtrees.
             var cache = new Dictionary<string, _Computed>();
 
@@ -98,6 +127,8 @@ public static class TaskHierarchyEndpoints
                     Id: t.Id,
                     ProjectId: t.ProjectId,
                     ParentTaskId: t.ParentTaskId,
+                    Number: t.Number,
+                    Wbs: wbsById.GetValueOrDefault(t.Id, string.Empty),
                     Title: t.Title,
                     Description: t.Description,
                     Status: t.Status,
@@ -180,6 +211,8 @@ public record TaskHierarchyNode(
     string Id,
     string ProjectId,
     string? ParentTaskId,
+    int Number,
+    string Wbs,
     string Title,
     string? Description,
     Domain.TaskStatus Status,

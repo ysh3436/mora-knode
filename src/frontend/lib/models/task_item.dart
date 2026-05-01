@@ -34,6 +34,10 @@ class TaskItem {
   final String? id;
   final String projectId;
   final String? parentTaskId;
+  /// Global "MK-{N}" identifier. Assigned by the backend on create; 0
+  /// only on documents that pre-date the migration (treated as "no
+  /// number" in display).
+  final int number;
   final String title;
   final String? description;
   final TaskStatus status;
@@ -53,6 +57,7 @@ class TaskItem {
     this.id,
     required this.projectId,
     this.parentTaskId,
+    this.number = 0,
     required this.title,
     this.description,
     this.status = TaskStatus.NotStarted,
@@ -70,6 +75,7 @@ class TaskItem {
         id: json['id'] as String?,
         projectId: json['projectId'] as String,
         parentTaskId: json['parentTaskId'] as String?,
+        number: (json['number'] as num?)?.toInt() ?? 0,
         title: json['title'] as String,
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
@@ -85,6 +91,7 @@ class TaskItem {
         if (id != null) 'id': id,
         'projectId': projectId,
         'parentTaskId': parentTaskId,
+        'number': number,
         'title': title,
         'description': description,
         'status': status.name,
@@ -110,6 +117,7 @@ class TaskItem {
       id: id,
       projectId: projectId,
       parentTaskId: parentTaskId,
+      number: number,
       title: title ?? this.title,
       description: description ?? this.description,
       status: status ?? this.status,

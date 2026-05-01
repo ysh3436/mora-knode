@@ -36,4 +36,28 @@ public class AppMetaRepository
         }
         return incoming;
     }
+
+    /// <summary>
+    /// Atomically allocates the next "MK-{N}" task number. Race-free even
+    /// under concurrent creates because MongoDB serialises FindOneAndUpdate
+    /// at the document level. Upserts the meta doc on first call so a
+    /// fresh deployment doesn't need any seed step.
+    /// </summary>
+    public async Task<int> AllocateNextTaskNumberAsync(CancellationToken ct = default)
+    {
+        var filter = Builders<AppMeta>.Filter.Eq(m => m.Id, AppMeta.DefaultId);
+        var update = Builders<AppMeta>.Update
+            .Inc(m => m.NextTaskNumber, 1)
+            .SetOnInsert(m => m.CreatedAt, DateTime.UtcNow)
+            .Set(m => m.UpdatedAt, DateTime.UtcNow);
+        var options = new FindOneAndUpdateOptions<AppMeta>
+        {
+            IsUpsert = true,
+            // Return the document AFTER the increment so the new value is
+            // what's been "allocated" — start at 1, not 0.
+            ReturnDocument = ReturnDocument.After,
+        };
+        var doc = await _ctx.AppMeta.FindOneAndUpdateAsync(filter, update, options, ct);
+        return doc.NextTaskNumber;
+    }
 }

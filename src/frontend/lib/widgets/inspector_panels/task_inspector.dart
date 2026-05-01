@@ -33,21 +33,39 @@ class TaskInspectorPanel extends ConsumerWidget {
       data: (groups) {
         TaskHierarchyNode? node;
         String? projectName;
+        List<TaskHierarchyNode> projectNodes = const [];
         for (final g in groups) {
           final found = g.nodes.where((n) => n.id == taskId).cast<TaskHierarchyNode?>().firstOrNull;
           if (found != null) {
             node = found;
             projectName = g.project.name;
+            projectNodes = g.nodes;
             break;
           }
         }
         if (node == null) return _Error(l.taskInspectorNotFound);
+
+        // Walk parent chain → ancestor list (root-first), used for the
+        // breadcrumb above the title.
+        final byId = {for (final n in projectNodes) n.id: n};
+        final ancestors = <TaskHierarchyNode>[];
+        var cursor = node.parentTaskId == null ? null : byId[node.parentTaskId];
+        while (cursor != null) {
+          ancestors.add(cursor);
+          cursor = cursor.parentTaskId == null ? null : byId[cursor.parentTaskId];
+        }
+        final ancestorChain = ancestors.reversed.toList();
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (ancestorChain.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: _AncestorBreadcrumb(chain: ancestorChain),
+                ),
               Row(
                 children: [
                   Icon(
@@ -56,6 +74,16 @@ class TaskInspectorPanel extends ConsumerWidget {
                     color: node.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
                   ),
                   const SizedBox(width: 8),
+                  if (node.number > 0) ...[
+                    Text(
+                      node.wbs.isEmpty ? 'MK-${node.number}' : '${node.wbs} · MK-${node.number}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: theme.colorScheme.outline,
+                        fontFeatures: const [FontFeature.tabularFigures()],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(child: _TitleEditor(node: node)),
                 ],
               ),
@@ -949,5 +977,44 @@ class _ChangeLogList extends ConsumerWidget {
         );
       },
     );
+  }
+}
+
+/// Root-first ancestor chain shown above the task title. Each crumb is
+/// "{wbs} · MK-{number}  Title" and tapping it focuses the inspector
+/// on that ancestor — keeps navigation single-handed when drilling
+/// in/out of a deep subtree.
+class _AncestorBreadcrumb extends ConsumerWidget {
+  final List<TaskHierarchyNode> chain;
+  const _AncestorBreadcrumb({required this.chain});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.outline,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    final children = <Widget>[];
+    for (var i = 0; i < chain.length; i++) {
+      if (i > 0) {
+        children.add(Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Text('›', style: style),
+        ));
+      }
+      final n = chain[i];
+      final label = n.wbs.isEmpty ? 'MK-${n.number}' : '${n.wbs} · MK-${n.number}';
+      children.add(InkWell(
+        onTap: () =>
+            ref.read(inspectionProvider.notifier).state = TaskInspection(n.id),
+        borderRadius: BorderRadius.circular(4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+          child: Text('$label  ${n.title}', style: style),
+        ),
+      ));
+    }
+    return Wrap(crossAxisAlignment: WrapCrossAlignment.center, children: children);
   }
 }

@@ -23,6 +23,14 @@ public class AppMeta
     /// </summary>
     public bool HolidaysAutoSeeded { get; set; }
 
+    /// <summary>
+    /// Monotonic counter for the global "MK-{N}" task identifier. Each
+    /// task creation atomically increments this and stamps the
+    /// pre-increment value onto TaskItem.Number. Starts at 0 → first
+    /// allocated number is 1.
+    /// </summary>
+    public int NextTaskNumber { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

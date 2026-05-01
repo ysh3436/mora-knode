@@ -391,12 +391,22 @@ class _TaskRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 flex: 4,
-                child: Text(
-                  node.title,
-                  style: node.hasChildren
-                      ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
-                      : theme.textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    if (node.number > 0) ...[
+                      _NumberBadge(number: node.number, wbs: node.wbs),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        node.title,
+                        style: node.hasChildren
+                            ? theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)
+                            : theme.textTheme.bodyMedium,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(width: 100, child: _statusChip(context, theme, status, aggregated: node.hasChildren)),
@@ -697,10 +707,20 @@ class _StickyTaskRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 flex: 4,
-                child: Text(
-                  node.title,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
+                child: Row(
+                  children: [
+                    if (node.number > 0) ...[
+                      _NumberBadge(number: node.number, wbs: node.wbs),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        node.title,
+                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SizedBox(width: 100, child: _statusChip(context, theme, status)),
@@ -760,5 +780,28 @@ class _StickyTaskRow extends StatelessWidget {
     final s = t.start != null ? df.format(t.start!.toLocal()) : '?';
     final e = t.end != null ? df.format(t.end!.toLocal()) : '?';
     return Text('$s → $e${t.isAllDay ? '' : ' ⏱'}', style: theme.textTheme.bodySmall);
+  }
+}
+
+/// Compact identifier shown before the title cell. Renders both the
+/// stable "MK-12" key (use this when referring to the task in chat or
+/// commits) and the derived "1.2.3" outline position so the visual
+/// hierarchy is readable at a glance.
+class _NumberBadge extends StatelessWidget {
+  final int number;
+  final String wbs;
+  const _NumberBadge({required this.number, required this.wbs});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final style = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.outline,
+      fontFeatures: const [FontFeature.tabularFigures()],
+    );
+    if (wbs.isEmpty) {
+      return Text('MK-$number', style: style);
+    }
+    return Text('$wbs · MK-$number', style: style);
   }
 }

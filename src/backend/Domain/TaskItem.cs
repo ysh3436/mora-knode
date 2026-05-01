@@ -33,6 +33,14 @@ public class TaskItem
     [BsonRepresentation(BsonType.String)]
     public TaskPriority Priority { get; set; } = TaskPriority.Unset;
 
+    /// <summary>
+    /// Global "MK-{N}" identifier shared across all projects. Assigned by
+    /// TaskRepository.CreateAsync via AppMetaRepository.AllocateNextTaskNumberAsync.
+    /// 0 means "not yet numbered" — only possible on documents that pre-date
+    /// the migration; everything else is positive and unique.
+    /// </summary>
+    public int Number { get; set; }
+
     public Timeline OriginTimeline { get; set; } = new();
     public Timeline CurrentTimeline { get; set; } = new();
     public Timeline RealTimeline { get; set; } = new();

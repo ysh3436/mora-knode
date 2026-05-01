@@ -5,6 +5,13 @@ class TaskHierarchyNode {
   final String id;
   final String projectId;
   final String? parentTaskId;
+  final int number;
+  /// Outline-style ("1.2.3") position label derived per-request from the
+  /// current tree state. Stable as long as Number isn't reassigned;
+  /// changes if the tree is reordered or moved. Use [number] for
+  /// references in conversations and commits — `wbs` is for visual
+  /// hierarchy only.
+  final String wbs;
   final String title;
   final String? description;
   final TaskStatus status;
@@ -27,6 +34,8 @@ class TaskHierarchyNode {
     required this.id,
     required this.projectId,
     required this.parentTaskId,
+    required this.number,
+    required this.wbs,
     required this.title,
     required this.description,
     required this.status,
@@ -50,6 +59,8 @@ class TaskHierarchyNode {
         id: json['id'] as String,
         projectId: json['projectId'] as String,
         parentTaskId: json['parentTaskId'] as String?,
+        number: (json['number'] as num?)?.toInt() ?? 0,
+        wbs: json['wbs'] as String? ?? '',
         title: json['title'] as String,
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
@@ -74,6 +85,7 @@ class TaskHierarchyNode {
         id: id,
         projectId: projectId,
         parentTaskId: parentTaskId,
+        number: number,
         title: title,
         description: description,
         status: status,

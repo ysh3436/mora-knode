@@ -8,11 +8,13 @@ public class TaskRepository
 {
     private readonly MongoContext _ctx;
     private readonly ChangeLogRepository _changeLogs;
+    private readonly AppMetaRepository _appMeta;
 
-    public TaskRepository(MongoContext ctx, ChangeLogRepository changeLogs)
+    public TaskRepository(MongoContext ctx, ChangeLogRepository changeLogs, AppMetaRepository appMeta)
     {
         _ctx = ctx;
         _changeLogs = changeLogs;
+        _appMeta = appMeta;
     }
 
     public Task<List<TaskItem>> ListByProjectAsync(string projectId, CancellationToken ct = default) =>
@@ -27,6 +29,12 @@ public class TaskRepository
         task.Id = ObjectId.GenerateNewId().ToString();
         task.CreatedAt = now;
         task.UpdatedAt = now;
+
+        // MK-{N} identifier — atomic counter on the AppMeta singleton.
+        // Migration backfills pre-existing tasks; new ones always pick up
+        // a fresh number here so callers can't accidentally bypass it by
+        // not setting the field client-side.
+        task.Number = await _appMeta.AllocateNextTaskNumberAsync(ct);
 
         // On first create, if OriginTimeline (L1) is empty and CurrentTimeline (L2) is set,
         // snapshot L2 into L1 to lock the baseline.

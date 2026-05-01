@@ -649,6 +649,42 @@ abstract class AppL10n {
   /// **'Dropped'**
   String get taskStatusDropped;
 
+  /// No description provided for @taskPriorityUnset.
+  ///
+  /// In en, this message translates to:
+  /// **'Unset'**
+  String get taskPriorityUnset;
+
+  /// No description provided for @taskPriorityLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get taskPriorityLow;
+
+  /// No description provided for @taskPriorityNormal.
+  ///
+  /// In en, this message translates to:
+  /// **'Normal'**
+  String get taskPriorityNormal;
+
+  /// No description provided for @taskPriorityHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get taskPriorityHigh;
+
+  /// No description provided for @taskPriorityUrgent.
+  ///
+  /// In en, this message translates to:
+  /// **'Urgent'**
+  String get taskPriorityUrgent;
+
+  /// No description provided for @filterPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Priority'**
+  String get filterPriority;
+
   /// Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.
   ///
   /// In en, this message translates to:

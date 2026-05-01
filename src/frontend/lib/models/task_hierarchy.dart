@@ -8,11 +8,13 @@ class TaskHierarchyNode {
   final String title;
   final String? description;
   final TaskStatus status;
+  final TaskPriority priority;
   final Timeline originTimeline;
   final Timeline currentTimeline;
   final Timeline realTimeline;
   final bool hasChildren;
   final TaskStatus computedStatus;
+  final TaskPriority computedPriority;
   final Timeline computedOriginTimeline;
   final Timeline computedCurrentTimeline;
   final Timeline computedRealTimeline;
@@ -28,11 +30,13 @@ class TaskHierarchyNode {
     required this.title,
     required this.description,
     required this.status,
+    required this.priority,
     required this.originTimeline,
     required this.currentTimeline,
     required this.realTimeline,
     required this.hasChildren,
     required this.computedStatus,
+    required this.computedPriority,
     required this.computedOriginTimeline,
     required this.computedCurrentTimeline,
     required this.computedRealTimeline,
@@ -49,11 +53,13 @@ class TaskHierarchyNode {
         title: json['title'] as String,
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
+        priority: _parsePriority(json['priority']),
         originTimeline: Timeline.fromJson(json['originTimeline'] as Map<String, dynamic>?),
         currentTimeline: Timeline.fromJson(json['currentTimeline'] as Map<String, dynamic>?),
         realTimeline: Timeline.fromJson(json['realTimeline'] as Map<String, dynamic>?),
         hasChildren: json['hasChildren'] as bool,
         computedStatus: _parseStatus(json['computedStatus']),
+        computedPriority: _parsePriority(json['computedPriority']),
         computedOriginTimeline: Timeline.fromJson(json['computedOriginTimeline'] as Map<String, dynamic>?),
         computedCurrentTimeline: Timeline.fromJson(json['computedCurrentTimeline'] as Map<String, dynamic>?),
         computedRealTimeline: Timeline.fromJson(json['computedRealTimeline'] as Map<String, dynamic>?),
@@ -71,6 +77,7 @@ class TaskHierarchyNode {
         title: title,
         description: description,
         status: status,
+        priority: priority,
         originTimeline: originTimeline,
         currentTimeline: currentTimeline,
         realTimeline: realTimeline,
@@ -80,6 +87,8 @@ class TaskHierarchyNode {
 
   static TaskStatus _parseStatus(Object? v) =>
       TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.NotStarted);
+  static TaskPriority _parsePriority(Object? v) =>
+      TaskPriority.values.firstWhere((p) => p.name == v, orElse: () => TaskPriority.Unset);
 }
 
 /// Depth-first flatten of hierarchy nodes. Roots and siblings sorted by current

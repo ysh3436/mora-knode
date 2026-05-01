@@ -24,6 +24,15 @@ public class TaskItem
     [BsonRepresentation(BsonType.String)]
     public TaskStatus Status { get; set; } = TaskStatus.NotStarted;
 
+    // Triage signal. Default Unset for tasks that pre-date the field or
+    // simply weren't categorized. The property initializer is the default
+    // — when BSON documents are missing this field, the deserializer
+    // simply leaves the property at the constructor-assigned value
+    // (BsonDefaultValue is intentionally not used because it bypasses the
+    // BsonRepresentation conversion and would inject a raw string).
+    [BsonRepresentation(BsonType.String)]
+    public TaskPriority Priority { get; set; } = TaskPriority.Unset;
+
     public Timeline OriginTimeline { get; set; } = new();
     public Timeline CurrentTimeline { get; set; } = new();
     public Timeline RealTimeline { get; set; } = new();

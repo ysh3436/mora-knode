@@ -109,6 +109,13 @@
   "taskStatusDone": "완료",
   "taskStatusCancelled": "취소",
   "taskStatusDropped": "중단",
+
+  "taskPriorityUnset": "미설정",
+  "taskPriorityLow": "낮음",
+  "taskPriorityNormal": "보통",
+  "taskPriorityHigh": "높음",
+  "taskPriorityUrgent": "긴급",
+  "filterPriority": "우선순위",
   "taskStatusAggregatedSuffix": "{label}*",
 
   "actionEdit": "편집",

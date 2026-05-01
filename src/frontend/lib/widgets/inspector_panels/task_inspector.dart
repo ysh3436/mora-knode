@@ -63,6 +63,7 @@ class TaskInspectorPanel extends ConsumerWidget {
               Wrap(spacing: 8, runSpacing: 4, children: [
                 _Pill(label: projectName ?? '?', icon: Icons.folder_outlined),
                 _InlineStatusPicker(node: node),
+                _InlinePriorityPicker(node: node),
                 _InlineParentPicker(
                   node: node,
                   siblings: groups.firstWhere((g) => g.nodes.any((n) => n.id == taskId)).nodes,
@@ -200,6 +201,48 @@ class _InlineStatusPicker extends ConsumerWidget {
       onSelected: (next) async {
         if (next == node.status) return;
         await _patchTaskStatus(ref, node, next);
+      },
+      child: pill,
+    );
+  }
+}
+
+/// Priority pill that doubles as an inline picker. Parent rows show the
+/// aggregated priority (max of any non-Unset child) read-only — editing it
+/// directly would just be overwritten on the next aggregation. Leaf rows
+/// get the popup picker so the user can rank work directly.
+class _InlinePriorityPicker extends ConsumerWidget {
+  final TaskHierarchyNode node;
+  const _InlinePriorityPicker({required this.node});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final p = node.hasChildren ? node.computedPriority : node.priority;
+    final pill = _Pill(
+      label: taskPriorityDisplay(context, p, aggregated: node.hasChildren),
+      icon: taskPriorityIcon(p),
+      color: taskPriorityBg(theme, p),
+    );
+    if (node.hasChildren) return pill;
+
+    return PopupMenuButton<TaskPriority>(
+      tooltip: AppL10n.of(context).filterPriority,
+      initialValue: p,
+      itemBuilder: (ctx) => [
+        for (final v in TaskPriority.values)
+          PopupMenuItem(
+            value: v,
+            child: Row(children: [
+              Icon(taskPriorityIcon(v), size: 14, color: theme.colorScheme.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(taskPriorityLabel(context, v)),
+            ]),
+          ),
+      ],
+      onSelected: (next) async {
+        if (next == p) return;
+        await _patchTaskPriority(ref, node, next);
       },
       child: pill,
     );
@@ -390,6 +433,28 @@ Future<void> _patchTaskStatus(WidgetRef ref, TaskHierarchyNode node, TaskStatus 
     title: node.title,
     description: node.description,
     status: next,
+    priority: node.priority,
+    originTimeline: node.originTimeline,
+    currentTimeline: node.currentTimeline,
+    realTimeline: node.realTimeline,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
+  );
+  await ref.read(apiClientProvider).updateTask(node.id, updated);
+  ref.invalidate(allHierarchyByProjectProvider);
+  ref.invalidate(taskHierarchyProvider(node.projectId));
+  ref.invalidate(taskChangeLogsProvider(node.id));
+}
+
+Future<void> _patchTaskPriority(WidgetRef ref, TaskHierarchyNode node, TaskPriority next) async {
+  final updated = TaskItem(
+    id: node.id,
+    projectId: node.projectId,
+    parentTaskId: node.parentTaskId,
+    title: node.title,
+    description: node.description,
+    status: node.status,
+    priority: next,
     originTimeline: node.originTimeline,
     currentTimeline: node.currentTimeline,
     realTimeline: node.realTimeline,
@@ -410,6 +475,7 @@ Future<void> _patchTaskTitle(WidgetRef ref, TaskHierarchyNode node, String next)
     title: next,
     description: node.description,
     status: node.status,
+    priority: node.priority,
     originTimeline: node.originTimeline,
     currentTimeline: node.currentTimeline,
     realTimeline: node.realTimeline,
@@ -430,6 +496,7 @@ Future<void> _patchTaskParent(WidgetRef ref, TaskHierarchyNode node, String? nex
     title: node.title,
     description: node.description,
     status: node.status,
+    priority: node.priority,
     originTimeline: node.originTimeline,
     currentTimeline: node.currentTimeline,
     realTimeline: node.realTimeline,
@@ -455,6 +522,7 @@ Future<void> _patchTaskTimeline(
     title: node.title,
     description: node.description,
     status: node.status,
+    priority: node.priority,
     // Origin is locked once set (per ADR-009): only flip Origin when it was
     // previously empty. Treat it as "first commitment" — afterwards Current
     // is the editable plan and Real is what actually happened.

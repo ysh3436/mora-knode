@@ -31,6 +31,23 @@ public enum TaskStatus
     Dropped = 52
 }
 
+// Triage signal — "what to pick next" when a queue contains many
+// candidates. Anchored at Normal=0 with negative integers for "more
+// urgent" and positive for "less urgent" so a *minimum* across children
+// naturally surfaces the most urgent active task on the parent row.
+// Unset sits well above any real value (100) so it never wins a Min
+// comparison unless every child is Unset — no special filter needed in
+// the aggregation. Persisted as the enum name (BsonRepresentation.String
+// on TaskItem.Priority) so these integers can be reshuffled freely.
+public enum TaskPriority
+{
+    Urgent = -20,
+    High = -10,
+    Normal = 0,
+    Low = 10,
+    Unset = 100
+}
+
 public enum MilestoneStatus
 {
     Upcoming,

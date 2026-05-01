@@ -301,6 +301,24 @@ class AppL10nKo extends AppL10n {
   String get taskStatusDropped => '중단';
 
   @override
+  String get taskPriorityUnset => '미설정';
+
+  @override
+  String get taskPriorityLow => '낮음';
+
+  @override
+  String get taskPriorityNormal => '보통';
+
+  @override
+  String get taskPriorityHigh => '높음';
+
+  @override
+  String get taskPriorityUrgent => '긴급';
+
+  @override
+  String get filterPriority => '우선순위';
+
+  @override
   String taskStatusAggregatedSuffix(String label) {
     return '$label*';
   }

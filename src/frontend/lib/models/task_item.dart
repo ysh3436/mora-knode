@@ -19,6 +19,17 @@ enum TaskStatus {
   Dropped,
 }
 
+// Mirror of backend Enums.cs TaskPriority. Same persistence pattern as
+// TaskStatus (string by name). Declaration order drives the picker order
+// — keep ascending so the dropdown reads from least to most urgent.
+enum TaskPriority {
+  Unset,
+  Low,
+  Normal,
+  High,
+  Urgent,
+}
+
 class TaskItem {
   final String? id;
   final String projectId;
@@ -26,6 +37,7 @@ class TaskItem {
   final String title;
   final String? description;
   final TaskStatus status;
+  final TaskPriority priority;
   final Timeline originTimeline;
   final Timeline currentTimeline;
   final Timeline realTimeline;
@@ -44,6 +56,7 @@ class TaskItem {
     required this.title,
     this.description,
     this.status = TaskStatus.NotStarted,
+    this.priority = TaskPriority.Unset,
     this.originTimeline = const Timeline(),
     this.currentTimeline = const Timeline(),
     this.realTimeline = const Timeline(),
@@ -60,6 +73,7 @@ class TaskItem {
         title: json['title'] as String,
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
+        priority: _parsePriority(json['priority']),
         originTimeline: Timeline.fromJson(json['originTimeline'] as Map<String, dynamic>?),
         currentTimeline: Timeline.fromJson(json['currentTimeline'] as Map<String, dynamic>?),
         realTimeline: Timeline.fromJson(json['realTimeline'] as Map<String, dynamic>?),
@@ -74,6 +88,7 @@ class TaskItem {
         'title': title,
         'description': description,
         'status': status.name,
+        'priority': priority.name,
         'originTimeline': originTimeline.toJson(),
         'currentTimeline': currentTimeline.toJson(),
         'realTimeline': realTimeline.toJson(),
@@ -85,6 +100,7 @@ class TaskItem {
     String? title,
     String? description,
     TaskStatus? status,
+    TaskPriority? priority,
     Timeline? currentTimeline,
     Timeline? realTimeline,
     String? changeReason,
@@ -97,6 +113,7 @@ class TaskItem {
       title: title ?? this.title,
       description: description ?? this.description,
       status: status ?? this.status,
+      priority: priority ?? this.priority,
       originTimeline: originTimeline,
       currentTimeline: currentTimeline ?? this.currentTimeline,
       realTimeline: realTimeline ?? this.realTimeline,
@@ -109,5 +126,7 @@ class TaskItem {
 
   static TaskStatus _parseStatus(Object? v) =>
       TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.NotStarted);
+  static TaskPriority _parsePriority(Object? v) =>
+      TaskPriority.values.firstWhere((p) => p.name == v, orElse: () => TaskPriority.Unset);
   static DateTime? _parseDate(Object? v) => v == null ? null : DateTime.parse(v as String).toUtc();
 }

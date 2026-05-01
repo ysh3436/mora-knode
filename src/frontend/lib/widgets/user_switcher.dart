@@ -5,10 +5,10 @@ import '../l10n/app_localizations.dart';
 import '../models/resource.dart';
 import '../state/providers.dart';
 
-/// Dev-mode "logged in as" picker — bottom of the sidebar. Cycles between
-/// human resources so the X-Dev-User-Id header (and therefore RBAC + view
-/// scoping on the backend) follows. Per seed-scenarios.md §4 this is a
-/// stand-in for token auth that lands in M2.
+/// Dev-mode "logged in as" picker — top of the sidebar, right below the
+/// app title. Cycles between human resources so the X-Dev-User-Id header
+/// (and therefore RBAC + view scoping on the backend) follows. Per
+/// seed-scenarios.md §4 this is a stand-in for token auth that lands in M2.
 class UserSwitcher extends ConsumerWidget {
   const UserSwitcher({super.key});
 
@@ -21,7 +21,7 @@ class UserSwitcher extends ConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: theme.dividerColor)),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: resources.when(
         loading: () => Padding(

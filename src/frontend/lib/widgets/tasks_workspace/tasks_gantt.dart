@@ -217,7 +217,7 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
     final byId = {for (final n in nodes) n.id: n};
     final matches = <String>{};
     for (final n in nodes) {
-      if (search.isNotEmpty && !n.title.toLowerCase().contains(search)) continue;
+      if (search.isNotEmpty && !taskHierarchyMatchesSearch(n, search)) continue;
       if (statusFilter.isNotEmpty &&
           !statusFilter.contains(n.hasChildren ? n.computedStatus : n.status)) {
         continue;

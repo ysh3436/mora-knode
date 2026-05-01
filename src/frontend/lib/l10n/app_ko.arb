@@ -123,6 +123,7 @@
   "sortKeyStartDate": "시작일",
   "sortKeyDueDate": "마감일",
   "sortKeyStatus": "상태",
+  "sortKeyNumber": "번호",
   "sortPriorityUrgentFirst": "긴급 먼저",
   "sortPriorityUnsetFirst": "미설정 먼저",
   "sortStartDateEarliestFirst": "이른 시작 먼저",
@@ -131,6 +132,8 @@
   "sortDueDateLatestFirst": "여유 먼저",
   "sortStatusActiveFirst": "활성 먼저",
   "sortStatusDoneFirst": "종료 먼저",
+  "sortNumberLowFirst": "낮은 번호 먼저",
+  "sortNumberHighFirst": "높은 번호 먼저",
   "taskStatusAggregatedSuffix": "{label}*",
 
   "actionEdit": "편집",

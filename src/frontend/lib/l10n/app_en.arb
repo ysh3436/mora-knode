@@ -130,6 +130,7 @@
   "sortKeyStartDate": "Start date",
   "sortKeyDueDate": "Due date",
   "sortKeyStatus": "Status",
+  "sortKeyNumber": "Number",
   "sortPriorityUrgentFirst": "Urgent first",
   "sortPriorityUnsetFirst": "Unset first",
   "sortStartDateEarliestFirst": "Earliest start first",
@@ -138,6 +139,8 @@
   "sortDueDateLatestFirst": "Latest first",
   "sortStatusActiveFirst": "Active first",
   "sortStatusDoneFirst": "Done first",
+  "sortNumberLowFirst": "Lower number first",
+  "sortNumberHighFirst": "Higher number first",
   "taskStatusAggregatedSuffix": "{label}*",
   "@taskStatusAggregatedSuffix": {
     "description": "Status label decorated with a marker (default *) when it's computed from child tasks instead of set directly.",

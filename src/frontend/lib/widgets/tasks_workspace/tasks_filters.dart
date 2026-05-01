@@ -185,6 +185,7 @@ class _SortControl extends ConsumerWidget {
           TaskSortKey.startDate => l.sortKeyStartDate,
           TaskSortKey.dueDate => l.sortKeyDueDate,
           TaskSortKey.status => l.sortKeyStatus,
+          TaskSortKey.number => l.sortKeyNumber,
         };
 
     void replaceChain(List<TaskSortStep> next) =>
@@ -263,6 +264,8 @@ class _SortStepChip extends StatelessWidget {
         (TaskSortKey.dueDate, false) => true,
         (TaskSortKey.status, true) => false,
         (TaskSortKey.status, false) => true,
+        (TaskSortKey.number, true) => false,
+        (TaskSortKey.number, false) => true,
       };
 
   static String _directionTooltip(AppL10n l, TaskSortStep s) => switch ((s.key, s.asc)) {
@@ -274,6 +277,8 @@ class _SortStepChip extends StatelessWidget {
         (TaskSortKey.dueDate, false) => l.sortDueDateLatestFirst,
         (TaskSortKey.status, true) => l.sortStatusActiveFirst,
         (TaskSortKey.status, false) => l.sortStatusDoneFirst,
+        (TaskSortKey.number, true) => l.sortNumberLowFirst,
+        (TaskSortKey.number, false) => l.sortNumberHighFirst,
       };
 
   @override

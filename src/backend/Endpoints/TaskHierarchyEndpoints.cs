@@ -171,21 +171,8 @@ public static class TaskHierarchyEndpoints
         return new Timeline { Start = start, End = end };
     }
 
-    private static Domain.TaskStatus AggregateStatus(List<Domain.TaskStatus> statuses)
-    {
-        if (statuses.Count == 0) return Domain.TaskStatus.NotStarted;
-        // All children reached a terminal state (success or otherwise) → parent is done.
-        if (statuses.All(s => s == Domain.TaskStatus.Done
-                           || s == Domain.TaskStatus.Cancelled
-                           || s == Domain.TaskStatus.Dropped))
-            return Domain.TaskStatus.Done;
-        if (statuses.Any(s => s == Domain.TaskStatus.Blocked)) return Domain.TaskStatus.Blocked;
-        if (statuses.Any(s => s == Domain.TaskStatus.InProgress || s == Domain.TaskStatus.Done))
-            return Domain.TaskStatus.InProgress;
-        // No active work yet, but a child is awaiting review — surface that on the parent.
-        if (statuses.Any(s => s == Domain.TaskStatus.InReview)) return Domain.TaskStatus.InReview;
-        return Domain.TaskStatus.NotStarted;
-    }
+    private static Domain.TaskStatus AggregateStatus(List<Domain.TaskStatus> statuses) =>
+        Domain.StatusAggregator.Aggregate(statuses);
 
     // Caller already filtered out children that are no longer in flight
     // (Done/Cancelled/Dropped) — what's left is the active triage pool.

@@ -53,6 +53,10 @@ public class TaskRepository
         NormalizeAllDay(task.RealTimeline);
 
         await _ctx.Tasks.InsertOneAsync(task, cancellationToken: ct);
+        // A new child shifts the rollup of its parent (and ancestors) — a
+        // NotStarted child can pull a previously-Done parent back to
+        // InProgress, etc.
+        await RecomputeAncestorStatusAsync(task.ParentTaskId, ct);
         return task;
     }
 
@@ -96,13 +100,79 @@ public class TaskRepository
 
         await _ctx.Tasks.ReplaceOneAsync(t => t.Id == id, incoming, cancellationToken: ct);
         await _changeLogs.InsertManyAsync(logs, ct);
+
+        // Status rollup. Self first (in case this task has children and the
+        // user nudged its status manually — children dictate the truth).
+        // Then walk up to the current parent. If reparenting happened, the
+        // *old* parent loses a child too and needs its own recompute.
+        await RecomputeAncestorStatusAsync(id, ct);
+        if (existing.ParentTaskId != incoming.ParentTaskId)
+        {
+            await RecomputeAncestorStatusAsync(existing.ParentTaskId, ct);
+        }
+        await RecomputeAncestorStatusAsync(incoming.ParentTaskId, ct);
         return incoming;
     }
 
     public async Task<bool> DeleteAsync(string id, CancellationToken ct = default)
     {
+        // Capture the parent id before delete so the rollup can refresh
+        // afterwards — losing a NotStarted child can flip a parent back
+        // to Done if every remaining sibling is terminal.
+        var existing = await GetAsync(id, ct);
+        var parentTaskId = existing?.ParentTaskId;
+
         var result = await _ctx.Tasks.DeleteOneAsync(t => t.Id == id, ct);
+        if (result.DeletedCount > 0)
+        {
+            await RecomputeAncestorStatusAsync(parentTaskId, ct);
+        }
         return result.DeletedCount > 0;
+    }
+
+    /// <summary>
+    /// Walks up from [id], recomputing each ancestor's stored status from
+    /// its current children using <see cref="StatusAggregator"/>. Stops
+    /// when a task has no children (leaf — nothing to roll up) or when
+    /// a recomputed value matches the existing one (no further changes
+    /// would propagate). Each persisted change is written to the
+    /// ScheduleChangeLog as an "auto: rolled up from children" entry so
+    /// the audit trail remains complete.
+    /// </summary>
+    private async Task RecomputeAncestorStatusAsync(string? id, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(id)) return;
+        var task = await GetAsync(id, ct);
+        if (task is null) return;
+
+        var children = await _ctx.Tasks
+            .Find(t => t.ParentTaskId == id)
+            .Project(t => t.Status)
+            .ToListAsync(ct);
+        if (children.Count == 0) return;
+
+        var rolledUp = StatusAggregator.Aggregate(children);
+        if (task.Status == rolledUp) return;
+
+        var oldStatus = task.Status;
+        task.Status = rolledUp;
+        task.UpdatedAt = DateTime.UtcNow;
+        await _ctx.Tasks.ReplaceOneAsync(t => t.Id == id, task, cancellationToken: ct);
+        await _changeLogs.InsertManyAsync(new[]
+        {
+            new ScheduleChangeLog
+            {
+                EntityType = ChangeEntityType.Task,
+                EntityId = id,
+                Field = "Status",
+                BeforeValue = oldStatus.ToString(),
+                AfterValue = rolledUp.ToString(),
+                Reason = "auto: rolled up from children",
+                ChangedBy = "system",
+            }
+        }, ct);
+
+        await RecomputeAncestorStatusAsync(task.ParentTaskId, ct);
     }
 
     public async Task<long> DeleteByProjectAsync(string projectId, CancellationToken ct = default)

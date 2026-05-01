@@ -89,10 +89,18 @@ class GanttChart extends StatefulWidget {
   /// holidays registered"; the chart renders weekend colors only.
   final Map<int, Holiday> holidays;
 
+  /// User-resizable title column width. Min/max enforced inside this
+  /// widget at the drag handle. Parent passes the live value (typically
+  /// from a StateProvider) and reacts to [onTitleColWidthChanged] to
+  /// persist updates.
+  final double titleColWidth;
+  final ValueChanged<double>? onTitleColWidthChanged;
+
   static const double rowHeight = 32;
   static const double headerTopHeight = 22;
   static const double headerBottomHeight = 22;
-  static const double labelWidth = 240;
+  static const double titleColMinWidth = 160;
+  static const double titleColMaxWidth = 600;
 
   const GanttChart({
     super.key,
@@ -106,6 +114,8 @@ class GanttChart extends StatefulWidget {
     this.onToggleCollapse,
     this.centerOn,
     this.holidays = const {},
+    this.titleColWidth = 240,
+    this.onTitleColWidthChanged,
   });
 
   @override
@@ -435,11 +445,13 @@ class _GanttChartState extends State<GanttChart> {
       behavior: const _GanttScrollBehavior(),
       child: LayoutBuilder(
       builder: (context, constraints) {
-        final timelineAreaWidth = constraints.maxWidth - GanttChart.labelWidth;
+        final timelineAreaWidth = constraints.maxWidth - widget.titleColWidth;
         final effectiveTimelineWidth =
             timelineWidth < timelineAreaWidth ? timelineAreaWidth : timelineWidth;
 
-        return Column(
+        return Stack(
+          children: [
+        Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Pinned header strip: "Task" label cell + horizontally-scrollable date row.
@@ -449,7 +461,7 @@ class _GanttChartState extends State<GanttChart> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Container(
-                    width: GanttChart.labelWidth,
+                    width: widget.titleColWidth,
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest,
                       border: Border(
@@ -569,7 +581,7 @@ class _GanttChartState extends State<GanttChart> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           SizedBox(
-                            width: GanttChart.labelWidth,
+                            width: widget.titleColWidth,
                             height: bodyHeight,
                             child: RepaintBoundary(
                               child: _LabelGutter(
@@ -631,7 +643,7 @@ class _GanttChartState extends State<GanttChart> {
                   Positioned(
                     top: 0,
                     left: 0,
-                    width: GanttChart.labelWidth,
+                    width: widget.titleColWidth,
                     child: AnimatedBuilder(
                       animation: _vCtrl,
                       builder: (ctx, _) {
@@ -654,7 +666,7 @@ class _GanttChartState extends State<GanttChart> {
                   // range so arrows appear/disappear as the user pans across
                   // the timeline (not just when extending the window).
                   Positioned(
-                    left: GanttChart.labelWidth,
+                    left: widget.titleColWidth,
                     top: 0,
                     right: 0,
                     bottom: 0,
@@ -704,6 +716,33 @@ class _GanttChartState extends State<GanttChart> {
                 ],
               ),
             ),
+          ],
+        ),
+            // Drag handle spanning the full chart height (header + body),
+            // sitting on the right edge of the title column. Only rendered
+            // when a resize callback is wired so embedders that want a
+            // fixed column don't see a hidden hot zone.
+            if (widget.onTitleColWidthChanged != null)
+              Positioned(
+                left: widget.titleColWidth - 3,
+                top: 0,
+                bottom: 0,
+                width: 6,
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.resizeColumn,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanUpdate: (d) {
+                      final next = (widget.titleColWidth + d.delta.dx).clamp(
+                        GanttChart.titleColMinWidth,
+                        GanttChart.titleColMaxWidth,
+                      );
+                      widget.onTitleColWidthChanged!(next);
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
+              ),
           ],
         );
       },

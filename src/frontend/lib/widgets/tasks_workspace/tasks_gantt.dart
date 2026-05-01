@@ -109,9 +109,15 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
         if (node.hasChildren && collapsed.contains(node.id)) {
           hiddenAncestor.add(node.id);
         }
+        // Prefix the row title with the WBS outline + MK-N so the gantt
+        // matches what the list view shows. WBS may be empty for tasks
+        // that pre-date the migration; in that case show MK-N alone.
+        final prefix = node.number == 0
+            ? ''
+            : (node.wbs.isEmpty ? 'MK-${node.number}  ' : '${node.wbs} · MK-${node.number}  ');
         rows.add(GanttRow(
           id: node.id,
-          title: node.title,
+          title: '$prefix${node.title}',
           depth: entry.$2 + depthOffset,
           hasChildren: node.hasChildren,
           origin: node.hasChildren ? node.computedOriginTimeline : node.originTimeline,
@@ -139,6 +145,7 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
     final zoom = switch (zoomIdx) { 1 => GanttZoom.week, 2 => GanttZoom.month, _ => GanttZoom.day };
     final selected = ref.watch(inspectionProvider);
     final selectedTaskId = selected is TaskInspection ? selected.taskId : null;
+    final titleColWidth = ref.watch(ganttTitleColWidthProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,6 +190,9 @@ class _TasksGanttState extends ConsumerState<TasksGantt> {
             zoom: zoom,
             selectedId: selectedTaskId,
             centerOn: _centerOn,
+            titleColWidth: titleColWidth,
+            onTitleColWidthChanged: (w) =>
+                ref.read(ganttTitleColWidthProvider.notifier).state = w,
             holidays: ref.watch(holidaysProvider).asData?.value ?? const {},
             onRowTap: (id) {
               // Project group rows use synthetic ids; ignore them for selection.

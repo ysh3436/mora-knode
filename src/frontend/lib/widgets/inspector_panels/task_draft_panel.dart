@@ -30,7 +30,7 @@ class _TaskDraftPanelState extends ConsumerState<TaskDraftPanel> {
   final _descC = TextEditingController();
   String? _projectId;
   String? _parentTaskId;
-  TaskStatus _status = TaskStatus.NotStarted;
+  TaskStatus _status = TaskStatus.Created;
   Timeline _origin = const Timeline();
   Timeline _current = const Timeline();
   Timeline _real = const Timeline();

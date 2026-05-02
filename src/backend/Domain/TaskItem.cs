@@ -18,11 +18,20 @@ public class TaskItem
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
 
-    // Persisted as the enum name (NotStarted / InReview / ...) instead of an
+    // Persisted as the enum name (Created / Planning / ...) instead of an
     // integer so the sparse numeric values in TaskStatus can be reordered
     // freely without breaking stored data.
     [BsonRepresentation(BsonType.String)]
-    public TaskStatus Status { get; set; } = TaskStatus.NotStarted;
+    public TaskStatus Status { get; set; } = TaskStatus.Created;
+
+    // Orthogonal "stuck" flag: the task is in a normal active lifecycle
+    // stage but something (predecessor, external dep) is blocking forward
+    // progress. Distinct from OnHold which is an active user pause. Only
+    // ever set/cleared by an actor (user toggle or bot declaring
+    // blocked/unblocked) — backend never watches conditions and flips this
+    // on its own. Phase 2 will let bots auto-set when picking up tasks
+    // with unfinished predecessors; until then it's manual.
+    public bool IsWaiting { get; set; } = false;
 
     // Triage signal. Default Unset for tasks that pre-date the field or
     // simply weren't categorized. The property initializer is the default

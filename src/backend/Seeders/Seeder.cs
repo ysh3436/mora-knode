@@ -197,12 +197,12 @@ public class Seeder
         var t3 = await NewTask(pMora, "Frontend foundation", TaskStatus.InProgress, l2: (-3, 5));
         await NewTask(pMora, "Riverpod state setup", TaskStatus.InProgress, l2: (-3, 0), parentId: t3.Id);
         await NewTask(pMora, "Gantt widget v0", TaskStatus.Done, l2: (-3, -1), l3: (-3, -1), parentId: t3.Id);
-        await NewTask(pMora, "Calendar week grid", TaskStatus.NotStarted, l2: (2, 5), parentId: t3.Id);
+        await NewTask(pMora, "Calendar week grid", TaskStatus.Created, l2: (2, 5), parentId: t3.Id);
         await NewTask(pMora, "Resource dedupe migration", TaskStatus.Done, l2: (0, 1), l3: (0, 0));
-        await NewTask(pMora, "Agent identity + RBAC API", TaskStatus.NotStarted, l2: (5, 15));
-        await NewTask(pMora, "Plan gate API", TaskStatus.NotStarted, l2: (10, 20));
-        await NewTask(pMora, "Work-queue API", TaskStatus.NotStarted, l2: (10, 25));
-        var t8 = await NewTask(pMora, "MCP scaffolding spike", TaskStatus.Blocked, l2: (3, 8),
+        await NewTask(pMora, "Agent identity + RBAC API", TaskStatus.Created, l2: (5, 15));
+        await NewTask(pMora, "Plan gate API", TaskStatus.Created, l2: (10, 20));
+        await NewTask(pMora, "Work-queue API", TaskStatus.Created, l2: (10, 25));
+        var t8 = await NewTask(pMora, "MCP scaffolding spike", TaskStatus.OnHold, l2: (3, 8),
             description: "Blocked on P0-1 decision");
 
         // internal-tools (5 top + 2 children + extras = 9)
@@ -220,14 +220,14 @@ public class Seeder
         {
             ProjectId = pInternal.Id,
             Title = "Pairing on rollout",
-            Status = TaskStatus.NotStarted,
+            Status = TaskStatus.Created,
             CurrentTimeline = new Timeline { Start = atUtc(1, 14, 0), End = atUtc(1, 16, 30), IsAllDay = false }
         }, ct);
         await _tasks.CreateAsync(new TaskItem
         {
             ProjectId = pInternal.Id,
             Title = "Customer demo",
-            Status = TaskStatus.NotStarted,
+            Status = TaskStatus.Created,
             CurrentTimeline = new Timeline { Start = atUtc(2, 11, 0), End = atUtc(2, 12, 0), IsAllDay = false }
         }, ct);
         await NewTask(pInternal, "CSV import script", TaskStatus.Done, l2: (-3, -1), l3: (-3, -1), l3Timed: true);
@@ -235,21 +235,21 @@ public class Seeder
         var t12 = await NewTask(pInternal, "Cron job rollback", TaskStatus.Done, l2: (-2, 0), l3: (-2, 0));
         var t13 = await NewTask(pInternal, "Quarterly cleanup", TaskStatus.InProgress, l2: (-7, -2));
         await NewTask(pInternal, "Cleanup checklist 1", TaskStatus.Done, l2: (-7, -5), l3: (-7, -5), parentId: t13.Id);
-        await NewTask(pInternal, "Cleanup checklist 2", TaskStatus.NotStarted, l2: (-4, -2), parentId: t13.Id);
+        await NewTask(pInternal, "Cleanup checklist 2", TaskStatus.Created, l2: (-4, -2), parentId: t13.Id);
 
         // client-acme (6 top + 2 + 1 children = 9)
         await NewTask(pAcme, "Phase 1: Discovery", TaskStatus.Done, l2: (-12, -7), l3: (-12, -7), l3Timed: true);
         var t15 = await NewTask(pAcme, "Phase 1: Design review", TaskStatus.InProgress, l2: (-3, 2));
-        var t16 = await NewTask(pAcme, "Phase 1: Implementation", TaskStatus.NotStarted, l2: (5, 13));
-        await NewTask(pAcme, "API stubs", TaskStatus.NotStarted, l2: (5, 9), parentId: t16.Id);
-        await NewTask(pAcme, "UI components", TaskStatus.NotStarted, l2: (8, 13), parentId: t16.Id);
-        var t17 = await NewTask(pAcme, "Phase 1: QA pass", TaskStatus.NotStarted, l2: (13, 14));
-        var t18 = await NewTask(pAcme, "Phase 2: Architecture", TaskStatus.NotStarted, l2: (15, 30));
-        await NewTask(pAcme, "Spec draft", TaskStatus.NotStarted, l2: (15, 22), parentId: t18.Id);
-        await NewTask(pAcme, "Phase 2: Demo", TaskStatus.NotStarted, l2: (30, 30));
+        var t16 = await NewTask(pAcme, "Phase 1: Implementation", TaskStatus.Created, l2: (5, 13));
+        await NewTask(pAcme, "API stubs", TaskStatus.Created, l2: (5, 9), parentId: t16.Id);
+        await NewTask(pAcme, "UI components", TaskStatus.Created, l2: (8, 13), parentId: t16.Id);
+        var t17 = await NewTask(pAcme, "Phase 1: QA pass", TaskStatus.Created, l2: (13, 14));
+        var t18 = await NewTask(pAcme, "Phase 2: Architecture", TaskStatus.Created, l2: (15, 30));
+        await NewTask(pAcme, "Spec draft", TaskStatus.Created, l2: (15, 22), parentId: t18.Id);
+        await NewTask(pAcme, "Phase 2: Demo", TaskStatus.Created, l2: (30, 30));
 
         // spike-mcp (1)
-        var tSpike = await NewTask(pSpike, "Initial RFC", TaskStatus.NotStarted, l2: (5, 12));
+        var tSpike = await NewTask(pSpike, "Initial RFC", TaskStatus.Created, l2: (5, 12));
 
         // archived-legacy (4, all done in distant past)
         await NewTask(pLegacy, "Legacy schema design", TaskStatus.Done, l2: (-120, -100), l3: (-120, -100));

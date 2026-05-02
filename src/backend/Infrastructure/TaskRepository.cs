@@ -97,6 +97,19 @@ public class TaskRepository
                 ChangedBy = incomingChangedBy
             });
         }
+        if (existing.IsWaiting != incoming.IsWaiting)
+        {
+            logs.Add(new ScheduleChangeLog
+            {
+                EntityType = ChangeEntityType.Task,
+                EntityId = id,
+                Field = "IsWaiting",
+                BeforeValue = existing.IsWaiting.ToString(),
+                AfterValue = incoming.IsWaiting.ToString(),
+                Reason = incomingReason,
+                ChangedBy = incomingChangedBy
+            });
+        }
 
         await _ctx.Tasks.ReplaceOneAsync(t => t.Id == id, incoming, cancellationToken: ct);
         await _changeLogs.InsertManyAsync(logs, ct);

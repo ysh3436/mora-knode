@@ -5,15 +5,18 @@
 import 'timeline.dart';
 
 // Mirror of backend Enums.cs TaskStatus. Stored / serialized by name so the
-// integer values are only an ordering hint — anchors at 10/30/50, beats in
-// between (InReview 20, Blocked 40), terminal-non-success above Done
-// (Cancelled 51, Dropped 52). Declaration order here also drives the
-// dropdown / filter order, so keep it ascending.
+// integer values are only an ordering hint. Lifecycle order: Created (10) →
+// Planning (20) → PlanReview (30) → InProgress (40) → WorkReview (50) →
+// Done (70). OnHold (60) is a sidelined state, Cancelled (71) is a
+// plan-stage kill, Dropped (72) is a post-effort kill kept for audit.
+// Declaration order drives the picker / filter order — keep ascending.
 enum TaskStatus {
-  NotStarted,
-  InReview,
+  Created,
+  Planning,
+  PlanReview,
   InProgress,
-  Blocked,
+  WorkReview,
+  OnHold,
   Done,
   Cancelled,
   Dropped,
@@ -41,6 +44,10 @@ class TaskItem {
   final String title;
   final String? description;
   final TaskStatus status;
+  /// Orthogonal "stuck" flag: lifecycle is in a normal active stage but
+  /// something (predecessor, external dep) blocks forward progress.
+  /// Distinct from OnHold (active user pause). Set/cleared only by actors.
+  final bool isWaiting;
   final TaskPriority priority;
   final Timeline originTimeline;
   final Timeline currentTimeline;
@@ -60,7 +67,8 @@ class TaskItem {
     this.number = 0,
     required this.title,
     this.description,
-    this.status = TaskStatus.NotStarted,
+    this.status = TaskStatus.Created,
+    this.isWaiting = false,
     this.priority = TaskPriority.Unset,
     this.originTimeline = const Timeline(),
     this.currentTimeline = const Timeline(),
@@ -79,6 +87,7 @@ class TaskItem {
         title: json['title'] as String,
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
+        isWaiting: (json['isWaiting'] as bool?) ?? false,
         priority: _parsePriority(json['priority']),
         originTimeline: Timeline.fromJson(json['originTimeline'] as Map<String, dynamic>?),
         currentTimeline: Timeline.fromJson(json['currentTimeline'] as Map<String, dynamic>?),
@@ -95,6 +104,7 @@ class TaskItem {
         'title': title,
         'description': description,
         'status': status.name,
+        'isWaiting': isWaiting,
         'priority': priority.name,
         'originTimeline': originTimeline.toJson(),
         'currentTimeline': currentTimeline.toJson(),
@@ -107,6 +117,7 @@ class TaskItem {
     String? title,
     String? description,
     TaskStatus? status,
+    bool? isWaiting,
     TaskPriority? priority,
     Timeline? currentTimeline,
     Timeline? realTimeline,
@@ -121,6 +132,7 @@ class TaskItem {
       title: title ?? this.title,
       description: description ?? this.description,
       status: status ?? this.status,
+      isWaiting: isWaiting ?? this.isWaiting,
       priority: priority ?? this.priority,
       originTimeline: originTimeline,
       currentTimeline: currentTimeline ?? this.currentTimeline,
@@ -133,7 +145,7 @@ class TaskItem {
   }
 
   static TaskStatus _parseStatus(Object? v) =>
-      TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.NotStarted);
+      TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.Created);
   static TaskPriority _parsePriority(Object? v) =>
       TaskPriority.values.firstWhere((p) => p.name == v, orElse: () => TaskPriority.Unset);
   static DateTime? _parseDate(Object? v) => v == null ? null : DateTime.parse(v as String).toUtc();

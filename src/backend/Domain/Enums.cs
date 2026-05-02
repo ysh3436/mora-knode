@@ -9,26 +9,35 @@ public enum ProjectStatus
     Archived
 }
 
-// Lifecycle is represented by sparse integer values so future intermediate
-// states can slot in without renumbering existing rows. Anchors at 10 / 30
-// / 50 (NotStarted / InProgress / Done); intermediate beats (InReview at
-// 20, Blocked at 40) sit between them. Terminal-but-not-Done states (51
-// Cancelled, 52 Dropped) sit just above Done to read as "alternative
-// endings" — Cancelled is an explicit decision to stop, Dropped is passive
-// abandonment / deprioritization.
+// 9-step lifecycle for matrix PM + agent collaboration. Sparse integer
+// values keep room for future intermediate states. Order reflects the
+// happy-path flow Created → Planning → PlanReview → InProgress →
+// WorkReview → Done, with OnHold (sidelined) / Cancelled (calendar-stage
+// kill) / Dropped (post-effort kill — kept for audit/learning) as
+// alternative endings.
+//
+// Picker exposes 7 of 9: Planning and PlanReview are bot-driven entry
+// points (set when the bot starts planning / submits an AgentPlan), so
+// surfacing them in the user picker would invite meaningless manual
+// transitions. The remaining 7 are the user-facing knobs.
+//
+// All transitions are actor-driven (user or bot via API). The backend
+// never moves a task forward on its own (ADR-005).
 //
 // TaskItem.Status is persisted as a string (BsonRepresentation.String) so
 // these integer values are *only* a sort/order signal — changing them
 // later won't break existing data.
 public enum TaskStatus
 {
-    NotStarted = 10,
-    InReview = 20,
-    InProgress = 30,
-    Blocked = 40,
-    Done = 50,
-    Cancelled = 51,
-    Dropped = 52
+    Created     = 10,
+    Planning    = 20,
+    PlanReview  = 30,
+    InProgress  = 40,
+    WorkReview  = 50,
+    OnHold      = 60,
+    Done        = 70,
+    Cancelled   = 71,
+    Dropped     = 72
 }
 
 // Triage signal — "what to pick next" when a queue contains many

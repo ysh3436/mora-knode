@@ -607,17 +607,23 @@ abstract class AppL10n {
   /// **'admin (no header)'**
   String get userSwitcherAdminCaption;
 
-  /// No description provided for @taskStatusNotStarted.
+  /// No description provided for @taskStatusCreated.
   ///
   /// In en, this message translates to:
-  /// **'Not started'**
-  String get taskStatusNotStarted;
+  /// **'Created'**
+  String get taskStatusCreated;
 
-  /// No description provided for @taskStatusInReview.
+  /// No description provided for @taskStatusPlanning.
   ///
   /// In en, this message translates to:
-  /// **'In review'**
-  String get taskStatusInReview;
+  /// **'Planning'**
+  String get taskStatusPlanning;
+
+  /// No description provided for @taskStatusPlanReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan review'**
+  String get taskStatusPlanReview;
 
   /// No description provided for @taskStatusInProgress.
   ///
@@ -625,11 +631,17 @@ abstract class AppL10n {
   /// **'In progress'**
   String get taskStatusInProgress;
 
-  /// No description provided for @taskStatusBlocked.
+  /// No description provided for @taskStatusWorkReview.
+  ///
+  /// In en, this message translates to:
+  /// **'Work review'**
+  String get taskStatusWorkReview;
+
+  /// No description provided for @taskStatusOnHold.
   ///
   /// In en, this message translates to:
   /// **'On hold'**
-  String get taskStatusBlocked;
+  String get taskStatusOnHold;
 
   /// No description provided for @taskStatusDone.
   ///
@@ -648,6 +660,30 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Dropped'**
   String get taskStatusDropped;
+
+  /// No description provided for @taskStatusCancelledTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancelled at planning stage'**
+  String get taskStatusCancelledTooltip;
+
+  /// No description provided for @taskStatusDroppedTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Dropped after work (kept for reference)'**
+  String get taskStatusDroppedTooltip;
+
+  /// No description provided for @taskWaitingToggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting'**
+  String get taskWaitingToggle;
+
+  /// No description provided for @taskWaitingTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as waiting (different from On hold)'**
+  String get taskWaitingTooltip;
 
   /// No description provided for @taskPriorityUnset.
   ///

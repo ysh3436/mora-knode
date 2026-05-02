@@ -91,6 +91,7 @@ class TaskInspectorPanel extends ConsumerWidget {
               Wrap(spacing: 8, runSpacing: 4, children: [
                 _Pill(label: projectName ?? '?', icon: Icons.folder_outlined),
                 _InlineStatusPicker(node: node),
+                _InlineWaitingToggle(node: node),
                 _InlinePriorityPicker(node: node),
                 _InlineParentPicker(
                   node: node,
@@ -216,15 +217,22 @@ class _InlineStatusPicker extends ConsumerWidget {
       tooltip: AppL10n.of(context).actionEdit,
       initialValue: node.status,
       itemBuilder: (ctx) => [
+        // Planning / PlanReview are bot-driven entry points (set when an
+        // agent starts planning / submits an AgentPlan). Letting users
+        // select them from the picker would invite meaningless transitions
+        // ("why is this PlanReview with no plan?"), so they are hidden
+        // here. Other 7 states are user-pickable. Managers can still force
+        // these via the API directly if needed.
         for (final v in TaskStatus.values)
-          PopupMenuItem(
-            value: v,
-            child: Row(children: [
-              Icon(Icons.circle, size: 10, color: taskStatusBg(theme, v)),
-              const SizedBox(width: 8),
-              Text(taskStatusLabel(context, v)),
-            ]),
-          ),
+          if (v != TaskStatus.Planning && v != TaskStatus.PlanReview)
+            PopupMenuItem(
+              value: v,
+              child: Row(children: [
+                Icon(Icons.circle, size: 10, color: taskStatusBg(theme, v)),
+                const SizedBox(width: 8),
+                Text(taskStatusLabel(context, v)),
+              ]),
+            ),
       ],
       onSelected: (next) async {
         if (next == node.status) return;
@@ -273,6 +281,38 @@ class _InlinePriorityPicker extends ConsumerWidget {
         await _patchTaskPriority(ref, node, next);
       },
       child: pill,
+    );
+  }
+}
+
+/// Toggle the orthogonal "stuck" flag — lifecycle stays put, but a small
+/// hourglass overlays the row to flag that progress is blocked on
+/// something. Distinct from OnHold (active user pause). Phase 2 will let
+/// bots auto-set this when they detect unfinished predecessors; for now
+/// it's a pure manual toggle in the inspector. Parents read-only because
+/// IsWaiting isn't aggregated yet.
+class _InlineWaitingToggle extends ConsumerWidget {
+  final TaskHierarchyNode node;
+  const _InlineWaitingToggle({required this.node});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l = AppL10n.of(context);
+    final on = node.isWaiting;
+    final pill = _Pill(
+      label: l.taskWaitingToggle,
+      icon: Icons.hourglass_top,
+      color: on ? theme.colorScheme.errorContainer : theme.colorScheme.surfaceContainerLowest,
+    );
+    if (node.hasChildren) return pill;
+    return Tooltip(
+      message: l.taskWaitingTooltip,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _patchTaskWaiting(ref, node, !on),
+        child: pill,
+      ),
     );
   }
 }
@@ -461,6 +501,7 @@ Future<void> _patchTaskStatus(WidgetRef ref, TaskHierarchyNode node, TaskStatus 
     title: node.title,
     description: node.description,
     status: next,
+    isWaiting: node.isWaiting,
     priority: node.priority,
     originTimeline: node.originTimeline,
     currentTimeline: node.currentTimeline,
@@ -482,7 +523,30 @@ Future<void> _patchTaskPriority(WidgetRef ref, TaskHierarchyNode node, TaskPrior
     title: node.title,
     description: node.description,
     status: node.status,
+    isWaiting: node.isWaiting,
     priority: next,
+    originTimeline: node.originTimeline,
+    currentTimeline: node.currentTimeline,
+    realTimeline: node.realTimeline,
+    createdAt: node.createdAt,
+    updatedAt: node.updatedAt,
+  );
+  await ref.read(apiClientProvider).updateTask(node.id, updated);
+  ref.invalidate(allHierarchyByProjectProvider);
+  ref.invalidate(taskHierarchyProvider(node.projectId));
+  ref.invalidate(taskChangeLogsProvider(node.id));
+}
+
+Future<void> _patchTaskWaiting(WidgetRef ref, TaskHierarchyNode node, bool next) async {
+  final updated = TaskItem(
+    id: node.id,
+    projectId: node.projectId,
+    parentTaskId: node.parentTaskId,
+    title: node.title,
+    description: node.description,
+    status: node.status,
+    isWaiting: next,
+    priority: node.priority,
     originTimeline: node.originTimeline,
     currentTimeline: node.currentTimeline,
     realTimeline: node.realTimeline,

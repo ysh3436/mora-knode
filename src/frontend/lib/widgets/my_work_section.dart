@@ -305,20 +305,24 @@ class _Lane extends StatelessWidget {
   }
 
   IconData _statusIcon(TaskStatus s) => switch (s) {
-        TaskStatus.NotStarted => Icons.radio_button_unchecked,
-        TaskStatus.InReview => Icons.rate_review_outlined,
+        TaskStatus.Created => Icons.radio_button_unchecked,
+        TaskStatus.Planning => Icons.edit_note,
+        TaskStatus.PlanReview => Icons.fact_check_outlined,
         TaskStatus.InProgress => Icons.timelapse,
-        TaskStatus.Blocked => Icons.pause_circle_outline,
+        TaskStatus.WorkReview => Icons.rate_review_outlined,
+        TaskStatus.OnHold => Icons.pause_circle_outline,
         TaskStatus.Done => Icons.check_circle,
         TaskStatus.Cancelled => Icons.cancel_outlined,
         TaskStatus.Dropped => Icons.do_not_disturb_on_outlined,
       };
 
   Color _statusColor(ThemeData theme, TaskStatus s) => switch (s) {
-        TaskStatus.NotStarted => theme.colorScheme.outline,
-        TaskStatus.InReview => theme.colorScheme.secondary,
+        TaskStatus.Created => theme.colorScheme.outline,
+        TaskStatus.Planning => theme.colorScheme.outlineVariant,
+        TaskStatus.PlanReview => theme.colorScheme.tertiary,
         TaskStatus.InProgress => theme.colorScheme.primary,
-        TaskStatus.Blocked => theme.colorScheme.error,
+        TaskStatus.WorkReview => theme.colorScheme.secondary,
+        TaskStatus.OnHold => theme.colorScheme.error,
         TaskStatus.Done => theme.colorScheme.tertiary,
         TaskStatus.Cancelled => theme.colorScheme.outline,
         TaskStatus.Dropped => theme.colorScheme.outlineVariant,

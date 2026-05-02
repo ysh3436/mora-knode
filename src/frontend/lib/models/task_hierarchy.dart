@@ -16,6 +16,7 @@ class TaskHierarchyNode {
   final String? description;
   final TaskStatus status;
   final TaskPriority priority;
+  final bool isWaiting;
   final Timeline originTimeline;
   final Timeline currentTimeline;
   final Timeline realTimeline;
@@ -40,6 +41,7 @@ class TaskHierarchyNode {
     required this.description,
     required this.status,
     required this.priority,
+    required this.isWaiting,
     required this.originTimeline,
     required this.currentTimeline,
     required this.realTimeline,
@@ -65,6 +67,7 @@ class TaskHierarchyNode {
         description: json['description'] as String?,
         status: _parseStatus(json['status']),
         priority: _parsePriority(json['priority']),
+        isWaiting: (json['isWaiting'] as bool?) ?? false,
         originTimeline: Timeline.fromJson(json['originTimeline'] as Map<String, dynamic>?),
         currentTimeline: Timeline.fromJson(json['currentTimeline'] as Map<String, dynamic>?),
         realTimeline: Timeline.fromJson(json['realTimeline'] as Map<String, dynamic>?),
@@ -89,6 +92,7 @@ class TaskHierarchyNode {
         title: title,
         description: description,
         status: status,
+        isWaiting: isWaiting,
         priority: priority,
         originTimeline: originTimeline,
         currentTimeline: currentTimeline,
@@ -98,7 +102,7 @@ class TaskHierarchyNode {
       );
 
   static TaskStatus _parseStatus(Object? v) =>
-      TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.NotStarted);
+      TaskStatus.values.firstWhere((s) => s.name == v, orElse: () => TaskStatus.Created);
   static TaskPriority _parsePriority(Object? v) =>
       TaskPriority.values.firstWhere((p) => p.name == v, orElse: () => TaskPriority.Unset);
 }
@@ -188,17 +192,19 @@ class TaskSortStep {
   int get hashCode => Object.hash(key, asc);
 }
 
-/// Hand-crafted ordering for status sort — "active first, terminal last"
-/// regardless of the underlying enum integer mapping. Lower number = more
-/// active. Used only for UI sort, not for backend logic.
+/// Hand-crafted ordering for status sort — "needs attention first, terminal
+/// last" regardless of the underlying enum integer mapping. Lower number =
+/// more demanding of attention. Used only for UI sort, not for backend logic.
 const _statusActiveOrder = <TaskStatus, int>{
-  TaskStatus.InProgress: 0,
-  TaskStatus.InReview: 1,
-  TaskStatus.Blocked: 2,
-  TaskStatus.NotStarted: 3,
-  TaskStatus.Done: 4,
-  TaskStatus.Cancelled: 5,
-  TaskStatus.Dropped: 6,
+  TaskStatus.WorkReview: 0,    // user must review work
+  TaskStatus.PlanReview: 1,    // user must review plan
+  TaskStatus.InProgress: 2,    // active work
+  TaskStatus.Planning: 3,      // bot planning
+  TaskStatus.OnHold: 4,        // sidelined by user
+  TaskStatus.Created: 5,       // freshly created, awaiting bot pickup
+  TaskStatus.Done: 6,
+  TaskStatus.Cancelled: 7,
+  TaskStatus.Dropped: 8,
 };
 
 /// Hand-crafted ordering for priority sort. The Dart enum's declaration

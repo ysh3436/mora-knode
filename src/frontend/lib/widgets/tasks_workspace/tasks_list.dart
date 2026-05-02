@@ -409,7 +409,19 @@ class _TaskRow extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: 100, child: _statusChip(context, theme, status, aggregated: node.hasChildren)),
+              SizedBox(
+                width: 100,
+                child: Row(children: [
+                  Flexible(child: _statusChip(context, theme, status, aggregated: node.hasChildren)),
+                  if (node.isWaiting) ...[
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: AppL10n.of(context).taskWaitingTooltip,
+                      child: Icon(Icons.hourglass_top, size: 14, color: theme.colorScheme.error),
+                    ),
+                  ],
+                ]),
+              ),
               SizedBox(
                 width: 80,
                 child: _priorityChip(
@@ -723,7 +735,19 @@ class _StickyTaskRow extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: 100, child: _statusChip(context, theme, status)),
+              SizedBox(
+                width: 100,
+                child: Row(children: [
+                  Flexible(child: _statusChip(context, theme, status)),
+                  if (node.isWaiting) ...[
+                    const SizedBox(width: 4),
+                    Tooltip(
+                      message: AppL10n.of(context).taskWaitingTooltip,
+                      child: Icon(Icons.hourglass_top, size: 14, color: theme.colorScheme.error),
+                    ),
+                  ],
+                ]),
+              ),
               SizedBox(width: 80, child: _priorityChip(context, theme, node.computedPriority, aggregated: true)),
               const SizedBox(width: 140), // assignees space (kept blank to match column widths)
               SizedBox(width: 110, child: _timelineCell(theme, timeline, df)),

@@ -280,16 +280,22 @@ class AppL10nKo extends AppL10n {
   String get userSwitcherAdminCaption => '관리자 (헤더 없음)';
 
   @override
-  String get taskStatusNotStarted => '시작 전';
+  String get taskStatusCreated => '생성';
 
   @override
-  String get taskStatusInReview => '검토 중';
+  String get taskStatusPlanning => '작업계획 작성';
+
+  @override
+  String get taskStatusPlanReview => '작업계획 리뷰';
 
   @override
   String get taskStatusInProgress => '진행 중';
 
   @override
-  String get taskStatusBlocked => '보류';
+  String get taskStatusWorkReview => '코드 리뷰';
+
+  @override
+  String get taskStatusOnHold => '보류';
 
   @override
   String get taskStatusDone => '완료';
@@ -298,7 +304,19 @@ class AppL10nKo extends AppL10n {
   String get taskStatusCancelled => '취소';
 
   @override
-  String get taskStatusDropped => '중단';
+  String get taskStatusDropped => '드랍';
+
+  @override
+  String get taskStatusCancelledTooltip => '계획 단계 취소';
+
+  @override
+  String get taskStatusDroppedTooltip => '작업 후 폐기 (반영·학습 가치)';
+
+  @override
+  String get taskWaitingToggle => '대기 표시';
+
+  @override
+  String get taskWaitingTooltip => '진행 막힘 표시 (보류와 다름)';
 
   @override
   String get taskPriorityUnset => '미설정';

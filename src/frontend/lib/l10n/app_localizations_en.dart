@@ -283,16 +283,22 @@ class AppL10nEn extends AppL10n {
   String get userSwitcherAdminCaption => 'admin (no header)';
 
   @override
-  String get taskStatusNotStarted => 'Not started';
+  String get taskStatusCreated => 'Created';
 
   @override
-  String get taskStatusInReview => 'In review';
+  String get taskStatusPlanning => 'Planning';
+
+  @override
+  String get taskStatusPlanReview => 'Plan review';
 
   @override
   String get taskStatusInProgress => 'In progress';
 
   @override
-  String get taskStatusBlocked => 'On hold';
+  String get taskStatusWorkReview => 'Work review';
+
+  @override
+  String get taskStatusOnHold => 'On hold';
 
   @override
   String get taskStatusDone => 'Done';
@@ -302,6 +308,19 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get taskStatusDropped => 'Dropped';
+
+  @override
+  String get taskStatusCancelledTooltip => 'Cancelled at planning stage';
+
+  @override
+  String get taskStatusDroppedTooltip =>
+      'Dropped after work (kept for reference)';
+
+  @override
+  String get taskWaitingToggle => 'Waiting';
+
+  @override
+  String get taskWaitingTooltip => 'Mark as waiting (different from On hold)';
 
   @override
   String get taskPriorityUnset => 'Unset';

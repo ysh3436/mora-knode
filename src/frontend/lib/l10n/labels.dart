@@ -10,10 +10,12 @@ import 'app_localizations.dart';
 String taskStatusLabel(BuildContext context, TaskStatus status) {
   final l = AppL10n.of(context);
   return switch (status) {
-    TaskStatus.NotStarted => l.taskStatusNotStarted,
-    TaskStatus.InReview => l.taskStatusInReview,
+    TaskStatus.Created => l.taskStatusCreated,
+    TaskStatus.Planning => l.taskStatusPlanning,
+    TaskStatus.PlanReview => l.taskStatusPlanReview,
     TaskStatus.InProgress => l.taskStatusInProgress,
-    TaskStatus.Blocked => l.taskStatusBlocked,
+    TaskStatus.WorkReview => l.taskStatusWorkReview,
+    TaskStatus.OnHold => l.taskStatusOnHold,
     TaskStatus.Done => l.taskStatusDone,
     TaskStatus.Cancelled => l.taskStatusCancelled,
     TaskStatus.Dropped => l.taskStatusDropped,
@@ -21,16 +23,18 @@ String taskStatusLabel(BuildContext context, TaskStatus status) {
 }
 
 /// Background tint for status pills / chips. Centralized so the inspector,
-/// task list, and my-work view can't drift apart. InReview uses the
-/// secondary container to draw the eye (pending decision); Blocked keeps
-/// the error tint as a "needs attention" cue; Done is the celebratory
-/// tertiary; Cancelled / Dropped fall to the lowest neutral surfaces so
-/// the row reads as deprioritized / out-of-flight.
+/// task list, and my-work view can't drift apart.
+/// Reviews use distinctive containers (PlanReview tertiary, WorkReview
+/// secondary) so manager-action-needed rows pop. OnHold uses the error
+/// tint as a strong "sidelined" cue. Cancelled / Dropped fall to the
+/// lowest neutral surfaces so out-of-flight rows recede.
 Color taskStatusBg(ThemeData theme, TaskStatus status) => switch (status) {
-      TaskStatus.NotStarted => theme.colorScheme.surfaceContainerHighest,
-      TaskStatus.InReview => theme.colorScheme.secondaryContainer,
+      TaskStatus.Created => theme.colorScheme.surfaceContainerHighest,
+      TaskStatus.Planning => theme.colorScheme.surfaceContainerHigh,
+      TaskStatus.PlanReview => theme.colorScheme.tertiaryContainer,
       TaskStatus.InProgress => theme.colorScheme.primaryContainer,
-      TaskStatus.Blocked => theme.colorScheme.errorContainer,
+      TaskStatus.WorkReview => theme.colorScheme.secondaryContainer,
+      TaskStatus.OnHold => theme.colorScheme.errorContainer,
       TaskStatus.Done => theme.colorScheme.tertiaryContainer,
       TaskStatus.Cancelled => theme.colorScheme.surfaceContainerLow,
       TaskStatus.Dropped => theme.colorScheme.surfaceContainerLowest,

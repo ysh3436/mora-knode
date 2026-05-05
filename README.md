@@ -55,38 +55,75 @@ For the advanced **2-layer delegation pattern** — lightweight routers running 
 
 ## Status
 
-- 🛠 **In development** — solo maintainer (ysh) building toward M2 dogfooding
-- **M1** (2026-05-07): MVP — CRUD + 3-level timeline + Gantt + change log
-- **M2** (2026-06-15): Agent identity & API + plan gate + matrix resource manager + first dogfooding loop
+- 🛠 **In development** — solo maintainer (ysh), private during dogfooding
+- **M1** (2026-05-07): MVP — CRUD + 3-level timeline + Gantt + change log — *essentially shipped*
+- **Phase 1.5** (shipped 2026-05-05): agent identity + token auth + plan gate + work-queue + matrix team layer (department / project members) + 9-step task lifecycle + unified change-history page
+- **M2** (2026-06-15): first dogfooding loop — register external agents, run a real task end-to-end through the plan gate, matrix utilization with mixed humans + agents
 - **M3** (2026-08): public open-source release with 3 months of dogfooding metrics
 - **M4** (2026-10): cloud hosted alpha
 - **M5** (2026-12 ~ 2027-01): general availability
 
 See [docs/planning/TODO.md](docs/planning/TODO.md) for the full roadmap.
 
-## Quick Start (preview — fully working at M3)
+## Quick Start
 
-> Goal: 5 minutes from `git clone` to your first AI agent's heartbeat polling mora-knode's work queue.
+Two paths: the **local dev** path works today; the **Docker** path lands at M3.
+
+### Local development (today)
 
 ```bash
-# 1. Clone & run the host
-git clone <repo>
+# 1. Clone
+git clone <repo> mora-knode && cd mora-knode
+
+# 2. Start MongoDB
+#    src/backend/appsettings.Development.json points at
+#    mongodb://localhost:27017 — local mongod or Docker mongo:7 both fine.
+
+# 3. Backend (port 5163)
+cd src/backend && dotnet run
+
+# 4. Frontend — separate terminal
+cd src/frontend && flutter run -d chrome
+```
+
+The browser opens with the seed data loaded. Pick a dev user from the sidebar
+switcher to scope what you see — this is the placeholder until token auth
+arrives in M2.
+
+### Docker (M3)
+
+```bash
 docker compose up           # backend + Flutter Web on :5000
+```
 
-# 2. Register an agent identity (Web UI)
-#    http://localhost:5000 → Agents → "+ Add"
-#    Name: manager-01  |  RBAC preset: Manager
-#    The UI auto-generates copy-pasteable env vars + setup snippets
-#    for Claude Code / Cursor / Python / curl.
+Lands when [`docker/`](docs/planning/TODO.md) is added in Phase 2 Stage 1.
 
-# 3. Paste into your external agent
-export MORA_KNODE_API_URL=http://localhost:5000
+### BYOA setup (M2 preview)
+
+```bash
+# Web UI → Agents → "+ Add"  (Name: manager-01, RBAC preset: Manager)
+# UI generates copy-pasteable env vars for Claude Code / Cursor / Python / curl.
+export MORA_KNODE_API_URL=http://localhost:5163
 export MORA_KNODE_AGENT_ID=...
 export MORA_KNODE_AGENT_TOKEN=...
-# Your agent is now polling the work-queue.
 ```
 
 See [docs/architecture/ADR-006-byoa-onboarding-ux.md](docs/architecture/ADR-006-byoa-onboarding-ux.md) for the onboarding UX spec, and [docs/dogfooding/agent-operations.md](docs/dogfooding/agent-operations.md) for the recommended operating patterns.
+
+## Verifying the agent flow (E2E)
+
+With the backend running, you can verify the plan-gate + work-queue loop:
+
+```bash
+python tools/demo_agent_flow.py
+```
+
+This is a 25-assertion end-to-end check: human reviewer + bot agent → bot
+submits plan → task moves to PlanReview → human rejects with comment → bot
+re-submits → human approves → work-queue surfaces the approved plan →
+permission guards (403 / 401 / 400). Same flow an external agent (Claude
+Code / Cursor / your own bot) walks through once it points at the host with
+a token.
 
 ## Tech stack
 

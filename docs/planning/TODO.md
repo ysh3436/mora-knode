@@ -45,8 +45,8 @@
 - [ ] **(follow-up)** 테마 / 언어 선호 영속화 — 새로고침 시 사용자 선택 유지. 현재 둘 다 메모리 only (System / 한국어로 리셋). 클라이언트 저장 (web `localStorage` 또는 `shared_preferences`) 정도면 충분.
 - [ ] **(bug)** Settings 카드들의 vertical 위치가 ko ↔ en 토글 시 미세하게 흔들림. Typography 통일 (`tall2021`) 로 80% 잡았으나 잔존. 본질은 CJK ↔ Latin 폰트의 ascent/descent metric 차이. 재현: Settings 열고 언어 토글 — Language/Theme 카드 아래 WorkCalendar / Holiday Sources 가 미세하게 위아래로 이동.
 
-### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-08 ~ 2026-05-21)
-M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md)
+### Phase 1.5: 외부 에이전트 host 사양 구현 (M1→M2 사이, 2026-05-02 ~ 2026-05-05) — **shipped**
+M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../architecture/schema-integration-for-agents.md), 실제 구현은 in-app MK-75 의 자식 task 트리 (MK-76~87, MK-99) 가 진실 원천. 아래 PR 1~4 는 원안 (실제로는 더 잘게 쪼개져 9개 PR 로 진행됨).
 
 - [x] **PR 1**: Enum 확장 — backend + frontend 동기화
   - `TaskStatus` 7개 (`NotStarted=10, InReview=20, InProgress=30, Blocked=40, Done=50, Cancelled=51, Dropped=52`) — sparse 정수값으로 미래 상태 삽입 여유. Anchor 10/30/50, intermediate 20/40, terminal-non-success 51/52

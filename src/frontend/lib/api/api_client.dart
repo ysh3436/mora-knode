@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/agent.dart';
+import '../models/agent_plan.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
 import '../models/milestone.dart';
@@ -98,6 +99,11 @@ class ApiClient {
       headers: _headers(_jsonHeaders),
       body: jsonEncode(t.toJson()),
     ));
+    return TaskItem.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<TaskItem> getTask(String id) async {
+    final data = await _decode(await _http.get(_uri('/api/tasks/$id'), headers: _headers()));
     return TaskItem.fromJson(data as Map<String, dynamic>);
   }
 
@@ -204,6 +210,61 @@ class ApiClient {
       headers: _headers(),
     ));
     return ((data as Map<String, dynamic>)['revoked'] as num?)?.toInt() ?? 0;
+  }
+
+  // --- Agent plans (ADR-002 plan gate) ---
+  /// Filtered plan list. Status filter drives the review queue (default
+  /// PendingReview); taskId scopes to one task's plan history. Newest first.
+  Future<List<AgentPlan>> listAgentPlans({
+    PlanStatus? status,
+    String? taskId,
+    String? submittedBy,
+  }) async {
+    final query = <String, String>{};
+    if (status != null) query['status'] = status.wire;
+    if (taskId != null) query['taskId'] = taskId;
+    if (submittedBy != null) query['submittedBy'] = submittedBy;
+    final data = await _decode(await _http.get(
+      _uri('/api/agents/plans', query.isEmpty ? null : query),
+      headers: _headers(),
+    ));
+    return (data as List).cast<Map<String, dynamic>>().map(AgentPlan.fromJson).toList();
+  }
+
+  /// Approve a pending plan. Backend constraint: requires Human-class RBAC
+  /// (Manager / Reviewer / Human preset). Side-effect: target task moves
+  /// from PlanReview → InProgress in the same call.
+  Future<AgentPlan> approveAgentPlan(String planId, {String? comment}) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/agents/plans/$planId/approve'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode({'comment': ?comment}),
+    ));
+    return AgentPlan.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Reject a pending plan. [comment] is required by the backend so the
+  /// agent has actionable feedback. Task moves back to InProgress per the
+  /// 9-step lifecycle (bot picks back up with the rejection note in hand).
+  Future<AgentPlan> rejectAgentPlan(String planId, {required String comment}) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/agents/plans/$planId/reject'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode({'comment': comment}),
+    ));
+    return AgentPlan.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Undo a previous approve / reject. Backend gates this to the original
+  /// reviewer (self-correction) or a Manager (override path). Plan goes
+  /// back to PendingReview, task lifecycle reverts to PlanReview so the
+  /// review queue re-surfaces it.
+  Future<AgentPlan> revertAgentPlan(String planId) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/agents/plans/$planId/revert'),
+      headers: _headers(),
+    ));
+    return AgentPlan.fromJson(data as Map<String, dynamic>);
   }
 
   // --- Assignments ---

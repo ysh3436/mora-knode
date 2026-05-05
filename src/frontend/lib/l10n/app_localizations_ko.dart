@@ -730,4 +730,120 @@ class AppL10nKo extends AppL10n {
 
   @override
   String get agentsTokenRevealAcknowledge => '확인했고 저장했습니다';
+
+  @override
+  String get plansSectionLead =>
+      '외부 에이전트가 제출한 작업계획을 검토하고 승인 또는 반려합니다. 승인된 plan 의 task 는 자동으로 InProgress 로 전환됩니다.';
+
+  @override
+  String get plansFilterPending => '검토 대기';
+
+  @override
+  String get plansFilterApproved => '승인됨';
+
+  @override
+  String get plansFilterRejected => '반려됨';
+
+  @override
+  String get plansFilterAll => '전체';
+
+  @override
+  String get plansEmptyPendingTitle => '검토 대기 중인 plan 이 없습니다';
+
+  @override
+  String get plansEmptyPendingHint => '에이전트가 plan 을 제출하면 여기로 들어옵니다.';
+
+  @override
+  String get plansEmptyApprovedTitle => '승인된 plan 이 없습니다';
+
+  @override
+  String get plansEmptyApprovedHint => '검토 대기 항목을 승인하면 이 목록에 누적됩니다.';
+
+  @override
+  String get plansEmptyRejectedTitle => '반려된 plan 이 없습니다';
+
+  @override
+  String get plansEmptyRejectedHint => '반려 사유와 함께 반려한 plan 들이 여기에 모입니다.';
+
+  @override
+  String get plansEmptyAllTitle => 'plan 이 아직 없습니다';
+
+  @override
+  String get plansEmptyAllHint => '에이전트가 작업계획을 제출하면 여기에 표시됩니다.';
+
+  @override
+  String plansTaskUnknown(String id) {
+    return 'task $id (찾을 수 없음)';
+  }
+
+  @override
+  String plansEstimateMinutes(int minutes) {
+    return '예상 $minutes분';
+  }
+
+  @override
+  String get plansStepsHeader => '단계';
+
+  @override
+  String get plansNotesHeader => '노트';
+
+  @override
+  String get plansReviewerCommentHeader => '리뷰어 코멘트';
+
+  @override
+  String get plansActionApprove => '승인';
+
+  @override
+  String get plansActionReject => '반려';
+
+  @override
+  String get plansApprovedToast =>
+      'plan 을 승인했습니다. task 가 InProgress 로 전환되었습니다.';
+
+  @override
+  String get plansRejectedToast => 'plan 을 반려했습니다.';
+
+  @override
+  String get plansRejectDialogTitle => 'plan 반려';
+
+  @override
+  String get plansRejectDialogHint =>
+      '에이전트가 다시 작업할 때 무엇을 고쳐야 하는지 적어주세요. 반려 사유는 ChangeLog 에도 기록됩니다.';
+
+  @override
+  String get plansRejectFieldComment => '반려 사유 *';
+
+  @override
+  String get plansRejectFieldRequired => '반려 사유는 필수입니다.';
+
+  @override
+  String get plansRejectConfirm => '반려';
+
+  @override
+  String get plansAuthBannerTitle => '사용자 선택 필요';
+
+  @override
+  String get plansAuthBannerHint =>
+      '승인 / 반려 / 취소는 인증된 사용자만 가능합니다. 사이드바 하단의 사용자 스위처에서 본인 계정을 선택하세요.';
+
+  @override
+  String plansReviewedBy(String by, String at) {
+    return '$by · $at';
+  }
+
+  @override
+  String get plansActionRevert => '결정 취소';
+
+  @override
+  String get plansRevertedToast => '결정을 되돌렸습니다. plan 이 검토 대기로 돌아갔습니다.';
+
+  @override
+  String get plansRevertConfirmTitle => '이 결정을 되돌릴까요?';
+
+  @override
+  String get plansRevertConfirmBody =>
+      'plan 이 검토 대기로 돌아가고 task 의 상태도 PlanReview 로 되돌아갑니다.';
+
+  @override
+  String get plansRevertConfirmAction => '되돌리기';
 }

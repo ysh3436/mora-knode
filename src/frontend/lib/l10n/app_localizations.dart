@@ -1458,6 +1458,216 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'I\'ve saved it'**
   String get agentsTokenRevealAcknowledge;
+
+  /// No description provided for @plansSectionLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Review and decide on plans submitted by external agents. Approving moves the task to InProgress automatically.'**
+  String get plansSectionLead;
+
+  /// No description provided for @plansFilterPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending review'**
+  String get plansFilterPending;
+
+  /// No description provided for @plansFilterApproved.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved'**
+  String get plansFilterApproved;
+
+  /// No description provided for @plansFilterRejected.
+  ///
+  /// In en, this message translates to:
+  /// **'Rejected'**
+  String get plansFilterRejected;
+
+  /// No description provided for @plansFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get plansFilterAll;
+
+  /// No description provided for @plansEmptyPendingTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No plans awaiting review'**
+  String get plansEmptyPendingTitle;
+
+  /// No description provided for @plansEmptyPendingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans submitted by agents land here.'**
+  String get plansEmptyPendingHint;
+
+  /// No description provided for @plansEmptyApprovedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No approved plans yet'**
+  String get plansEmptyApprovedTitle;
+
+  /// No description provided for @plansEmptyApprovedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approved pending items accumulate here.'**
+  String get plansEmptyApprovedHint;
+
+  /// No description provided for @plansEmptyRejectedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No rejected plans yet'**
+  String get plansEmptyRejectedTitle;
+
+  /// No description provided for @plansEmptyRejectedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Plans you reject (with comments) collect here.'**
+  String get plansEmptyRejectedHint;
+
+  /// No description provided for @plansEmptyAllTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No plans yet'**
+  String get plansEmptyAllTitle;
+
+  /// No description provided for @plansEmptyAllHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Agents will surface their plans here.'**
+  String get plansEmptyAllHint;
+
+  /// No description provided for @plansTaskUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'task {id} (not found)'**
+  String plansTaskUnknown(String id);
+
+  /// No description provided for @plansEstimateMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'~{minutes}m'**
+  String plansEstimateMinutes(int minutes);
+
+  /// No description provided for @plansStepsHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Steps'**
+  String get plansStepsHeader;
+
+  /// No description provided for @plansNotesHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Notes'**
+  String get plansNotesHeader;
+
+  /// No description provided for @plansReviewerCommentHeader.
+  ///
+  /// In en, this message translates to:
+  /// **'Reviewer comment'**
+  String get plansReviewerCommentHeader;
+
+  /// No description provided for @plansActionApprove.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve'**
+  String get plansActionApprove;
+
+  /// No description provided for @plansActionReject.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get plansActionReject;
+
+  /// No description provided for @plansApprovedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan approved. Task moved to InProgress.'**
+  String get plansApprovedToast;
+
+  /// No description provided for @plansRejectedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Plan rejected.'**
+  String get plansRejectedToast;
+
+  /// No description provided for @plansRejectDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject plan'**
+  String get plansRejectDialogTitle;
+
+  /// No description provided for @plansRejectDialogHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tell the agent what needs to change. The comment is stored on the plan and the ChangeLog.'**
+  String get plansRejectDialogHint;
+
+  /// No description provided for @plansRejectFieldComment.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason *'**
+  String get plansRejectFieldComment;
+
+  /// No description provided for @plansRejectFieldRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Reason is required.'**
+  String get plansRejectFieldRequired;
+
+  /// No description provided for @plansRejectConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Reject'**
+  String get plansRejectConfirm;
+
+  /// No description provided for @plansAuthBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a user first'**
+  String get plansAuthBannerTitle;
+
+  /// No description provided for @plansAuthBannerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Approve / reject / revert are restricted to authenticated users. Use the user switcher at the bottom of the sidebar to select your account.'**
+  String get plansAuthBannerHint;
+
+  /// No description provided for @plansReviewedBy.
+  ///
+  /// In en, this message translates to:
+  /// **'{by} · {at}'**
+  String plansReviewedBy(String by, String at);
+
+  /// No description provided for @plansActionRevert.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert decision'**
+  String get plansActionRevert;
+
+  /// No description provided for @plansRevertedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Decision reverted. Plan is back to Pending review.'**
+  String get plansRevertedToast;
+
+  /// No description provided for @plansRevertConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert this decision?'**
+  String get plansRevertConfirmTitle;
+
+  /// No description provided for @plansRevertConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The plan returns to Pending review and the task lifecycle goes back to PlanReview.'**
+  String get plansRevertConfirmBody;
+
+  /// No description provided for @plansRevertConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Revert'**
+  String get plansRevertConfirmAction;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

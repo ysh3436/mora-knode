@@ -740,4 +740,122 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get agentsTokenRevealAcknowledge => 'I\'ve saved it';
+
+  @override
+  String get plansSectionLead =>
+      'Review and decide on plans submitted by external agents. Approving moves the task to InProgress automatically.';
+
+  @override
+  String get plansFilterPending => 'Pending review';
+
+  @override
+  String get plansFilterApproved => 'Approved';
+
+  @override
+  String get plansFilterRejected => 'Rejected';
+
+  @override
+  String get plansFilterAll => 'All';
+
+  @override
+  String get plansEmptyPendingTitle => 'No plans awaiting review';
+
+  @override
+  String get plansEmptyPendingHint => 'Plans submitted by agents land here.';
+
+  @override
+  String get plansEmptyApprovedTitle => 'No approved plans yet';
+
+  @override
+  String get plansEmptyApprovedHint =>
+      'Approved pending items accumulate here.';
+
+  @override
+  String get plansEmptyRejectedTitle => 'No rejected plans yet';
+
+  @override
+  String get plansEmptyRejectedHint =>
+      'Plans you reject (with comments) collect here.';
+
+  @override
+  String get plansEmptyAllTitle => 'No plans yet';
+
+  @override
+  String get plansEmptyAllHint => 'Agents will surface their plans here.';
+
+  @override
+  String plansTaskUnknown(String id) {
+    return 'task $id (not found)';
+  }
+
+  @override
+  String plansEstimateMinutes(int minutes) {
+    return '~${minutes}m';
+  }
+
+  @override
+  String get plansStepsHeader => 'Steps';
+
+  @override
+  String get plansNotesHeader => 'Notes';
+
+  @override
+  String get plansReviewerCommentHeader => 'Reviewer comment';
+
+  @override
+  String get plansActionApprove => 'Approve';
+
+  @override
+  String get plansActionReject => 'Reject';
+
+  @override
+  String get plansApprovedToast => 'Plan approved. Task moved to InProgress.';
+
+  @override
+  String get plansRejectedToast => 'Plan rejected.';
+
+  @override
+  String get plansRejectDialogTitle => 'Reject plan';
+
+  @override
+  String get plansRejectDialogHint =>
+      'Tell the agent what needs to change. The comment is stored on the plan and the ChangeLog.';
+
+  @override
+  String get plansRejectFieldComment => 'Reason *';
+
+  @override
+  String get plansRejectFieldRequired => 'Reason is required.';
+
+  @override
+  String get plansRejectConfirm => 'Reject';
+
+  @override
+  String get plansAuthBannerTitle => 'Pick a user first';
+
+  @override
+  String get plansAuthBannerHint =>
+      'Approve / reject / revert are restricted to authenticated users. Use the user switcher at the bottom of the sidebar to select your account.';
+
+  @override
+  String plansReviewedBy(String by, String at) {
+    return '$by · $at';
+  }
+
+  @override
+  String get plansActionRevert => 'Revert decision';
+
+  @override
+  String get plansRevertedToast =>
+      'Decision reverted. Plan is back to Pending review.';
+
+  @override
+  String get plansRevertConfirmTitle => 'Revert this decision?';
+
+  @override
+  String get plansRevertConfirmBody =>
+      'The plan returns to Pending review and the task lifecycle goes back to PlanReview.';
+
+  @override
+  String get plansRevertConfirmAction => 'Revert';
 }

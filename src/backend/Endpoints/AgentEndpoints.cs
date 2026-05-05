@@ -294,6 +294,52 @@ public static class AgentEndpoints
             return Results.Ok(plan);
         });
 
+        // PUT /api/agents/plans/{id}/revert
+        // Undo a previous approve / reject. Allowed for the original
+        // reviewer (so they can fix a misclick) or any Manager (override
+        // path for cases where the original reviewer is unavailable).
+        // Side effect: task lifecycle moves back to PlanReview so the
+        // queue surface re-surfaces the plan.
+        group.MapPut("/plans/{id}/revert", async (
+            string id,
+            UserContext userCtx,
+            AgentPlanRepository plans,
+            TaskRepository tasks,
+            CancellationToken ct) =>
+        {
+            if (userCtx.CurrentUser is null)
+                return Results.Json(
+                    new { error = "Authentication required." },
+                    statusCode: StatusCodes.Status401Unauthorized);
+
+            var plan = await plans.GetAsync(id, ct);
+            if (plan is null) return Results.NotFound();
+            if (plan.Status == PlanStatus.PendingReview)
+                return Results.Conflict(new { error = "Plan has not been reviewed yet." });
+
+            // Self-or-Manager: the original reviewer can always undo their
+            // own decision; Managers can override anyone (escalation path
+            // when the original reviewer isn't around).
+            var isOwner = string.Equals(plan.ReviewedByResourceId, userCtx.CurrentUser.Id, StringComparison.Ordinal);
+            var isManager = userCtx.CurrentUser.Rbac == RbacPreset.Manager;
+            if (!isOwner && !isManager)
+                return Results.Json(
+                    new { error = "Only the original reviewer or a Manager can revert this decision." },
+                    statusCode: StatusCodes.Status403Forbidden);
+
+            plan.Status = PlanStatus.PendingReview;
+            plan.ReviewerComment = null;
+            plan.ReviewedByResourceId = null;
+            plan.ReviewedAt = null;
+            await plans.ReplaceAsync(id, plan, ct);
+
+            await SyncTaskAfterReview(plan.TaskId, TaskStatus.PlanReview,
+                $"plan reverted to PendingReview (plan id {id})",
+                userCtx.CurrentUser.Name, tasks, ct);
+
+            return Results.Ok(plan);
+        });
+
         // ---------- Work-queue ----------
         // GET /api/agents/work-queue
         // Returns the calling agent's assigned tasks paired with their

@@ -7,6 +7,7 @@ import '../widgets/agents_section.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/matrix_section.dart';
 import '../widgets/my_work_section.dart';
+import '../widgets/plans_section.dart';
 import '../widgets/projects_section.dart';
 import '../widgets/settings_section.dart';
 import '../widgets/tasks_workspace/tasks_workspace.dart';
@@ -34,7 +35,7 @@ class MainScreen extends ConsumerWidget {
       AppSection.matrix =>
         (_HeaderTitle(l.headerMatrixLoad), const MatrixSection()),
       AppSection.plans =>
-        (_HeaderTitle(l.headerPlans, subtitle: l.badgeM2), _Coming(label: l.comingPlanReviewQueue)),
+        (_HeaderTitle(l.headerPlans), const PlansSection()),
       AppSection.audit =>
         (_HeaderTitle(l.headerAudit), _Coming(label: l.comingChangeLog)),
       AppSection.agents =>

@@ -26,6 +26,7 @@ public class MongoContext
     public IMongoCollection<HolidayCacheEntry> HolidayCache => _db.GetCollection<HolidayCacheEntry>("holiday_cache");
     public IMongoCollection<AppMeta> AppMeta => _db.GetCollection<AppMeta>("app_meta");
     public IMongoCollection<AgentToken> AgentTokens => _db.GetCollection<AgentToken>("agent_tokens");
+    public IMongoCollection<Department> Departments => _db.GetCollection<Department>("departments");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {
@@ -82,6 +83,13 @@ public class MongoContext
             new CreateIndexModel<AgentToken>(
                 Builders<AgentToken>.IndexKeys.Ascending(x => x.ResourceId),
                 new CreateIndexOptions { Name = "agent_token_resource" }),
+            cancellationToken: ct);
+
+        // Departments — parent lookup is the hot read path (build tree).
+        await Departments.Indexes.CreateOneAsync(
+            new CreateIndexModel<Department>(
+                Builders<Department>.IndexKeys.Ascending(x => x.ParentDepartmentId),
+                new CreateIndexOptions { Name = "department_parent" }),
             cancellationToken: ct);
     }
 

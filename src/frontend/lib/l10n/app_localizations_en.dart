@@ -635,4 +635,109 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get projectTaskOpenInAllWork => 'Open in All work';
+
+  @override
+  String get actionCopy => 'Copy';
+
+  @override
+  String get agentsSectionLead =>
+      'Manage external AI agent identities and their auth tokens. Tokens are shown exactly once at issuance.';
+
+  @override
+  String get agentsCreateButton => '+ New agent';
+
+  @override
+  String get agentsEmptyTitle => 'No agents yet';
+
+  @override
+  String get agentsEmptyHint =>
+      'Use + New agent to provision the first identity and receive its token.';
+
+  @override
+  String get agentsRotateTooltip =>
+      'Rotate token (existing key is revoked immediately)';
+
+  @override
+  String get agentsRevokeTooltip => 'Revoke all tokens (no auth until rotated)';
+
+  @override
+  String get agentsExpandTokens => 'Show token history';
+
+  @override
+  String get agentsCollapseTokens => 'Hide token history';
+
+  @override
+  String get agentsRotatedTitle => 'New token issued';
+
+  @override
+  String get agentsCreatedTitle => 'Agent created';
+
+  @override
+  String get agentsRevokeConfirmTitle => 'Revoke tokens?';
+
+  @override
+  String agentsRevokeConfirmBody(String name) {
+    return 'All active tokens for \"$name\" will be invalidated. Rotation is required to use the agent again.';
+  }
+
+  @override
+  String get agentsRevokeConfirmAction => 'Revoke';
+
+  @override
+  String agentsRevokedToast(int count) {
+    return 'Revoked $count token(s).';
+  }
+
+  @override
+  String get agentsTokensEmpty => 'No token history.';
+
+  @override
+  String get agentsTokenActive => 'active';
+
+  @override
+  String agentsTokenRevokedAt(String at) {
+    return 'revoked · $at';
+  }
+
+  @override
+  String agentsTokenCreatedAt(String at) {
+    return 'issued · $at';
+  }
+
+  @override
+  String get agentsCreateDialogTitle => 'New agent';
+
+  @override
+  String get agentsFieldName => 'Name *';
+
+  @override
+  String get agentsFieldRole => 'Role (optional)';
+
+  @override
+  String get agentsFieldDescription => 'Description (optional)';
+
+  @override
+  String get agentsFieldDescriptionHint =>
+      'Model / tooling / prompt provenance, etc.';
+
+  @override
+  String get agentsFieldRbac => 'RBAC preset';
+
+  @override
+  String get agentsFieldNameRequired => 'Name is required.';
+
+  @override
+  String get agentsCreateConfirm => 'Create and reveal token';
+
+  @override
+  String get agentsTokenRevealWarning =>
+      'This token is shown only once. Copy it somewhere safe before closing.';
+
+  @override
+  String agentsTokenRevealHint(String lastFour) {
+    return 'Last 4 chars: …$lastFour';
+  }
+
+  @override
+  String get agentsTokenRevealAcknowledge => 'I\'ve saved it';
 }

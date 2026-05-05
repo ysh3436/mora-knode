@@ -1278,6 +1278,186 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Open in All work'**
   String get projectTaskOpenInAllWork;
+
+  /// No description provided for @actionCopy.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy'**
+  String get actionCopy;
+
+  /// No description provided for @agentsSectionLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage external AI agent identities and their auth tokens. Tokens are shown exactly once at issuance.'**
+  String get agentsSectionLead;
+
+  /// No description provided for @agentsCreateButton.
+  ///
+  /// In en, this message translates to:
+  /// **'+ New agent'**
+  String get agentsCreateButton;
+
+  /// No description provided for @agentsEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No agents yet'**
+  String get agentsEmptyTitle;
+
+  /// No description provided for @agentsEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Use + New agent to provision the first identity and receive its token.'**
+  String get agentsEmptyHint;
+
+  /// No description provided for @agentsRotateTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Rotate token (existing key is revoked immediately)'**
+  String get agentsRotateTooltip;
+
+  /// No description provided for @agentsRevokeTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke all tokens (no auth until rotated)'**
+  String get agentsRevokeTooltip;
+
+  /// No description provided for @agentsExpandTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Show token history'**
+  String get agentsExpandTokens;
+
+  /// No description provided for @agentsCollapseTokens.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide token history'**
+  String get agentsCollapseTokens;
+
+  /// No description provided for @agentsRotatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New token issued'**
+  String get agentsRotatedTitle;
+
+  /// No description provided for @agentsCreatedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Agent created'**
+  String get agentsCreatedTitle;
+
+  /// No description provided for @agentsRevokeConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke tokens?'**
+  String get agentsRevokeConfirmTitle;
+
+  /// No description provided for @agentsRevokeConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'All active tokens for \"{name}\" will be invalidated. Rotation is required to use the agent again.'**
+  String agentsRevokeConfirmBody(String name);
+
+  /// No description provided for @agentsRevokeConfirmAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get agentsRevokeConfirmAction;
+
+  /// No description provided for @agentsRevokedToast.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoked {count} token(s).'**
+  String agentsRevokedToast(int count);
+
+  /// No description provided for @agentsTokensEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No token history.'**
+  String get agentsTokensEmpty;
+
+  /// No description provided for @agentsTokenActive.
+  ///
+  /// In en, this message translates to:
+  /// **'active'**
+  String get agentsTokenActive;
+
+  /// No description provided for @agentsTokenRevokedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'revoked · {at}'**
+  String agentsTokenRevokedAt(String at);
+
+  /// No description provided for @agentsTokenCreatedAt.
+  ///
+  /// In en, this message translates to:
+  /// **'issued · {at}'**
+  String agentsTokenCreatedAt(String at);
+
+  /// No description provided for @agentsCreateDialogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'New agent'**
+  String get agentsCreateDialogTitle;
+
+  /// No description provided for @agentsFieldName.
+  ///
+  /// In en, this message translates to:
+  /// **'Name *'**
+  String get agentsFieldName;
+
+  /// No description provided for @agentsFieldRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Role (optional)'**
+  String get agentsFieldRole;
+
+  /// No description provided for @agentsFieldDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description (optional)'**
+  String get agentsFieldDescription;
+
+  /// No description provided for @agentsFieldDescriptionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Model / tooling / prompt provenance, etc.'**
+  String get agentsFieldDescriptionHint;
+
+  /// No description provided for @agentsFieldRbac.
+  ///
+  /// In en, this message translates to:
+  /// **'RBAC preset'**
+  String get agentsFieldRbac;
+
+  /// No description provided for @agentsFieldNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Name is required.'**
+  String get agentsFieldNameRequired;
+
+  /// No description provided for @agentsCreateConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and reveal token'**
+  String get agentsCreateConfirm;
+
+  /// No description provided for @agentsTokenRevealWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'This token is shown only once. Copy it somewhere safe before closing.'**
+  String get agentsTokenRevealWarning;
+
+  /// No description provided for @agentsTokenRevealHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Last 4 chars: …{lastFour}'**
+  String agentsTokenRevealHint(String lastFour);
+
+  /// No description provided for @agentsTokenRevealAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve saved it'**
+  String get agentsTokenRevealAcknowledge;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

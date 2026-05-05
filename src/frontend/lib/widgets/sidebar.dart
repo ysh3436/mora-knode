@@ -97,7 +97,6 @@ class Sidebar extends ConsumerWidget {
                   icon: Icons.smart_toy_outlined,
                   label: l.navAgents,
                   selected: section == AppSection.agents,
-                  badge: l.badgeM2,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.agents,
                 ),
                 if (isAdmin) ...[

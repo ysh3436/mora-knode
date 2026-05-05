@@ -27,6 +27,7 @@ public class MongoContext
     public IMongoCollection<AppMeta> AppMeta => _db.GetCollection<AppMeta>("app_meta");
     public IMongoCollection<AgentToken> AgentTokens => _db.GetCollection<AgentToken>("agent_tokens");
     public IMongoCollection<Department> Departments => _db.GetCollection<Department>("departments");
+    public IMongoCollection<AgentPlan> AgentPlans => _db.GetCollection<AgentPlan>("agent_plans");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {
@@ -90,6 +91,20 @@ public class MongoContext
             new CreateIndexModel<Department>(
                 Builders<Department>.IndexKeys.Ascending(x => x.ParentDepartmentId),
                 new CreateIndexOptions { Name = "department_parent" }),
+            cancellationToken: ct);
+
+        // AgentPlans — the two hot reads are "all plans for this task"
+        // (work-queue, history) and "review queue" (status filter), so
+        // index both. SubmittedBy lookup is rare enough to skip.
+        await AgentPlans.Indexes.CreateOneAsync(
+            new CreateIndexModel<AgentPlan>(
+                Builders<AgentPlan>.IndexKeys.Ascending(x => x.TaskId),
+                new CreateIndexOptions { Name = "agent_plan_task" }),
+            cancellationToken: ct);
+        await AgentPlans.Indexes.CreateOneAsync(
+            new CreateIndexModel<AgentPlan>(
+                Builders<AgentPlan>.IndexKeys.Ascending(x => x.Status),
+                new CreateIndexOptions { Name = "agent_plan_status" }),
             cancellationToken: ct);
     }
 

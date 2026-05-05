@@ -1,0 +1,32 @@
+# Build outputs
+**/bin/
+**/obj/
+**/build/
+**/.dart_tool/
+
+# Editor / OS noise
+**/.vscode/
+**/.vs/
+**/.idea/
+**/.DS_Store
+**/Thumbs.db
+
+# Local config (per-host overrides — not for the image)
+**/appsettings.Local.json
+
+# Git metadata
+.git/
+.gitignore
+
+# Docs / planning that don't need to ship in the image
+docs/
+planning/
+.claude/
+
+# Tools / fixtures (run from host, not from inside the container)
+tools/
+
+# Misc
+*.log
+*.user
+.env

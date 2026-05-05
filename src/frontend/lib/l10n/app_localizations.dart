@@ -1812,6 +1812,48 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Showing {n} of {total}'**
   String auditCountOf(int n, int total);
+
+  /// No description provided for @matrixEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No resources to show.'**
+  String get matrixEmpty;
+
+  /// No description provided for @matrixEmptyFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'No resources match the selected filters.'**
+  String get matrixEmptyFiltered;
+
+  /// No description provided for @matrixFilterDepartment.
+  ///
+  /// In en, this message translates to:
+  /// **'Department'**
+  String get matrixFilterDepartment;
+
+  /// No description provided for @matrixFilterProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get matrixFilterProject;
+
+  /// No description provided for @matrixFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get matrixFilterAll;
+
+  /// No description provided for @matrixFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get matrixFilterClear;
+
+  /// No description provided for @matrixFilterActiveHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Filters active'**
+  String get matrixFilterActiveHint;
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

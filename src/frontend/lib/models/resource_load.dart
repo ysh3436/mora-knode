@@ -23,6 +23,7 @@ class ResourceLoad {
   final String resourceId;
   final String resourceName;
   final String? resourceRole;
+  final String? departmentId;
   final int capacityPercent;
   final List<ResourceLoadBucket> days;
 
@@ -30,6 +31,7 @@ class ResourceLoad {
     required this.resourceId,
     required this.resourceName,
     this.resourceRole,
+    this.departmentId,
     required this.capacityPercent,
     required this.days,
   });
@@ -38,6 +40,7 @@ class ResourceLoad {
         resourceId: json['resourceId'] as String,
         resourceName: json['resourceName'] as String,
         resourceRole: json['resourceRole'] as String?,
+        departmentId: json['departmentId'] as String?,
         capacityPercent: (json['capacityPercent'] as num).toInt(),
         days: (json['days'] as List)
             .cast<Map<String, dynamic>>()

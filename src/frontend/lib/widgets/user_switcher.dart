@@ -55,7 +55,9 @@ class UserSwitcher extends ConsumerWidget {
                     checked: r.id == currentId,
                     child: Row(
                       children: [
-                        Text(r.name),
+                        Flexible(
+                          child: Text(r.name, overflow: TextOverflow.ellipsis),
+                        ),
                         const SizedBox(width: 8),
                         Text(r.rbac.label,
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outline)),

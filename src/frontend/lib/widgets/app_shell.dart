@@ -10,14 +10,39 @@ import 'sidebar.dart';
 /// Three-pane desktop layout (wireframes.md §3 candidate A):
 /// sidebar (default open) + main content + inspector (default closed).
 /// `[` toggles sidebar, `]` toggles inspector — see §6.
-class AppShell extends ConsumerWidget {
+class AppShell extends ConsumerStatefulWidget {
   final Widget child;
   final Widget? header;
+
+  /// ADR-008 commits the app to desktop-only sizing. We pin the layout
+  /// to this minimum width and let the browser scroll horizontally
+  /// when the viewport is narrower, instead of letting child widgets
+  /// fight for shrinking space and emit RenderFlex overflow assertions.
+  /// Picked at 1200 because the gantt + inspector (520) + sidebar (220)
+  /// already sums to ~960 and we want some slack for the centre pane.
+  static const double _minLayoutWidth = 1200;
 
   const AppShell({super.key, required this.child, this.header});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends ConsumerState<AppShell> {
+  /// Owned by the state so the Scrollbar's thumbVisibility flag has
+  /// a stable controller across rebuilds — sharing a controller with
+  /// the SingleChildScrollView is what makes the always-visible
+  /// horizontal scrollbar work.
+  late final ScrollController _hScroll = ScrollController();
+
+  @override
+  void dispose() {
+    _hScroll.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final sidebarOpen = ref.watch(sidebarOpenProvider);
     final inspectorOpen = ref.watch(inspectorOpenProvider);
     final inspectorWidth = ref.watch(inspectorWidthProvider);
@@ -36,35 +61,62 @@ class AppShell extends ConsumerWidget {
           autofocus: true,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Clamp the live width to the current viewport so a previously
-              // saved value can't exceed the available space (e.g. window resized).
-              final maxW = (constraints.maxWidth - 360).clamp(360.0, 1200.0);
+              // If the viewport is narrower than the design minimum,
+              // pin to _minLayoutWidth and let the user scroll
+              // horizontally. When wider, take the full viewport.
+              const minWidth = AppShell._minLayoutWidth;
+              final layoutWidth = constraints.maxWidth < minWidth
+                  ? minWidth
+                  : constraints.maxWidth;
+              final maxW = (layoutWidth - 360).clamp(360.0, 1200.0);
               final w = inspectorWidth.clamp(360.0, maxW);
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (sidebarOpen) const Sidebar(),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _TopBar(header: header),
-                        Expanded(child: child),
-                      ],
+              final shell = SizedBox(
+                width: layoutWidth,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (sidebarOpen) const Sidebar(),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _TopBar(header: widget.header),
+                          Expanded(child: widget.child),
+                        ],
+                      ),
                     ),
-                  ),
-                  if (inspectorOpen) ...[
-                    _InspectorResizeHandle(
-                      onDelta: (dx) {
-                        // Drag right = handle moves right = inspector shrinks.
-                        final next = (w - dx).clamp(360.0, maxW);
-                        ref.read(inspectorWidthProvider.notifier).state = next;
-                      },
-                    ),
-                    SizedBox(width: w, child: const Inspector()),
+                    if (inspectorOpen) ...[
+                      _InspectorResizeHandle(
+                        onDelta: (dx) {
+                          // Drag right = handle moves right = inspector shrinks.
+                          final next = (w - dx).clamp(360.0, maxW);
+                          ref.read(inspectorWidthProvider.notifier).state = next;
+                        },
+                      ),
+                      SizedBox(width: w, child: const Inspector()),
+                    ],
                   ],
-                ],
+                ),
               );
+              if (constraints.maxWidth < minWidth) {
+                // Scrollbar with thumbVisibility forces the bar to
+                // render even before the user touches anything — Flutter
+                // web's default is to only show on interaction, which
+                // would leave a narrow-window user wondering whether
+                // anything is hidden off-screen. Bar shares the
+                // controller owned by _AppShellState so the visibility
+                // assertion is satisfied across rebuilds.
+                return Scrollbar(
+                  thumbVisibility: true,
+                  controller: _hScroll,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    controller: _hScroll,
+                    child: shell,
+                  ),
+                );
+              }
+              return shell;
             },
           ),
         ),

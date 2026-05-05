@@ -883,22 +883,39 @@ class _StickyAncestorStack extends StatelessWidget {
           ),
           child: Row(
             children: [
-              if (r.id != null && onToggleCollapse != null)
-                InkWell(
-                  onTap: () => onToggleCollapse!(r.id!),
-                  borderRadius: BorderRadius.circular(4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(2),
-                    child: Icon(
-                      isCollapsed ? Icons.chevron_right : Icons.expand_more,
-                      size: 14,
-                      color: theme.colorScheme.outline,
-                    ),
+              // Project header: chevron disclosure + folder kind icon,
+              // matching the task rows below.
+              SizedBox(
+                width: 18,
+                height: 18,
+                child: r.id != null && onToggleCollapse != null
+                    ? Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: () => onToggleCollapse!(r.id!),
+                          borderRadius: BorderRadius.circular(4),
+                          child: Center(
+                            child: Icon(
+                              isCollapsed ? Icons.chevron_right : Icons.expand_more,
+                              size: 14,
+                              color: theme.colorScheme.outline,
+                            ),
+                          ),
+                        ),
+                      )
+                    : null,
+              ),
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: Center(
+                  child: Icon(
+                    Icons.folder_open_outlined,
+                    size: 12,
+                    color: theme.colorScheme.primary,
                   ),
-                )
-              else
-                const SizedBox(width: 18),
-              Icon(Icons.folder_open_outlined, size: 14, color: theme.colorScheme.primary),
+                ),
+              ),
               const SizedBox(width: 4),
               Flexible(
                 child: Text(
@@ -956,27 +973,41 @@ class _LabelGutter extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
+                // Disclosure column: chevron toggle for folders, blank
+                // for leaves. Hit area covers the whole 18×18 box.
                 SizedBox(
                   width: 18,
-                  child: canCollapse
-                      ? InkWell(
-                          onTap: () => onToggleCollapse!(r.id!),
-                          borderRadius: BorderRadius.circular(4),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2),
-                            child: Icon(
-                              isCollapsed ? Icons.chevron_right : Icons.expand_more,
-                              size: 14,
-                              color: theme.colorScheme.outline,
+                  height: 18,
+                  child: r.hasChildren
+                      ? Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: canCollapse ? () => onToggleCollapse!(r.id!) : null,
+                            borderRadius: BorderRadius.circular(4),
+                            child: Center(
+                              child: Icon(
+                                isCollapsed ? Icons.chevron_right : Icons.expand_more,
+                                size: 14,
+                                color: theme.colorScheme.outline,
+                              ),
                             ),
                           ),
                         )
                       : null,
                 ),
-                Icon(
-                  r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
-                  size: 14,
-                  color: r.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+                // Kind icon — fixed centred 14×14 box matches the
+                // tasks-list pattern so folder_open_outlined and
+                // chevron_right line up at the same x for siblings.
+                SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: Center(
+                    child: Icon(
+                      r.hasChildren ? Icons.folder_open_outlined : Icons.chevron_right,
+                      size: 12,
+                      color: r.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Flexible(

@@ -948,4 +948,25 @@ class AppL10nEn extends AppL10n {
   String auditCountOf(int n, int total) {
     return 'Showing $n of $total';
   }
+
+  @override
+  String get matrixEmpty => 'No resources to show.';
+
+  @override
+  String get matrixEmptyFiltered => 'No resources match the selected filters.';
+
+  @override
+  String get matrixFilterDepartment => 'Department';
+
+  @override
+  String get matrixFilterProject => 'Project';
+
+  @override
+  String get matrixFilterAll => 'All';
+
+  @override
+  String get matrixFilterClear => 'Clear filters';
+
+  @override
+  String get matrixFilterActiveHint => 'Filters active';
 }

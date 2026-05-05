@@ -7,6 +7,7 @@ import '../models/agent.dart';
 import '../models/agent_plan.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
+import '../models/department.dart';
 import '../models/holiday.dart';
 import '../models/milestone.dart';
 import '../models/project.dart';
@@ -363,20 +364,43 @@ final matrixAnchorProvider = StateProvider<DateTime>((_) {
   return today.subtract(Duration(days: today.weekday - DateTime.monday));
 });
 
+/// User-selected department + project narrowing for the matrix surface.
+/// null = no narrowing (show every visible resource). The two filters
+/// compose on the backend (intersect).
+final matrixDepartmentFilterProvider = StateProvider<String?>((_) => null);
+final matrixProjectFilterProvider = StateProvider<String?>((_) => null);
+
 class MatrixRange {
   final DateTime from;
   final DateTime to;
-  const MatrixRange(this.from, this.to);
+  final String? departmentId;
+  final String? projectId;
+  const MatrixRange(this.from, this.to, {this.departmentId, this.projectId});
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MatrixRange && other.from == from && other.to == to);
+      (other is MatrixRange &&
+          other.from == from &&
+          other.to == to &&
+          other.departmentId == departmentId &&
+          other.projectId == projectId);
 
   @override
-  int get hashCode => Object.hash(from, to);
+  int get hashCode => Object.hash(from, to, departmentId, projectId);
 }
 
 final matrixLoadProvider = FutureProvider.family<MatrixLoadResponse, MatrixRange>((ref, range) async {
-  return ref.watch(apiClientProvider).matrixLoad(from: range.from, to: range.to);
+  return ref.watch(apiClientProvider).matrixLoad(
+        from: range.from,
+        to: range.to,
+        departmentId: range.departmentId,
+        projectId: range.projectId,
+      );
+});
+
+/// All departments — drives the matrix filter dropdown. Tree shape
+/// rendering happens at the widget level (sort by parent path).
+final departmentsProvider = FutureProvider<List<Department>>((ref) async {
+  return ref.watch(apiClientProvider).listDepartments();
 });

@@ -366,27 +366,43 @@ class _TaskRow extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Disclosure column: chevron toggle for folders, blank
+              // 22 px reservation for leaves. Hit area = the full
+              // 22×22 box so a slightly imprecise click still toggles.
               SizedBox(
                 width: 22,
-                child: onToggleCollapse == null
-                    ? null
-                    : InkWell(
-                        onTap: onToggleCollapse,
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.all(2),
-                          child: Icon(
-                            isCollapsed ? Icons.chevron_right : Icons.expand_more,
-                            size: 16,
-                            color: theme.colorScheme.outline,
+                height: 22,
+                child: node.hasChildren
+                    ? Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: onToggleCollapse,
+                          borderRadius: BorderRadius.circular(4),
+                          child: Center(
+                            child: Icon(
+                              isCollapsed ? Icons.chevron_right : Icons.expand_more,
+                              size: 16,
+                              color: theme.colorScheme.outline,
+                            ),
                           ),
                         ),
-                      ),
+                      )
+                    : null,
               ),
-              Icon(
-                node.hasChildren ? Icons.folder_open_outlined : Icons.task_alt_outlined,
-                size: 16,
-                color: node.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+              // Kind icon — wrapped in a fixed centred 16×16 box so
+              // folder_open_outlined and task_alt_outlined (whose
+              // visible glyphs differ in width inside their default
+              // square) share the same x for siblings.
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: Center(
+                  child: Icon(
+                    node.hasChildren ? Icons.folder_open_outlined : Icons.task_alt_outlined,
+                    size: 14,
+                    color: node.hasChildren ? theme.colorScheme.primary : theme.colorScheme.outline,
+                  ),
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

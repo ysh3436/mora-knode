@@ -119,10 +119,16 @@ class _ProjectDropdown extends ConsumerWidget {
     final l = AppL10n.of(context);
     final projects = ref.watch(projectsProvider).asData?.value ?? const <Project>[];
     final filter = ref.watch(auditFilterProvider);
+    // Same guard as the matrix filter dropdown: feeding initialValue
+    // with an id that doesn't (yet) match any item trips the
+    // DropdownButton assertion. Pass null until the list lands.
+    final initial = filter.projectId != null && projects.any((p) => p.id == filter.projectId)
+        ? filter.projectId
+        : null;
     return SizedBox(
       width: 240,
       child: DropdownButtonFormField<String?>(
-        initialValue: filter.projectId,
+        initialValue: initial,
         isDense: true,
         // Without isExpanded the Row inside the picker tries to size to
         // the longest project name, blowing past the 240px width when

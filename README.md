@@ -31,35 +31,42 @@ mora-knode does **not** call LLMs. It does **not** know which model your agent u
 ## How it works
 
 ```
-                  ┌─────────────────────────┐
-                  │  mora-knode (host)      │
-                  │  - work-queue           │
-                  │  - plan approval gate   │
-                  │  - matrix resources     │
-                  │  - audit trail          │
-                  └────────────▲────────────┘
-                               │ REST API + agent token
-                               │
-                  ┌────────────┴────────────┐
-                  │   CrewAI (orchestrator) │
-                  │   Manager / Developer / │
-                  │   Researcher / QA roles │
-                  └────────────┬────────────┘
-                               │ CLI invocation
-                  ┌────────────┴────────────┐
-                  │                         │
-                  ▼                         ▼
-            ┌───────────┐             ┌───────────┐
-            │  Codex    │             │ Claude    │
-            │  (CLI)    │             │ Code (CLI)│
-            └─────┬─────┘             └─────┬─────┘
-                  ↓                         ↓
-                 LLM                       LLM
+                       ┌─────────────────────────┐
+                       │  mora-knode (host)      │
+                       │  - work-queue           │
+                       │  - plan approval gate   │
+                       │  - matrix resources     │
+                       │  - audit trail          │
+                       └────────────▲────────────┘
+                                    │ REST API + agent token
+                                    │  (one identity per pod)
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+   ┌────┴─────────┐            ┌────┴─────────┐            ┌────┴─────────┐
+   │ Pod #1       │            │ Pod #2       │            │ Pod #N       │
+   │ (VM / OS)    │            │ (VM / OS)    │            │ (VM / OS)    │
+   │ ┌──────────┐ │            │ ┌──────────┐ │            │ ┌──────────┐ │
+   │ │ CrewAI   │ │            │ │ CrewAI   │ │            │ │ CrewAI   │ │
+   │ │ handler  │ │            │ │ handler  │ │            │ │ handler  │ │
+   │ └────┬─────┘ │            │ └────┬─────┘ │            │ └────┬─────┘ │
+   │      │ CLI   │            │      │ CLI   │            │      │ CLI   │
+   │      ▼       │            │      ▼       │            │      ▼       │
+   │ ┌──────────┐ │            │ ┌──────────┐ │            │ ┌──────────┐ │
+   │ │  Codex   │ │            │ │  Claude  │ │            │ │   ...    │ │
+   │ │   CLI    │ │            │ │ Code CLI │ │            │ │   CLI    │ │
+   │ └────┬─────┘ │            │ └────┬─────┘ │            │ └────┬─────┘ │
+   │      ↓       │            │      ↓       │            │      ↓       │
+   │     LLM      │            │     LLM      │            │     LLM      │
+   └──────────────┘            └──────────────┘            └──────────────┘
+   isolated env                isolated env                isolated env
+   (e.g. test)                 (e.g. dev)                  (e.g. research)
 ```
 
-The maintainer (you) sits at the matrix board, approves plans, merges PRs. **CrewAI** runs as a lightweight handler on a VM / OS — it owns the mora-knode agent token, polls the work-queue, claims tasks, dispatches the heavy coding work to a CLI tool, and reports results back. CrewAI itself burns almost no tokens; the actual model work happens inside the coding CLIs (**Codex** on a ChatGPT Pro plan, **Claude Code** on a Claude Pro plan), both running under existing Pro subscriptions for **zero additional per-task cost**.
+The maintainer (you) sits at the matrix board, approves plans, merges PRs. Each **pod** is one CrewAI handler paired **1:1** with a single coding CLI (**Codex** on ChatGPT Pro, **Claude Code** on Claude Pro, etc.) inside an isolated VM / OS / container. The CrewAI side owns the mora-knode agent token, polls the work-queue, claims tasks, and dispatches the heavy coding work to its paired CLI; the CLI does the actual model work — both run under existing Pro subscriptions for **zero additional per-task cost**.
 
-This is the current dogfooding setup. Because mora-knode is **LLM-/SDK-/runner-agnostic** ([ADR-005](docs/architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)), you can swap CrewAI for any other handler — what mora-knode sees is just an authenticated REST client.
+Why 1:1 and isolated: each pod is a clean environment — test / development / research can run side-by-side without their working trees, branch state, or running processes leaking into each other. Add or remove a pod by registering / revoking its agent identity in mora-knode.
+
+Because mora-knode is **LLM-/SDK-/runner-agnostic** ([ADR-005](docs/architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)), you can swap CrewAI for any other handler — what mora-knode sees is just an authenticated REST client per pod.
 
 For the advanced **2-layer delegation pattern** — lightweight handlers (Layer 1) running 24/7 across multiple VMs / OS environments, delegating heavy work to coding CLIs (Layer 2) — see [docs/dogfooding/agent-operations.md §8.2](docs/dogfooding/agent-operations.md).
 

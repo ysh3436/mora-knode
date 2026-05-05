@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../models/agent.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
 import '../models/milestone.dart';
@@ -139,6 +140,70 @@ class ApiClient {
 
   Future<void> deleteResource(String id) async {
     await _decode(await _http.delete(_uri('/api/resources/$id'), headers: _headers()));
+  }
+
+  // --- Agents (Resource.Kind=Agent + AgentToken) ---
+  /// Lists every Resource of Kind=Agent. Token info isn't joined here —
+  /// hit [listAgentTokens] for the per-agent credential history.
+  Future<List<Resource>> listAgents() async {
+    final data = await _decode(await _http.get(_uri('/api/agents/'), headers: _headers()));
+    return (data as List).cast<Map<String, dynamic>>().map(Resource.fromJson).toList();
+  }
+
+  /// Provisions a brand-new agent identity + first token. The raw token
+  /// in the response is returned by the backend exactly once — UI must
+  /// surface it immediately and warn the user that it cannot be recovered.
+  Future<CreatedAgent> createAgent({
+    required String name,
+    String? role,
+    String? description,
+    RbacPresetFE rbac = RbacPresetFE.developer,
+    int capacityPercent = 100,
+  }) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/agents/'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode({
+        'name': name,
+        'role': ?role,
+        'description': ?description,
+        'rbac': rbac.wire,
+        'capacityPercent': capacityPercent,
+      }),
+    ));
+    return CreatedAgent.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<List<AgentTokenSummary>> listAgentTokens(String agentId) async {
+    final data = await _decode(await _http.get(
+      _uri('/api/agents/$agentId/tokens'),
+      headers: _headers(),
+    ));
+    return (data as List)
+        .cast<Map<String, dynamic>>()
+        .map(AgentTokenSummary.fromJson)
+        .toList();
+  }
+
+  /// Atomic: revoke any active token row + issue a fresh one. Returns the
+  /// new raw token (one-time only — same warn-and-copy UX as create).
+  Future<RotatedToken> rotateAgentToken(String agentId) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/agents/$agentId/rotate'),
+      headers: _headers(),
+    ));
+    return RotatedToken.fromJson(data as Map<String, dynamic>);
+  }
+
+  /// Revokes every active token for the agent without re-issuing. After
+  /// this the agent has no usable credential and Bearer auth fails 401
+  /// until rotate runs.
+  Future<int> revokeAgentTokens(String agentId) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/agents/$agentId/revoke'),
+      headers: _headers(),
+    ));
+    return ((data as Map<String, dynamic>)['revoked'] as num?)?.toInt() ?? 0;
   }
 
   // --- Assignments ---

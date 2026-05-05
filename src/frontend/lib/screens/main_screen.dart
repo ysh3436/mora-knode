@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/app_localizations.dart';
 import '../state/providers.dart';
+import '../widgets/agents_section.dart';
 import '../widgets/app_shell.dart';
 import '../widgets/matrix_section.dart';
 import '../widgets/my_work_section.dart';
@@ -37,7 +38,7 @@ class MainScreen extends ConsumerWidget {
       AppSection.audit =>
         (_HeaderTitle(l.headerAudit), _Coming(label: l.comingChangeLog)),
       AppSection.agents =>
-        (_HeaderTitle(l.headerAgents, subtitle: l.badgeM2), _Coming(label: l.comingAgentRbac)),
+        (_HeaderTitle(l.headerAgents), const AgentsSection()),
       AppSection.settings =>
         (_HeaderTitle(l.headerSettings), const SettingsSection()),
     };

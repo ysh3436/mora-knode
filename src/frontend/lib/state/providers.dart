@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
+import '../models/agent.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
 import '../models/holiday.dart';
@@ -96,6 +97,20 @@ final milestonesProvider = FutureProvider.family<List<Milestone>, String>((ref, 
 
 final resourcesProvider = FutureProvider<List<Resource>>((ref) async {
   return ref.watch(apiClientProvider).listResources();
+});
+
+/// All Resource records of Kind=Agent. Drives the agent management
+/// section. Separate from [resourcesProvider] so re-fetching after a
+/// create/rotate/revoke doesn't blow the resource cache used elsewhere.
+final agentsProvider = FutureProvider<List<Resource>>((ref) async {
+  return ref.watch(apiClientProvider).listAgents();
+});
+
+/// Token history for one agent (active + revoked rows, newest first).
+/// Surfaces as "what credentials exist" in the per-agent expander.
+final agentTokensProvider =
+    FutureProvider.family<List<AgentTokenSummary>, String>((ref, agentId) async {
+  return ref.watch(apiClientProvider).listAgentTokens(agentId);
 });
 
 final assignmentsByTaskProvider = FutureProvider.family<List<Assignment>, String>((ref, taskId) async {

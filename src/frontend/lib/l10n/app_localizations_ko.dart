@@ -628,4 +628,106 @@ class AppL10nKo extends AppL10n {
 
   @override
   String get projectTaskOpenInAllWork => '전체 업무에서 보기';
+
+  @override
+  String get actionCopy => '복사';
+
+  @override
+  String get agentsSectionLead =>
+      '외부 AI 에이전트의 식별과 인증 토큰을 관리합니다. 토큰은 발급 직후 한 번만 표시됩니다.';
+
+  @override
+  String get agentsCreateButton => '+ 새 에이전트';
+
+  @override
+  String get agentsEmptyTitle => '아직 등록된 에이전트가 없습니다';
+
+  @override
+  String get agentsEmptyHint => '+ 새 에이전트 버튼으로 첫 에이전트를 만들고 토큰을 받으세요.';
+
+  @override
+  String get agentsRotateTooltip => '토큰 재발급 (기존은 즉시 무효)';
+
+  @override
+  String get agentsRevokeTooltip => '모든 토큰 폐기 (재발급 전까지 인증 불가)';
+
+  @override
+  String get agentsExpandTokens => '토큰 이력 보기';
+
+  @override
+  String get agentsCollapseTokens => '토큰 이력 닫기';
+
+  @override
+  String get agentsRotatedTitle => '새 토큰이 발급되었습니다';
+
+  @override
+  String get agentsCreatedTitle => '에이전트가 생성되었습니다';
+
+  @override
+  String get agentsRevokeConfirmTitle => '토큰을 폐기할까요?';
+
+  @override
+  String agentsRevokeConfirmBody(String name) {
+    return '\"$name\" 의 모든 활성 토큰이 무효화됩니다. 다시 사용하려면 토큰을 재발급해야 합니다.';
+  }
+
+  @override
+  String get agentsRevokeConfirmAction => '폐기';
+
+  @override
+  String agentsRevokedToast(int count) {
+    return '$count개 토큰이 폐기되었습니다.';
+  }
+
+  @override
+  String get agentsTokensEmpty => '토큰 이력이 없습니다.';
+
+  @override
+  String get agentsTokenActive => '활성';
+
+  @override
+  String agentsTokenRevokedAt(String at) {
+    return '폐기됨 · $at';
+  }
+
+  @override
+  String agentsTokenCreatedAt(String at) {
+    return '발급 · $at';
+  }
+
+  @override
+  String get agentsCreateDialogTitle => '새 에이전트';
+
+  @override
+  String get agentsFieldName => '이름 *';
+
+  @override
+  String get agentsFieldRole => '역할 (선택)';
+
+  @override
+  String get agentsFieldDescription => '설명 (선택)';
+
+  @override
+  String get agentsFieldDescriptionHint => '사용 모델 / 도구 셋 / 프롬프트 출처 등';
+
+  @override
+  String get agentsFieldRbac => 'RBAC 프리셋';
+
+  @override
+  String get agentsFieldNameRequired => '이름은 필수입니다.';
+
+  @override
+  String get agentsCreateConfirm => '생성하고 토큰 받기';
+
+  @override
+  String get agentsTokenRevealWarning =>
+      '이 토큰은 지금 한 번만 표시됩니다. 닫기 전 안전한 곳에 복사해두세요.';
+
+  @override
+  String agentsTokenRevealHint(String lastFour) {
+    return '끝 4자리: …$lastFour';
+  }
+
+  @override
+  String get agentsTokenRevealAcknowledge => '확인했고 저장했습니다';
 }

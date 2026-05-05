@@ -1,6 +1,7 @@
 using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
+using TaskStatus = MoraKnode.Domain.TaskStatus;
 
 namespace MoraKnode.Endpoints;
 
@@ -119,7 +120,256 @@ public static class AgentEndpoints
             return Results.Ok(new { revoked = n });
         });
 
+        // ---------- Plan gate (ADR-002) ----------
+        // POST /api/agents/plans
+        // Submit a plan for review. Caller must be authenticated and
+        // assigned to the target task (Q3 strict). Side-effect: bumps the
+        // task's lifecycle into PlanReview so the matrix view surfaces "a
+        // human needs to look at this" without polling. The bot doesn't
+        // separately PUT /tasks/{id} — submission and lifecycle move are
+        // one atomic actor decision.
+        group.MapPost("/plans", async (
+            SubmitPlanRequest req,
+            UserContext userCtx,
+            AgentPlanRepository plans,
+            TaskRepository tasks,
+            AssignmentRepository assignments,
+            CancellationToken ct) =>
+        {
+            if (userCtx.CurrentUser is null)
+                return Results.Json(new { error = "Authentication required to submit plans." },
+                    statusCode: StatusCodes.Status401Unauthorized);
+            if (string.IsNullOrWhiteSpace(req.TaskId))
+                return Results.BadRequest(new { error = "TaskId is required" });
+            if (string.IsNullOrWhiteSpace(req.Title))
+                return Results.BadRequest(new { error = "Title is required" });
+
+            var task = await tasks.GetAsync(req.TaskId, ct);
+            if (task is null) return Results.NotFound(new { error = "Task not found" });
+
+            // Strict: only assignees can submit. Humans (Manager/Reviewer/
+            // Human preset) bypass — they can propose on any task in their
+            // remit (matches the IsAdmin treatment in UserContext).
+            if (!userCtx.IsAdmin)
+            {
+                var mine = await assignments.ListAsync(
+                    resourceId: userCtx.CurrentUser.Id,
+                    taskId: req.TaskId,
+                    ct: ct);
+                if (mine.Count == 0)
+                    return Results.Json(
+                        new { error = "Submitter is not assigned to this task." },
+                        statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var plan = await plans.InsertAsync(new AgentPlan
+            {
+                TaskId = req.TaskId,
+                SubmittedByResourceId = userCtx.CurrentUser.Id,
+                Status = PlanStatus.PendingReview,
+                Title = req.Title.Trim(),
+                EstimateMinutes = req.EstimateMinutes,
+                Steps = req.Steps?.Select(s => new PlanStep
+                {
+                    Description = s.Description ?? string.Empty,
+                    EstimateMinutes = s.EstimateMinutes,
+                }).ToList() ?? new List<PlanStep>(),
+                Notes = req.Notes,
+            }, ct);
+
+            // Bump task into PlanReview unless the user's already moved it
+            // somewhere terminal — we never drag a Done/Cancelled/Dropped
+            // task back into the review flow on a stale submission.
+            if (task.Status is TaskStatus.Created
+                            or TaskStatus.Planning
+                            or TaskStatus.PlanReview
+                            or TaskStatus.InProgress
+                            or TaskStatus.OnHold)
+            {
+                task.Status = TaskStatus.PlanReview;
+                task.ChangeReason = $"plan submitted (plan id {plan.Id})";
+                task.ChangedBy = userCtx.CurrentUser.Name;
+                await tasks.ReplaceAsync(task.Id, task, ct);
+            }
+
+            return Results.Created($"/api/agents/plans/{plan.Id}", plan);
+        });
+
+        // GET /api/agents/plans?status=PendingReview&taskId=...&submittedBy=...
+        // The review queue UI hits this with status=PendingReview. The
+        // task-detail UI hits it with taskId=... to render plan history.
+        group.MapGet("/plans", async (
+            string? status,
+            string? taskId,
+            string? submittedBy,
+            AgentPlanRepository plans,
+            CancellationToken ct) =>
+        {
+            PlanStatus? statusFilter = null;
+            if (!string.IsNullOrWhiteSpace(status))
+            {
+                if (!Enum.TryParse<PlanStatus>(status, ignoreCase: true, out var s))
+                    return Results.BadRequest(new { error = $"Unknown plan status '{status}'" });
+                statusFilter = s;
+            }
+            var rows = await plans.ListAsync(taskId, submittedBy, statusFilter, ct);
+            return Results.Ok(rows);
+        });
+
+        group.MapGet("/plans/{id}", async (
+            string id,
+            AgentPlanRepository plans,
+            CancellationToken ct) =>
+        {
+            var plan = await plans.GetAsync(id, ct);
+            return plan is null ? Results.NotFound() : Results.Ok(plan);
+        });
+
+        // PUT /api/agents/plans/{id}/approve
+        // Human-only gate. Approving is the actor decision that says "the
+        // plan is good — do the work". Same call moves the task forward
+        // into InProgress so the bot's next work-queue poll sees the
+        // approved task ready to execute.
+        group.MapPut("/plans/{id}/approve", async (
+            string id,
+            ApprovePlanRequest? req,
+            UserContext userCtx,
+            AgentPlanRepository plans,
+            TaskRepository tasks,
+            CancellationToken ct) =>
+        {
+            var (deny, _) = RequireHuman(userCtx);
+            if (deny is not null) return deny;
+
+            var plan = await plans.GetAsync(id, ct);
+            if (plan is null) return Results.NotFound();
+            if (plan.Status != PlanStatus.PendingReview)
+                return Results.Conflict(new { error = $"Plan is already {plan.Status}." });
+
+            plan.Status = PlanStatus.Approved;
+            plan.ReviewerComment = req?.Comment;
+            plan.ReviewedByResourceId = userCtx.CurrentUser!.Id;
+            plan.ReviewedAt = DateTime.UtcNow;
+            await plans.ReplaceAsync(id, plan, ct);
+
+            await SyncTaskAfterReview(plan.TaskId, TaskStatus.InProgress,
+                $"plan approved (plan id {id})", userCtx.CurrentUser.Name, tasks, ct);
+
+            return Results.Ok(plan);
+        });
+
+        // PUT /api/agents/plans/{id}/reject
+        // Reject requires a comment so the agent has something to act on.
+        // Lifecycle goes back to InProgress per the 9-step design — the
+        // bot picks the task back up, decides whether to re-plan or push
+        // through, and submits a new plan or moves to WorkReview directly.
+        group.MapPut("/plans/{id}/reject", async (
+            string id,
+            RejectPlanRequest req,
+            UserContext userCtx,
+            AgentPlanRepository plans,
+            TaskRepository tasks,
+            CancellationToken ct) =>
+        {
+            var (deny, _) = RequireHuman(userCtx);
+            if (deny is not null) return deny;
+            if (req is null || string.IsNullOrWhiteSpace(req.Comment))
+                return Results.BadRequest(new { error = "Comment is required to reject a plan." });
+
+            var plan = await plans.GetAsync(id, ct);
+            if (plan is null) return Results.NotFound();
+            if (plan.Status != PlanStatus.PendingReview)
+                return Results.Conflict(new { error = $"Plan is already {plan.Status}." });
+
+            plan.Status = PlanStatus.Rejected;
+            plan.ReviewerComment = req.Comment.Trim();
+            plan.ReviewedByResourceId = userCtx.CurrentUser!.Id;
+            plan.ReviewedAt = DateTime.UtcNow;
+            await plans.ReplaceAsync(id, plan, ct);
+
+            await SyncTaskAfterReview(plan.TaskId, TaskStatus.InProgress,
+                $"plan rejected (plan id {id}): {req.Comment.Trim()}",
+                userCtx.CurrentUser.Name, tasks, ct);
+
+            return Results.Ok(plan);
+        });
+
+        // ---------- Work-queue ----------
+        // GET /api/agents/work-queue
+        // Returns the calling agent's assigned tasks paired with their
+        // latest plan (if any). v1 doesn't lock or claim — every assigned
+        // task surfaces, and the bot decides what to pick. The latest plan
+        // is what tells the bot whether it should be planning, awaiting
+        // review, or executing.
+        group.MapGet("/work-queue", async (
+            UserContext userCtx,
+            AssignmentRepository assignments,
+            TaskRepository tasks,
+            AgentPlanRepository plans,
+            CancellationToken ct) =>
+        {
+            if (userCtx.CurrentUser is null)
+                return Results.Json(new { error = "Authentication required." },
+                    statusCode: StatusCodes.Status401Unauthorized);
+
+            var mine = await assignments.ListAsync(resourceId: userCtx.CurrentUser.Id, ct: ct);
+            var rows = new List<WorkQueueRow>();
+            foreach (var a in mine)
+            {
+                var task = await tasks.GetAsync(a.TaskId, ct);
+                if (task is null) continue;
+                // Terminal tasks aren't actionable — keep the queue lean
+                // by hiding Done/Cancelled/Dropped. The bot can fetch full
+                // history through /api/tasks if it ever needs them.
+                if (task.Status is TaskStatus.Done
+                                or TaskStatus.Cancelled
+                                or TaskStatus.Dropped) continue;
+                var latest = await plans.LatestForTaskAsync(task.Id, ct);
+                rows.Add(new WorkQueueRow(task, latest));
+            }
+            return Results.Ok(rows);
+        });
+
         return app;
+    }
+
+    private static (IResult? deny, Resource? user) RequireHuman(UserContext userCtx)
+    {
+        if (userCtx.CurrentUser is null)
+            return (Results.Json(
+                new { error = "Authentication required." },
+                statusCode: StatusCodes.Status401Unauthorized), null);
+        // ADR-004 §3 / phase15-domain-sketch §3.3: v1 confines plan
+        // approval to human-class presets. Agents can submit but never
+        // approve their own (or each other's) plans.
+        var rbac = userCtx.CurrentUser.Rbac;
+        if (rbac is not (RbacPreset.Human or RbacPreset.Manager or RbacPreset.Reviewer))
+            return (Results.Json(
+                new { error = "Plan approve/reject is restricted to human reviewers." },
+                statusCode: StatusCodes.Status403Forbidden), null);
+        return (null, userCtx.CurrentUser);
+    }
+
+    private static async Task SyncTaskAfterReview(
+        string taskId,
+        TaskStatus target,
+        string reason,
+        string? reviewerName,
+        TaskRepository tasks,
+        CancellationToken ct)
+    {
+        var task = await tasks.GetAsync(taskId, ct);
+        if (task is null) return;
+        // Don't drag a task that's already moved on (e.g. user manually
+        // marked it Done after the plan was submitted) back into the flow.
+        if (task.Status is TaskStatus.Done
+                        or TaskStatus.Cancelled
+                        or TaskStatus.Dropped) return;
+        if (task.Status == target) return;
+        task.Status = target;
+        task.ChangeReason = reason;
+        task.ChangedBy = reviewerName;
+        await tasks.ReplaceAsync(taskId, task, ct);
     }
 }
 
@@ -146,3 +396,20 @@ public record TokenSummary(
     DateTime? RevokedAt,
     DateTime? LastSeenAt,
     bool IsActive);
+
+public record SubmitPlanRequest(
+    string TaskId,
+    string Title,
+    int? EstimateMinutes,
+    List<PlanStepInput>? Steps,
+    string? Notes);
+
+public record PlanStepInput(
+    string? Description,
+    int? EstimateMinutes);
+
+public record ApprovePlanRequest(string? Comment);
+
+public record RejectPlanRequest(string Comment);
+
+public record WorkQueueRow(TaskItem Task, AgentPlan? LatestPlan);

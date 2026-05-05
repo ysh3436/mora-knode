@@ -29,6 +29,12 @@ public class Resource
     // Null for humans.
     public string? AgentDescription { get; set; }
 
+    // Matrix axis 1: which functional org unit this resource reports into.
+    // Null = unassigned / floater (legitimate for contractors, agents not
+    // tied to a specific team, etc).
+    [BsonRepresentation(BsonType.ObjectId)]
+    public string? DepartmentId { get; set; }
+
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

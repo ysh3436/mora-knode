@@ -52,6 +52,46 @@ public static class ProjectEndpoints
             return Results.NoContent();
         });
 
+        // Project membership ops as separate sub-routes so the caller doesn't
+        // have to PUT the full Project body just to add or drop one member.
+        // Both endpoints are idempotent: re-adding an existing member is a
+        // no-op, removing a non-member returns the unchanged list.
+        group.MapPost("/{id}/members/{resourceId}", async (
+            string id,
+            string resourceId,
+            ProjectRepository projectRepo,
+            ResourceRepository resourceRepo,
+            CancellationToken ct) =>
+        {
+            var project = await projectRepo.GetAsync(id, ct);
+            if (project is null) return Results.NotFound();
+            var resource = await resourceRepo.GetAsync(resourceId, ct);
+            if (resource is null) return Results.BadRequest(new { error = $"Resource {resourceId} does not exist" });
+
+            if (!project.MemberResourceIds.Contains(resourceId))
+            {
+                project.MemberResourceIds.Add(resourceId);
+                await projectRepo.ReplaceAsync(id, project, ct);
+            }
+            return Results.Ok(project);
+        });
+
+        group.MapDelete("/{id}/members/{resourceId}", async (
+            string id,
+            string resourceId,
+            ProjectRepository projectRepo,
+            CancellationToken ct) =>
+        {
+            var project = await projectRepo.GetAsync(id, ct);
+            if (project is null) return Results.NotFound();
+
+            if (project.MemberResourceIds.Remove(resourceId))
+            {
+                await projectRepo.ReplaceAsync(id, project, ct);
+            }
+            return Results.Ok(project);
+        });
+
         return app;
     }
 }

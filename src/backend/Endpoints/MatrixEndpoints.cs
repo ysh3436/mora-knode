@@ -1,6 +1,7 @@
 using MoraKnode.Auth;
 using MoraKnode.Domain;
 using MoraKnode.Infrastructure;
+using MongoDB.Driver;
 
 namespace MoraKnode.Endpoints;
 
@@ -21,10 +22,14 @@ public static class MatrixEndpoints
         group.MapGet("/load", async (
             DateTime from,
             DateTime to,
+            string? departmentId,
+            string? projectId,
             ResourceRepository resources,
             AssignmentRepository assignments,
             TaskRepository taskRepo,
             WorkCalendarRepository calendarRepo,
+            DepartmentRepository departments,
+            ProjectRepository projects,
             UserContext userContext,
             CancellationToken ct) =>
         {
@@ -39,7 +44,29 @@ public static class MatrixEndpoints
             var (calendar, isFallback) = await calendarRepo.GetOrFallbackAsync(ct);
             var resourceList = await resources.ListAsync(ct);
 
-            // Non-admin → only the caller's own row.
+            // Matrix axis filters. departmentId picks up the whole subtree
+            // so filtering by an org root narrows to "everyone in that
+            // org chunk". projectId narrows to the project's explicit
+            // member list. Both filters compose (intersect) when both are
+            // present — e.g. "engineering people on project X".
+            if (!string.IsNullOrEmpty(departmentId))
+            {
+                var subtreeMembers = await departments.ResourceIdsInSubtreeAsync(departmentId, ct);
+                resourceList = resourceList.Where(r => subtreeMembers.Contains(r.Id)).ToList();
+            }
+            if (!string.IsNullOrEmpty(projectId))
+            {
+                var project = await projects.GetAsync(projectId, ct);
+                if (project is null)
+                    return Results.BadRequest(new { error = $"Project {projectId} does not exist" });
+                var memberSet = project.MemberResourceIds.ToHashSet();
+                resourceList = resourceList.Where(r => memberSet.Contains(r.Id)).ToList();
+            }
+
+            // Non-admin → only the caller's own row. Applied AFTER the
+            // department/project narrow so a developer asking for
+            // "department X" still gets just their own row even if their
+            // colleagues are in the same department.
             if (!userContext.IsAdmin && userContext.CurrentUser is not null)
             {
                 var meId = userContext.CurrentUser.Id;
@@ -106,7 +133,7 @@ public static class MatrixEndpoints
                         : 0;
                     days.Add(new ResourceLoadBucket(day, load, isWork && load > r.CapacityPercent, isWork));
                 }
-                return new ResourceLoad(r.Id, r.Name, r.Role, r.CapacityPercent, days);
+                return new ResourceLoad(r.Id, r.Name, r.Role, r.DepartmentId, r.CapacityPercent, days);
             }).ToList();
 
             return Results.Ok(new
@@ -132,5 +159,6 @@ public record ResourceLoad(
     string ResourceId,
     string ResourceName,
     string? ResourceRole,
+    string? DepartmentId,
     int CapacityPercent,
     List<ResourceLoadBucket> Days);

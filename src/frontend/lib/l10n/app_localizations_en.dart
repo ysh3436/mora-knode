@@ -858,4 +858,94 @@ class AppL10nEn extends AppL10n {
 
   @override
   String get plansRevertConfirmAction => 'Revert';
+
+  @override
+  String get auditSectionLead =>
+      'Every change to projects, tasks, and milestones in one place — status, IsWaiting, plan approve/reject/revert, and timeline edits are all logged automatically.';
+
+  @override
+  String get auditFilterAll => 'All';
+
+  @override
+  String get auditFilterTask => 'Tasks';
+
+  @override
+  String get auditFilterProject => 'Projects';
+
+  @override
+  String get auditFilterMilestone => 'Milestones';
+
+  @override
+  String auditLimitN(int n) {
+    return '$n per page';
+  }
+
+  @override
+  String get auditRefresh => 'Reload';
+
+  @override
+  String get auditEmptyTitle => 'No change history yet';
+
+  @override
+  String get auditEmptyHint =>
+      'Try changing the filter or raising the page size. New activity accumulates here automatically.';
+
+  @override
+  String auditCount(int n) {
+    return '$n entries';
+  }
+
+  @override
+  String get auditValueNone => '(none)';
+
+  @override
+  String get auditChangedByUnknown => '(unknown)';
+
+  @override
+  String auditEntityTaskUnknown(String id) {
+    return 'task $id (not found)';
+  }
+
+  @override
+  String auditEntityProjectUnknown(String id) {
+    return 'project $id (not found)';
+  }
+
+  @override
+  String auditEntityMilestone(String id) {
+    return 'milestone $id';
+  }
+
+  @override
+  String get auditFilterProjectScope => 'Project';
+
+  @override
+  String get auditFilterFrom => 'From';
+
+  @override
+  String get auditFilterTo => 'To';
+
+  @override
+  String get auditFilterClear => 'Clear filters';
+
+  @override
+  String auditPageRange(int first, int last, int total) {
+    return '$first–$last of $total';
+  }
+
+  @override
+  String auditPageOf(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get auditPagePrev => 'Previous page';
+
+  @override
+  String get auditPageNext => 'Next page';
+
+  @override
+  String auditCountOf(int n, int total) {
+    return 'Showing $n of $total';
+  }
 }

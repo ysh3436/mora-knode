@@ -846,4 +846,93 @@ class AppL10nKo extends AppL10n {
 
   @override
   String get plansRevertConfirmAction => '되돌리기';
+
+  @override
+  String get auditSectionLead =>
+      '프로젝트 / 업무 / 마일스톤의 모든 변경 자취를 한 곳에서 추적합니다. status, IsWaiting, plan 승인/반려/취소, 타임라인 수정 모두 자동 기록됩니다.';
+
+  @override
+  String get auditFilterAll => '전체';
+
+  @override
+  String get auditFilterTask => '업무';
+
+  @override
+  String get auditFilterProject => '프로젝트';
+
+  @override
+  String get auditFilterMilestone => '마일스톤';
+
+  @override
+  String auditLimitN(int n) {
+    return '$n개씩';
+  }
+
+  @override
+  String get auditRefresh => '다시 불러오기';
+
+  @override
+  String get auditEmptyTitle => '변경 이력이 없습니다';
+
+  @override
+  String get auditEmptyHint => '필터를 바꾸거나 항목 수를 늘려보세요. 작업이 진행되면서 자동으로 쌓입니다.';
+
+  @override
+  String auditCount(int n) {
+    return '총 $n건';
+  }
+
+  @override
+  String get auditValueNone => '(없음)';
+
+  @override
+  String get auditChangedByUnknown => '(알 수 없음)';
+
+  @override
+  String auditEntityTaskUnknown(String id) {
+    return 'task $id (찾을 수 없음)';
+  }
+
+  @override
+  String auditEntityProjectUnknown(String id) {
+    return 'project $id (찾을 수 없음)';
+  }
+
+  @override
+  String auditEntityMilestone(String id) {
+    return 'milestone $id';
+  }
+
+  @override
+  String get auditFilterProjectScope => '프로젝트';
+
+  @override
+  String get auditFilterFrom => '시작';
+
+  @override
+  String get auditFilterTo => '종료';
+
+  @override
+  String get auditFilterClear => '필터 지우기';
+
+  @override
+  String auditPageRange(int first, int last, int total) {
+    return '$first–$last / $total';
+  }
+
+  @override
+  String auditPageOf(int page, int total) {
+    return '$page / $total';
+  }
+
+  @override
+  String get auditPagePrev => '이전 페이지';
+
+  @override
+  String get auditPageNext => '다음 페이지';
+
+  @override
+  String auditCountOf(int n, int total) {
+    return '총 $total건 중 $n건 표시';
+  }
 }

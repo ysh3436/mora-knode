@@ -1668,6 +1668,150 @@ abstract class AppL10n {
   /// In en, this message translates to:
   /// **'Revert'**
   String get plansRevertConfirmAction;
+
+  /// No description provided for @auditSectionLead.
+  ///
+  /// In en, this message translates to:
+  /// **'Every change to projects, tasks, and milestones in one place — status, IsWaiting, plan approve/reject/revert, and timeline edits are all logged automatically.'**
+  String get auditSectionLead;
+
+  /// No description provided for @auditFilterAll.
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get auditFilterAll;
+
+  /// No description provided for @auditFilterTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get auditFilterTask;
+
+  /// No description provided for @auditFilterProject.
+  ///
+  /// In en, this message translates to:
+  /// **'Projects'**
+  String get auditFilterProject;
+
+  /// No description provided for @auditFilterMilestone.
+  ///
+  /// In en, this message translates to:
+  /// **'Milestones'**
+  String get auditFilterMilestone;
+
+  /// No description provided for @auditLimitN.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} per page'**
+  String auditLimitN(int n);
+
+  /// No description provided for @auditRefresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Reload'**
+  String get auditRefresh;
+
+  /// No description provided for @auditEmptyTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No change history yet'**
+  String get auditEmptyTitle;
+
+  /// No description provided for @auditEmptyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Try changing the filter or raising the page size. New activity accumulates here automatically.'**
+  String get auditEmptyHint;
+
+  /// No description provided for @auditCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{n} entries'**
+  String auditCount(int n);
+
+  /// No description provided for @auditValueNone.
+  ///
+  /// In en, this message translates to:
+  /// **'(none)'**
+  String get auditValueNone;
+
+  /// No description provided for @auditChangedByUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'(unknown)'**
+  String get auditChangedByUnknown;
+
+  /// No description provided for @auditEntityTaskUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'task {id} (not found)'**
+  String auditEntityTaskUnknown(String id);
+
+  /// No description provided for @auditEntityProjectUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'project {id} (not found)'**
+  String auditEntityProjectUnknown(String id);
+
+  /// No description provided for @auditEntityMilestone.
+  ///
+  /// In en, this message translates to:
+  /// **'milestone {id}'**
+  String auditEntityMilestone(String id);
+
+  /// No description provided for @auditFilterProjectScope.
+  ///
+  /// In en, this message translates to:
+  /// **'Project'**
+  String get auditFilterProjectScope;
+
+  /// No description provided for @auditFilterFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get auditFilterFrom;
+
+  /// No description provided for @auditFilterTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get auditFilterTo;
+
+  /// No description provided for @auditFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get auditFilterClear;
+
+  /// No description provided for @auditPageRange.
+  ///
+  /// In en, this message translates to:
+  /// **'{first}–{last} of {total}'**
+  String auditPageRange(int first, int last, int total);
+
+  /// No description provided for @auditPageOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{page} / {total}'**
+  String auditPageOf(int page, int total);
+
+  /// No description provided for @auditPagePrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous page'**
+  String get auditPagePrev;
+
+  /// No description provided for @auditPageNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next page'**
+  String get auditPageNext;
+
+  /// No description provided for @auditCountOf.
+  ///
+  /// In en, this message translates to:
+  /// **'Showing {n} of {total}'**
+  String auditCountOf(int n, int total);
 }
 
 class _AppL10nDelegate extends LocalizationsDelegate<AppL10n> {

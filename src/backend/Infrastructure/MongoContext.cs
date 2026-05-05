@@ -25,6 +25,7 @@ public class MongoContext
     public IMongoCollection<HolidaySource> HolidaySources => _db.GetCollection<HolidaySource>("holiday_sources");
     public IMongoCollection<HolidayCacheEntry> HolidayCache => _db.GetCollection<HolidayCacheEntry>("holiday_cache");
     public IMongoCollection<AppMeta> AppMeta => _db.GetCollection<AppMeta>("app_meta");
+    public IMongoCollection<AgentToken> AgentTokens => _db.GetCollection<AgentToken>("agent_tokens");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {
@@ -67,6 +68,20 @@ public class MongoContext
             new CreateIndexModel<Resource>(
                 Builders<Resource>.IndexKeys.Ascending(x => x.Name),
                 new CreateIndexOptions { Unique = true, Name = "uniq_resource_name" }),
+            cancellationToken: ct);
+
+        // AgentToken.TokenHashSha256 — unique on hash so a duplicate raw token
+        // (vanishingly unlikely with 32 random bytes, but cheap insurance)
+        // would surface as a write error rather than a silent collision.
+        await AgentTokens.Indexes.CreateOneAsync(
+            new CreateIndexModel<AgentToken>(
+                Builders<AgentToken>.IndexKeys.Ascending(x => x.TokenHashSha256),
+                new CreateIndexOptions { Unique = true, Name = "uniq_agent_token_hash" }),
+            cancellationToken: ct);
+        await AgentTokens.Indexes.CreateOneAsync(
+            new CreateIndexModel<AgentToken>(
+                Builders<AgentToken>.IndexKeys.Ascending(x => x.ResourceId),
+                new CreateIndexOptions { Name = "agent_token_resource" }),
             cancellationToken: ct);
     }
 

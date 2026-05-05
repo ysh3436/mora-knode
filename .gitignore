@@ -6,6 +6,9 @@ obj/
 *.userosscache
 *.sln.docstates
 
+# Local dev runtime artifacts (backend stdout, flutter run output)
+*.log
+
 # Local-only config override (per-worktree ports, Mongo DB names, etc).
 # Use appsettings.Local.example.json as the template.
 appsettings.Local.json

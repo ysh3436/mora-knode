@@ -34,6 +34,7 @@ builder.Services.AddSingleton<AppMetaRepository>();
 builder.Services.AddSingleton<AgentTokenRepository>();
 builder.Services.AddSingleton<DepartmentRepository>();
 builder.Services.AddSingleton<AgentPlanRepository>();
+builder.Services.AddSingleton<TaskCommentRepository>();
 builder.Services.AddHttpClient("ics");
 builder.Services.AddSingleton<IcsFetcherService>();
 builder.Services.AddSingleton<Seeder>();
@@ -78,6 +79,7 @@ app.MapMilestoneEndpoints();
 app.MapWorkCalendarEndpoints();
 app.MapHolidaySourceEndpoints();
 app.MapHolidayEndpoints();
+app.MapTaskCommentEndpoints();
 
 if (app.Environment.IsDevelopment())
 {

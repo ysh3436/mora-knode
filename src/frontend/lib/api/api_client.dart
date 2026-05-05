@@ -11,6 +11,7 @@ import '../models/milestone.dart';
 import '../models/project.dart';
 import '../models/resource.dart';
 import '../models/resource_load.dart';
+import '../models/task_comment.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
 import '../models/holiday.dart';
@@ -445,6 +446,35 @@ class ApiClient {
     if (to != null) query['to'] = to.toUtc().toIso8601String();
     final data = await _decode(await _http.get(_uri('/api/change-logs', query), headers: _headers()));
     return ChangeLogPage.fromJson(data as Map<String, dynamic>);
+  }
+
+  // --- Task comments ---
+  Future<List<TaskComment>> listTaskComments(String taskId) async {
+    final data = await _decode(
+        await _http.get(_uri('/api/tasks/$taskId/comments'), headers: _headers()));
+    return (data as List).cast<Map<String, dynamic>>().map(TaskComment.fromJson).toList();
+  }
+
+  Future<TaskComment> postTaskComment(String taskId, {required String body, String? kind}) async {
+    final data = await _decode(await _http.post(
+      _uri('/api/tasks/$taskId/comments'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode({'body': body, 'kind': kind}),
+    ));
+    return TaskComment.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<TaskComment> updateTaskComment(String id, {required String body, String? kind}) async {
+    final data = await _decode(await _http.put(
+      _uri('/api/comments/$id'),
+      headers: _headers(_jsonHeaders),
+      body: jsonEncode({'body': body, 'kind': kind}),
+    ));
+    return TaskComment.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteTaskComment(String id) async {
+    await _decode(await _http.delete(_uri('/api/comments/$id'), headers: _headers()));
   }
 }
 

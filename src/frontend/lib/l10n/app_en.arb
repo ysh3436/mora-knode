@@ -355,5 +355,13 @@
   "auditPagePrev": "Previous page",
   "auditPageNext": "Next page",
   "auditCountOf": "Showing {n} of {total}",
-  "@auditCountOf": { "placeholders": { "n": { "type": "int" }, "total": { "type": "int" } } }
+  "@auditCountOf": { "placeholders": { "n": { "type": "int" }, "total": { "type": "int" } } },
+
+  "matrixEmpty": "No resources to show.",
+  "matrixEmptyFiltered": "No resources match the selected filters.",
+  "matrixFilterDepartment": "Department",
+  "matrixFilterProject": "Project",
+  "matrixFilterAll": "All",
+  "matrixFilterClear": "Clear filters",
+  "matrixFilterActiveHint": "Filters active"
 }

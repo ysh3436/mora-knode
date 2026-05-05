@@ -322,5 +322,13 @@
   "auditPageOf": "{page} / {total}",
   "auditPagePrev": "이전 페이지",
   "auditPageNext": "다음 페이지",
-  "auditCountOf": "총 {total}건 중 {n}건 표시"
+  "auditCountOf": "총 {total}건 중 {n}건 표시",
+
+  "matrixEmpty": "표시할 리소스가 없습니다.",
+  "matrixEmptyFiltered": "선택한 필터에 해당하는 리소스가 없습니다.",
+  "matrixFilterDepartment": "부서",
+  "matrixFilterProject": "프로젝트",
+  "matrixFilterAll": "전체",
+  "matrixFilterClear": "필터 지우기",
+  "matrixFilterActiveHint": "필터 적용 중"
 }

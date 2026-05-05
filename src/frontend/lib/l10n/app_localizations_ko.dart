@@ -935,4 +935,25 @@ class AppL10nKo extends AppL10n {
   String auditCountOf(int n, int total) {
     return '총 $total건 중 $n건 표시';
   }
+
+  @override
+  String get matrixEmpty => '표시할 리소스가 없습니다.';
+
+  @override
+  String get matrixEmptyFiltered => '선택한 필터에 해당하는 리소스가 없습니다.';
+
+  @override
+  String get matrixFilterDepartment => '부서';
+
+  @override
+  String get matrixFilterProject => '프로젝트';
+
+  @override
+  String get matrixFilterAll => '전체';
+
+  @override
+  String get matrixFilterClear => '필터 지우기';
+
+  @override
+  String get matrixFilterActiveHint => '필터 적용 중';
 }

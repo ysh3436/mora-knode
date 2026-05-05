@@ -6,6 +6,7 @@ import '../models/agent.dart';
 import '../models/agent_plan.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
+import '../models/department.dart';
 import '../models/milestone.dart';
 import '../models/project.dart';
 import '../models/resource.dart';
@@ -293,15 +294,29 @@ class ApiClient {
   }
 
   // --- Matrix ---
-  Future<MatrixLoadResponse> matrixLoad({required DateTime from, required DateTime to}) async {
+  Future<MatrixLoadResponse> matrixLoad({
+    required DateTime from,
+    required DateTime to,
+    String? departmentId,
+    String? projectId,
+  }) async {
+    final query = <String, String>{
+      'from': from.toUtc().toIso8601String(),
+      'to': to.toUtc().toIso8601String(),
+    };
+    if (departmentId != null) query['departmentId'] = departmentId;
+    if (projectId != null) query['projectId'] = projectId;
     final data = await _decode(await _http.get(
-      _uri('/api/matrix/load', {
-        'from': from.toUtc().toIso8601String(),
-        'to': to.toUtc().toIso8601String(),
-      }),
+      _uri('/api/matrix/load', query),
       headers: _headers(),
     ));
     return MatrixLoadResponse.fromJson(data as Map<String, dynamic>);
+  }
+
+  // --- Departments ---
+  Future<List<Department>> listDepartments() async {
+    final data = await _decode(await _http.get(_uri('/api/departments'), headers: _headers()));
+    return (data as List).cast<Map<String, dynamic>>().map(Department.fromJson).toList();
   }
 
   // --- Milestones ---

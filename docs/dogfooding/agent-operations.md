@@ -25,10 +25,11 @@ mora-knode 는 매트릭스 PM 플랫폼이며, 외부 AI 에이전트가 [Agent
 4. **매트릭스 슬롯** — 가동률 카운트 대상에 포함
 
 ### 2.2 외부 도구 자유 선택
+- **CrewAI (현재 dogfooding 권장)** — VM 또는 OS 레벨에서 가볍게 핸들링만 담당. Manager / Developer / Researcher / QA 역할 정의, mora-knode 토큰으로 work-queue polling, 깊은 작업은 Codex / Claude Code CLI 를 subprocess 로 호출 (§8.2 의 Layer 1 패턴). CrewAI 자체는 토큰을 거의 안 씀
 - **Claude Code** — `.claude/agents/` 의 sub-agent 로 mora-knode 클라이언트 정의
 - **Cursor** — 자체 워크스페이스에서 mora-knode MCP 서버 연결
 - **자체 봇** — Python/Node/C# 등 자유. mora-knode REST API 만 호출하면 됨
-- **여러 도구 혼용** — Manager 는 Claude Code, Developer 는 Cursor, QA 는 자체 봇 — OK
+- **여러 도구 혼용** — Manager 는 CrewAI + Claude Code, Developer 는 Cursor, QA 는 자체 봇 — OK
 
 mora-knode 입장에서 모두 동등한 외부 클라이언트.
 
@@ -192,7 +193,7 @@ ysh 가 가진 자원 (Claude Pro / Cursor Pro / 여러 HW / 가상화 환경) �
 |---|---|
 | 특징 | 가벼움, 24/7 가동, 비용 거의 0 |
 | 역할 | mora-knode work-queue polling → claim → complexity 판단 → Layer 2 위임 → 결과 mora-knode 보고 |
-| 도구 후보 | 자체 Python 스크립트 / Cline / OpenHands / opencode / Claude Code sub-agent / GitHub Actions cron |
+| 도구 후보 | **CrewAI (현재 dogfooding 사용)** / 자체 Python 스크립트 / Cline / OpenHands / opencode / Claude Code sub-agent / GitHub Actions cron |
 
 기본 루프 (Python 예시):
 ```python
@@ -213,8 +214,8 @@ while True:
 | 도구 | 호출 방식 | 비용 |
 |---|---|---|
 | Claude Code (Claude Pro) | `subprocess.run(["claude", ...])` 또는 sub-agent | Claude Pro 정액 한도 안 (추가 비용 0) |
+| Codex (ChatGPT Pro) | `subprocess.run(["codex", ...])` | ChatGPT Pro 정액 한도 안 (추가 비용 0) |
 | Cursor (Cursor Pro) | CLI mode 또는 API | Cursor Pro 정액 한도 안 |
-| GPT-4 (사용자 키) | OpenAI API | 토큰당 비용 (사용자 책임) |
 | Gemini / 자체 모델 / Ollama | API 또는 local | 변동 / local 무료 |
 
 Layer 1 이 Layer 2 를 호출하는 인계 패턴 3 옵션 (사용자 자유):

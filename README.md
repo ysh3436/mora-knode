@@ -39,19 +39,29 @@ mora-knode does **not** call LLMs. It does **not** know which model your agent u
                   │  - audit trail          │
                   └────────────▲────────────┘
                                │ REST API + agent token
-              ┌────────────────┼────────────────┐
-              │                │                │
-       ┌──────┴──────┐  ┌──────┴──────┐  ┌──────┴──────┐
-       │ Claude Code │  │   Cursor    │  │  your bot   │
-       │  (Manager)  │  │ (Developer) │  │    (QA)     │
-       └─────────────┘  └─────────────┘  └─────────────┘
-            ↓                ↓                ↓
-        any LLM          any LLM         any tool
+                               │
+                  ┌────────────┴────────────┐
+                  │   CrewAI (orchestrator) │
+                  │   Manager / Developer / │
+                  │   Researcher / QA roles │
+                  └────────────┬────────────┘
+                               │ CLI invocation
+                  ┌────────────┴────────────┐
+                  │                         │
+                  ▼                         ▼
+            ┌───────────┐             ┌───────────┐
+            │  Codex    │             │ Claude    │
+            │  (CLI)    │             │ Code (CLI)│
+            └─────┬─────┘             └─────┬─────┘
+                  ↓                         ↓
+                 LLM                       LLM
 ```
 
-The maintainer (you) sits at the matrix board, approves plans, merges PRs. Agents poll the work queue and do the rest.
+The maintainer (you) sits at the matrix board, approves plans, merges PRs. **CrewAI** runs as a lightweight handler on a VM / OS — it owns the mora-knode agent token, polls the work-queue, claims tasks, dispatches the heavy coding work to a CLI tool, and reports results back. CrewAI itself burns almost no tokens; the actual model work happens inside the coding CLIs (**Codex** on a ChatGPT Pro plan, **Claude Code** on a Claude Pro plan), both running under existing Pro subscriptions for **zero additional per-task cost**.
 
-For the advanced **2-layer delegation pattern** — lightweight routers running 24/7 across multiple machines, delegating heavy work to BYOA tools like Claude Code (Pro subscription) — see [docs/dogfooding/agent-operations.md §8.2](docs/dogfooding/agent-operations.md).
+This is the current dogfooding setup. Because mora-knode is **LLM-/SDK-/runner-agnostic** ([ADR-005](docs/architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)), you can swap CrewAI for any other handler — what mora-knode sees is just an authenticated REST client.
+
+For the advanced **2-layer delegation pattern** — lightweight handlers (Layer 1) running 24/7 across multiple VMs / OS environments, delegating heavy work to coding CLIs (Layer 2) — see [docs/dogfooding/agent-operations.md §8.2](docs/dogfooding/agent-operations.md).
 
 ## Status
 

@@ -28,6 +28,7 @@ public class MongoContext
     public IMongoCollection<AgentToken> AgentTokens => _db.GetCollection<AgentToken>("agent_tokens");
     public IMongoCollection<Department> Departments => _db.GetCollection<Department>("departments");
     public IMongoCollection<AgentPlan> AgentPlans => _db.GetCollection<AgentPlan>("agent_plans");
+    public IMongoCollection<TaskComment> TaskComments => _db.GetCollection<TaskComment>("task_comments");
 
     public async Task EnsureIndexesAsync(CancellationToken ct = default)
     {
@@ -105,6 +106,17 @@ public class MongoContext
             new CreateIndexModel<AgentPlan>(
                 Builders<AgentPlan>.IndexKeys.Ascending(x => x.Status),
                 new CreateIndexOptions { Name = "agent_plan_status" }),
+            cancellationToken: ct);
+
+        // TaskComments — single hot read path is "all comments for this
+        // task, ordered by time", so a compound index on (taskId, createdAt)
+        // covers both filter and sort in one B-tree walk.
+        await TaskComments.Indexes.CreateOneAsync(
+            new CreateIndexModel<TaskComment>(
+                Builders<TaskComment>.IndexKeys
+                    .Ascending(x => x.TaskId)
+                    .Ascending(x => x.CreatedAt),
+                new CreateIndexOptions { Name = "task_comment_task_time" }),
             cancellationToken: ct);
     }
 

@@ -12,6 +12,7 @@ import '../../models/timeline.dart';
 import '../../state/providers.dart';
 import '../inline_date_range_popover.dart';
 import '../task_timeline_pickers.dart' show pickTimedTimeline;
+import 'task_comments_section.dart';
 
 /// Detail panel for a TaskInspection. Pulls from already-cached aggregated
 /// providers so opening the inspector does not trigger extra fetches.
@@ -115,6 +116,9 @@ class TaskInspectorPanel extends ConsumerWidget {
                 _ChildrenList(parentId: node.id, allGroups: groups),
                 const SizedBox(height: 16),
               ],
+              _SectionHeader(l.inspectorSectionComments),
+              TaskCommentsSection(taskId: taskId),
+              const SizedBox(height: 20),
               _SectionHeader(l.inspectorSectionRecentChanges),
               _ChangeLogList(taskId: taskId),
               const SizedBox(height: 16),

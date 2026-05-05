@@ -487,6 +487,79 @@ class AppL10nEn extends AppL10n {
   String get inspectorSectionRecentChanges => 'Recent changes';
 
   @override
+  String get inspectorSectionComments => 'Comments';
+
+  @override
+  String get commentsEmpty => 'No comments yet.';
+
+  @override
+  String get commentAddHint => 'Write a comment…';
+
+  @override
+  String get commentPostButton => 'Post';
+
+  @override
+  String get commentSavingHint => 'Uploading…';
+
+  @override
+  String get commentEdit => 'Edit';
+
+  @override
+  String get commentDelete => 'Delete';
+
+  @override
+  String get commentDeleteConfirmTitle => 'Delete this comment?';
+
+  @override
+  String get commentDeleteConfirmBody =>
+      'This comment will be permanently removed.';
+
+  @override
+  String get commentSaveButton => 'Save';
+
+  @override
+  String get commentCancelButton => 'Cancel';
+
+  @override
+  String get commentExpand => 'Expand';
+
+  @override
+  String get commentCollapse => 'Collapse';
+
+  @override
+  String get commentKindReview => 'review';
+
+  @override
+  String get commentKindBug => 'bug';
+
+  @override
+  String get commentKindQa => 'qa';
+
+  @override
+  String get commentKindNote => 'note';
+
+  @override
+  String get commentLoginRequired => 'Log in to post a comment.';
+
+  @override
+  String commentDeleteFailed(String error) {
+    return 'Delete failed: $error';
+  }
+
+  @override
+  String commentRelativeMinutes(int n) {
+    return '${n}m ago';
+  }
+
+  @override
+  String commentRelativeHours(int n) {
+    return '${n}h ago';
+  }
+
+  @override
+  String get commentRelativeJustNow => 'just now';
+
+  @override
   String get inspectorSectionStats => 'Stats';
 
   @override

@@ -1009,6 +1009,138 @@ abstract class AppL10n {
   /// **'Recent changes'**
   String get inspectorSectionRecentChanges;
 
+  /// No description provided for @inspectorSectionComments.
+  ///
+  /// In en, this message translates to:
+  /// **'Comments'**
+  String get inspectorSectionComments;
+
+  /// No description provided for @commentsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No comments yet.'**
+  String get commentsEmpty;
+
+  /// No description provided for @commentAddHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Write a comment…'**
+  String get commentAddHint;
+
+  /// No description provided for @commentPostButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Post'**
+  String get commentPostButton;
+
+  /// No description provided for @commentSavingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading…'**
+  String get commentSavingHint;
+
+  /// No description provided for @commentEdit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get commentEdit;
+
+  /// No description provided for @commentDelete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get commentDelete;
+
+  /// No description provided for @commentDeleteConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this comment?'**
+  String get commentDeleteConfirmTitle;
+
+  /// No description provided for @commentDeleteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This comment will be permanently removed.'**
+  String get commentDeleteConfirmBody;
+
+  /// No description provided for @commentSaveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get commentSaveButton;
+
+  /// No description provided for @commentCancelButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get commentCancelButton;
+
+  /// No description provided for @commentExpand.
+  ///
+  /// In en, this message translates to:
+  /// **'Expand'**
+  String get commentExpand;
+
+  /// No description provided for @commentCollapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get commentCollapse;
+
+  /// No description provided for @commentKindReview.
+  ///
+  /// In en, this message translates to:
+  /// **'review'**
+  String get commentKindReview;
+
+  /// No description provided for @commentKindBug.
+  ///
+  /// In en, this message translates to:
+  /// **'bug'**
+  String get commentKindBug;
+
+  /// No description provided for @commentKindQa.
+  ///
+  /// In en, this message translates to:
+  /// **'qa'**
+  String get commentKindQa;
+
+  /// No description provided for @commentKindNote.
+  ///
+  /// In en, this message translates to:
+  /// **'note'**
+  String get commentKindNote;
+
+  /// No description provided for @commentLoginRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Log in to post a comment.'**
+  String get commentLoginRequired;
+
+  /// No description provided for @commentDeleteFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete failed: {error}'**
+  String commentDeleteFailed(String error);
+
+  /// No description provided for @commentRelativeMinutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}m ago'**
+  String commentRelativeMinutes(int n);
+
+  /// No description provided for @commentRelativeHours.
+  ///
+  /// In en, this message translates to:
+  /// **'{n}h ago'**
+  String commentRelativeHours(int n);
+
+  /// No description provided for @commentRelativeJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get commentRelativeJustNow;
+
   /// No description provided for @inspectorSectionStats.
   ///
   /// In en, this message translates to:

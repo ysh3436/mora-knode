@@ -483,6 +483,78 @@ class AppL10nKo extends AppL10n {
   String get inspectorSectionRecentChanges => '최근 변경';
 
   @override
+  String get inspectorSectionComments => '코멘트';
+
+  @override
+  String get commentsEmpty => '아직 코멘트가 없습니다.';
+
+  @override
+  String get commentAddHint => '코멘트 작성…';
+
+  @override
+  String get commentPostButton => '작성';
+
+  @override
+  String get commentSavingHint => '업로드 중…';
+
+  @override
+  String get commentEdit => '수정';
+
+  @override
+  String get commentDelete => '삭제';
+
+  @override
+  String get commentDeleteConfirmTitle => '코멘트를 삭제할까요?';
+
+  @override
+  String get commentDeleteConfirmBody => '이 코멘트가 영구적으로 삭제됩니다.';
+
+  @override
+  String get commentSaveButton => '저장';
+
+  @override
+  String get commentCancelButton => '취소';
+
+  @override
+  String get commentExpand => '펼치기';
+
+  @override
+  String get commentCollapse => '접기';
+
+  @override
+  String get commentKindReview => '리뷰';
+
+  @override
+  String get commentKindBug => '버그';
+
+  @override
+  String get commentKindQa => 'QA';
+
+  @override
+  String get commentKindNote => '노트';
+
+  @override
+  String get commentLoginRequired => '로그인 후 코멘트를 작성할 수 있습니다.';
+
+  @override
+  String commentDeleteFailed(String error) {
+    return '삭제 실패: $error';
+  }
+
+  @override
+  String commentRelativeMinutes(int n) {
+    return '$n분 전';
+  }
+
+  @override
+  String commentRelativeHours(int n) {
+    return '$n시간 전';
+  }
+
+  @override
+  String get commentRelativeJustNow => '방금 전';
+
+  @override
   String get inspectorSectionStats => '통계';
 
   @override

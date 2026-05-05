@@ -13,6 +13,7 @@ import '../models/milestone.dart';
 import '../models/project.dart';
 import '../models/resource.dart';
 import '../models/resource_load.dart';
+import '../models/task_comment.dart';
 import '../models/task_hierarchy.dart';
 import '../models/task_item.dart';
 import '../models/work_calendar.dart';
@@ -210,6 +211,10 @@ final taskChangeLogsProvider = FutureProvider.family<List<ChangeLog>, String>((r
         limit: 50,
       );
   return page.rows;
+});
+
+final taskCommentsProvider = FutureProvider.family<List<TaskComment>, String>((ref, taskId) async {
+  return ref.watch(apiClientProvider).listTaskComments(taskId);
 });
 
 // --- Aggregated cross-project views ---

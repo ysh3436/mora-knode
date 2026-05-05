@@ -362,7 +362,10 @@ class _TaskRow extends StatelessWidget {
             color: isSelected ? theme.colorScheme.secondaryContainer.withValues(alpha: 0.5) : null,
             border: Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.3))),
           ),
-          padding: EdgeInsets.fromLTRB(12 + row.depth * 18.0, 0, 12, 0),
+          // Base 28 (vs project header chevron at 12) so a depth-0 task
+          // visibly sits *under* the project. Per-depth step is 18 — small
+          // enough that 4-deep trees still fit, large enough to read.
+          padding: EdgeInsets.fromLTRB(28 + row.depth * 18.0, 0, 12, 0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -713,7 +716,10 @@ class _StickyTaskRow extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: theme.dividerColor)),
           ),
-          padding: EdgeInsets.fromLTRB(12 + row.depth * 18.0, 0, 12, 0),
+          // Base 28 (vs project header chevron at 12) so a depth-0 task
+          // visibly sits *under* the project. Per-depth step is 18 — small
+          // enough that 4-deep trees still fit, large enough to read.
+          padding: EdgeInsets.fromLTRB(28 + row.depth * 18.0, 0, 12, 0),
           child: Row(
             children: [
               SizedBox(

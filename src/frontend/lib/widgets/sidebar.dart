@@ -84,7 +84,6 @@ class Sidebar extends ConsumerWidget {
                   icon: Icons.fact_check_outlined,
                   label: l.navPlans,
                   selected: section == AppSection.plans,
-                  badge: l.badgeM2,
                   onTap: () => ref.read(appSectionProvider.notifier).state = AppSection.plans,
                 ),
                 _NavItem(
@@ -121,7 +120,6 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final String? badge;
   final VoidCallback onTap;
 
   const _NavItem({
@@ -129,7 +127,6 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
-    this.badge,
   });
 
   @override
@@ -165,18 +162,6 @@ class _NavItem extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  if (badge != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        badge!,
-                        style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, color: theme.colorScheme.outline, height: 1.2),
-                      ),
-                    ),
                 ],
               ),
             ),

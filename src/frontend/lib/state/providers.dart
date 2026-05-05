@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/api_client.dart';
 import '../models/agent.dart';
+import '../models/agent_plan.dart';
 import '../models/assignment.dart';
 import '../models/change_log.dart';
 import '../models/holiday.dart';
@@ -111,6 +112,18 @@ final agentsProvider = FutureProvider<List<Resource>>((ref) async {
 final agentTokensProvider =
     FutureProvider.family<List<AgentTokenSummary>, String>((ref, agentId) async {
   return ref.watch(apiClientProvider).listAgentTokens(agentId);
+});
+
+/// Active filter on the plan review queue. PendingReview by default — the
+/// queue is "what needs my decision". User toggles to Approved / Rejected
+/// / null (all) to look back through history.
+final planReviewFilterProvider = StateProvider<PlanStatus?>((_) => PlanStatus.pendingReview);
+
+/// Plans matching the current filter. Re-fetched on filter change since
+/// the backend is doing the filtering anyway.
+final agentPlansProvider = FutureProvider<List<AgentPlan>>((ref) async {
+  final filter = ref.watch(planReviewFilterProvider);
+  return ref.watch(apiClientProvider).listAgentPlans(status: filter);
 });
 
 final assignmentsByTaskProvider = FutureProvider.family<List<Assignment>, String>((ref, taskId) async {

@@ -25,7 +25,7 @@ mora-knode 는 매트릭스 PM 플랫폼이며, 외부 AI 에이전트가 [Agent
 4. **매트릭스 슬롯** — 가동률 카운트 대상에 포함
 
 ### 2.2 외부 도구 자유 선택
-- **CrewAI (현재 dogfooding 권장)** — VM 또는 OS 레벨에서 가볍게 핸들링만 담당. Manager / Developer / Researcher / QA 역할 정의, mora-knode 토큰으로 work-queue polling, 깊은 작업은 Codex / Claude Code CLI 를 subprocess 로 호출 (§8.2 의 Layer 1 패턴). CrewAI 자체는 토큰을 거의 안 씀
+- **CrewAI (현재 dogfooding 권장)** — VM 또는 OS 레벨에서 가볍게 핸들링만 담당. **N개 인스턴스** 운영, 각 인스턴스는 **1개 CLI 와 1:1** (CrewAI A ↔ Codex, CrewAI B ↔ Claude Code 등). pod 단위로 VM / 컨테이너 / OS 분리 → test / dev / research 환경이 서로 간섭 없이 병렬 가동. mora-knode 토큰으로 work-queue polling, 깊은 작업은 짝 CLI 를 subprocess 로 호출 (§8.2 의 Layer 1 패턴). CrewAI 자체는 토큰을 거의 안 씀
 - **Claude Code** — `.claude/agents/` 의 sub-agent 로 mora-knode 클라이언트 정의
 - **Cursor** — 자체 워크스페이스에서 mora-knode MCP 서버 연결
 - **자체 봇** — Python/Node/C# 등 자유. mora-knode REST API 만 호출하면 됨
@@ -251,12 +251,14 @@ response = client.messages.create(model="claude-opus-4-7", ...)
 
 ysh 가 가진 환경별 Layer 1 분산 예시:
 
-| 환경 | Layer 1 인스턴스 (예시) | Layer 2 도구 (예시) |
+각 환경 = 한 pod = CrewAI 인스턴스 1개 + 짝 CLI 1개 (1:1).
+
+| 환경 | Layer 1 인스턴스 (예시) | Layer 2 도구 (예시, pod 마다 1개) |
 |---|---|---|
-| 노트북 (24/7) | `openclaw-laptop` (Manager 역할) | Claude Code (Claude Pro) |
-| 데스크탑 (낮 시간) | `openclaw-desktop` (Developer 역할) | Cursor (Cursor Pro) |
-| VM / 가상화 1 | `openclaw-vm-1` (QA 역할) | 자체 테스트 봇 (LLM 무관) |
-| VM / 가상화 2 | `openclaw-vm-2` (Researcher 역할) | Claude Code (다른 Pro 구독) |
+| 노트북 (24/7) | `crewai-laptop` (Manager 역할) | Claude Code (Claude Pro) |
+| 데스크탑 (낮 시간) | `crewai-desktop` (Developer 역할) | Codex (ChatGPT Pro) |
+| VM / 가상화 1 | `crewai-vm-1` (QA 역할) | 자체 테스트 봇 (LLM 무관) |
+| VM / 가상화 2 | `crewai-vm-2` (Researcher 역할) | Claude Code (다른 Pro 구독) |
 
 mora-knode 매트릭스에는 4개 agent identity 등록. work-queue 에 task 가 들어오면 *경쟁* — 먼저 claim 한 인스턴스가 가져감 (mora-knode 의 lock 메커니즘).
 

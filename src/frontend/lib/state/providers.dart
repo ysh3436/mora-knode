@@ -126,16 +126,89 @@ final agentPlansProvider = FutureProvider<List<AgentPlan>>((ref) async {
   return ref.watch(apiClientProvider).listAgentPlans(status: filter);
 });
 
+/// Audit page filter. All fields combine on the backend query — entity
+/// type, project scope, date range, and the page slice (offset/limit).
+/// Resetting [offset] to 0 on any *other* field change is the caller's
+/// responsibility (handled by the page-size / chip / picker handlers in
+/// audit_section.dart).
+class AuditFilter {
+  final ChangeEntityType? entityType;
+  final String? projectId;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final int limit;
+  final int offset;
+
+  const AuditFilter({
+    this.entityType,
+    this.projectId,
+    this.fromDate,
+    this.toDate,
+    this.limit = 100,
+    this.offset = 0,
+  });
+
+  AuditFilter copyWith({
+    Object? entityType = _sentinel,
+    Object? projectId = _sentinel,
+    Object? fromDate = _sentinel,
+    Object? toDate = _sentinel,
+    int? limit,
+    int? offset,
+  }) =>
+      AuditFilter(
+        entityType: identical(entityType, _sentinel) ? this.entityType : entityType as ChangeEntityType?,
+        projectId: identical(projectId, _sentinel) ? this.projectId : projectId as String?,
+        fromDate: identical(fromDate, _sentinel) ? this.fromDate : fromDate as DateTime?,
+        toDate: identical(toDate, _sentinel) ? this.toDate : toDate as DateTime?,
+        limit: limit ?? this.limit,
+        offset: offset ?? this.offset,
+      );
+
+  static const Object _sentinel = Object();
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AuditFilter &&
+          other.entityType == entityType &&
+          other.projectId == projectId &&
+          other.fromDate == fromDate &&
+          other.toDate == toDate &&
+          other.limit == limit &&
+          other.offset == offset);
+
+  @override
+  int get hashCode => Object.hash(entityType, projectId, fromDate, toDate, limit, offset);
+}
+
+final auditFilterProvider = StateProvider<AuditFilter>((_) => const AuditFilter());
+
+/// Paginated audit feed. Returns rows + total so the UI can render a
+/// "page X of Y" indicator without a second round-trip.
+final auditLogsProvider = FutureProvider<ChangeLogPage>((ref) async {
+  final filter = ref.watch(auditFilterProvider);
+  return ref.watch(apiClientProvider).listChangeLogs(
+        entityType: filter.entityType,
+        projectId: filter.projectId,
+        from: filter.fromDate,
+        to: filter.toDate,
+        offset: filter.offset,
+        limit: filter.limit,
+      );
+});
+
 final assignmentsByTaskProvider = FutureProvider.family<List<Assignment>, String>((ref, taskId) async {
   return ref.watch(apiClientProvider).listAssignments(taskId: taskId);
 });
 
 final taskChangeLogsProvider = FutureProvider.family<List<ChangeLog>, String>((ref, taskId) async {
-  return ref.watch(apiClientProvider).listChangeLogs(
+  final page = await ref.watch(apiClientProvider).listChangeLogs(
         entityType: ChangeEntityType.Task,
         entityId: taskId,
         limit: 50,
       );
+  return page.rows;
 });
 
 // --- Aggregated cross-project views ---

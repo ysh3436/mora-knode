@@ -18,4 +18,10 @@ public class Milestone
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    [BsonIgnore]
+    public string? ChangeReason { get; set; }
+
+    [BsonIgnore]
+    public string? ChangedBy { get; set; }
 }

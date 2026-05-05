@@ -404,11 +404,55 @@ class ApiClient {
   }
 
   // --- Change Logs ---
-  Future<List<ChangeLog>> listChangeLogs({ChangeEntityType? entityType, String? entityId, int limit = 100}) async {
-    final query = <String, String>{'limit': '$limit'};
+  /// Paginated change-log feed. Returns the rows for the requested
+  /// [offset, offset+limit) slice plus the total matching count so the
+  /// audit page can render "page X of Y". Filters compose: entityType
+  /// narrows by kind, entityId zooms to one entity, projectId scopes to
+  /// a project's tasks + milestones + the project itself, and from/to
+  /// gate by ChangedAt half-open range.
+  Future<ChangeLogPage> listChangeLogs({
+    ChangeEntityType? entityType,
+    String? entityId,
+    String? projectId,
+    DateTime? from,
+    DateTime? to,
+    int offset = 0,
+    int limit = 100,
+  }) async {
+    final query = <String, String>{
+      'limit': '$limit',
+      'offset': '$offset',
+    };
     if (entityType != null) query['entityType'] = entityType.name;
     if (entityId != null) query['entityId'] = entityId;
+    if (projectId != null) query['projectId'] = projectId;
+    if (from != null) query['from'] = from.toUtc().toIso8601String();
+    if (to != null) query['to'] = to.toUtc().toIso8601String();
     final data = await _decode(await _http.get(_uri('/api/change-logs', query), headers: _headers()));
-    return (data as List).cast<Map<String, dynamic>>().map(ChangeLog.fromJson).toList();
+    return ChangeLogPage.fromJson(data as Map<String, dynamic>);
   }
+}
+
+class ChangeLogPage {
+  final List<ChangeLog> rows;
+  final int total;
+  final int offset;
+  final int limit;
+
+  const ChangeLogPage({
+    required this.rows,
+    required this.total,
+    required this.offset,
+    required this.limit,
+  });
+
+  factory ChangeLogPage.fromJson(Map<String, dynamic> json) => ChangeLogPage(
+        rows: ((json['rows'] as List?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map(ChangeLog.fromJson)
+            .toList(),
+        total: ((json['total'] as num?) ?? 0).toInt(),
+        offset: ((json['offset'] as num?) ?? 0).toInt(),
+        limit: ((json['limit'] as num?) ?? 100).toInt(),
+      );
 }

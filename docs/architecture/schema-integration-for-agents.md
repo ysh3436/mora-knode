@@ -1,9 +1,14 @@
 # mora-knode 스키마 통합 계획 (외부 AI 에이전트 host 지원)
 
-- 상태: planned (2026-04-29 외부 에이전트 host 모델로 일반화 재작성)
-- 날짜: 2026-04-23 (최초), 2026-04-29 (재작성)
+- 상태: **shipped (2026-05-05)**
+- 날짜: 2026-04-23 (최초), 2026-04-29 (재작성), 2026-05-06 (shipped 표기)
 - 대상: mora-knode 의 C# 도메인 모델, Repository, Endpoint
 - 연관: [ADR-002 (Plan 게이트)](ADR-002-manager-approval-gate.md), [ADR-004 (Agent Identity & API)](ADR-004-agent-identity-and-api.md), [ADR-005 (LLM 비차별 원칙)](ADR-005-mora-knode-does-not-orchestrate-llms.md)
+
+> **Status: shipped (2026-05-05)** — 본 문서의 PR 1~6 설계는 9개 PR 로 분할되어 master 에 머지 완료.
+> 실제 구현 진실 원천은 mora-knode in-app project "mora-knode itself" 의 MK-75 자식 task 트리 (MK-76~87, MK-99).
+> 외부 에이전트가 호출할 API 의 정확한 사양은 [../api/external-agent-api.md](../api/external-agent-api.md) 참조.
+> 본 문서는 **설계 의도 / 트레이드오프 기록용** 으로 보존. 코드와 diff 가 발생할 경우 코드가 우선.
 
 ## 목적
 

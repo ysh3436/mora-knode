@@ -23,7 +23,7 @@
 - [x] 일정 변경 로깅 (`ScheduleChangeLog` 자동 기록) — `ChangeLogRepository`, 인스펙터 "변경 이력" 탭
 - [x] 간트차트 뷰 UI — virtual ±5y 스크롤, today highlight, holiday-aware, 일/주/월 줌, off-screen 화살표
 - [x] 마일스톤 관리 — backend CRUD (`MilestoneRepository`) + 캘린더 flag 아이콘 표시 (전용 관리 UI 는 M2 로 이동)
-- [x] **LICENSE 파일 commit** — AGPL v3 적용 완료 (2026-04-29, commit 247ef51)
+- [x] **LICENSE 파일 commit** — 초기 AGPL v3 (2026-04-29, commit 247ef51), 이후 All Rights Reserved 로 변경 (2026-05-06)
 - ~~매트릭스 리소스 매니저~~ → **M2 로 이동** (옵션 C: 외부 에이전트 합산을 처음부터 통합 설계)
 
 ### Phase 1 추가 완성 (계획 외 polish — dogfooding 중 누적, 2026-04-29 ~ 2026-05-01)
@@ -100,13 +100,13 @@ M2 dogfooding 시작 (5/22) 직전, 단일 self-hosted work stack (mongo + backe
 - [ ] `docker/` 디렉터리 신설 (backend.Dockerfile, docker-compose.yml — orchestrator Dockerfile 없음, ADR-005)
 - [ ] `docker compose up` 으로 mongo + backend end-to-end 환경 검증
 
-### Phase 3: 오픈소스 공개 (M3, 2026-08 이후) — partner 없는 단독 공개
-- [ ] AGPL v3 적용 + LICENSE / CONTRIBUTING.md / ROADMAP.md (non-goals 포함, ADR-005 강조)
-- [ ] README (영어 우선) + 3개월 dogfooding 메트릭 공개
+### Phase 3: M3 마감 정리 (2026-08 이후) — 라이센스 / 공개 정책 미정
+> 2026-05-06 결정: 초기 "M3 = AGPL v3 OSS 공개" 계획은 보류. 현재 라이센스는 All Rights Reserved (포트폴리오 / 리뷰 전용). 공개 / 라이센스 변경은 M5 시점 별도 결정.
+
+- [ ] 3개월 dogfooding 메트릭 정리 (사내 보고용)
+- [ ] CONTRIBUTING.md / ROADMAP.md 는 라이센스 정책 확정 후 작성
 - [ ] 1인 사례 시연 영상 1분 (한 사람이 4 에이전트와 매트릭스 운영)
-- [ ] Public 전환 + 유통 (HN Show HN, Indie Hackers, r/selfhosted, X)
-- [ ] 외부 에이전트 1차 issue triage (메인테이너 부담 통제)
-- [ ] M3 공개 후 60일 자동 점검 — 이슈 / PR 폭증 시 즉시 대응 (적합도 검토 §9.5)
+- [ ] (보류) Public OSS 전환 / 유통 채널 — M5 시점 라이센스 결정 후 재논의
 - [ ] **SSE push 모드 v2** — `GET /api/agents/work-queue/stream` (MongoDB Change Streams + replica set 전환, [../api/external-agent-api.md](../api/external-agent-api.md) §6)
 - [ ] **Email 알람 v3** — SMTP / SaaS 옵션, 공개 사용자 보편 채널 ([../api/external-agent-api.md](../api/external-agent-api.md) §7)
 

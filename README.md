@@ -75,6 +75,7 @@ For the advanced **2-layer delegation pattern** — lightweight handlers (Layer 
 - 🛠 **In development** — solo maintainer (ysh), private during dogfooding
 - **M1** (2026-05-07): MVP — CRUD + 3-level timeline + Gantt + change log — *essentially shipped*
 - **Phase 1.5** (shipped 2026-05-05): agent identity + token auth + plan gate + work-queue + matrix team layer (department / project members) + 9-step task lifecycle + unified change-history page
+- **Phase 2 infra** (shipping 2026-05-10): single self-hosted work stack (mongo + backend + frontend + Gitea) + AI agent pod base image + mora-knode API reference for external agents — see [ADR-010](docs/architecture/ADR-010-self-hosted-infra.md)
 - **M2** (2026-06-15): first dogfooding loop — register external agents, run a real task end-to-end through the plan gate, matrix utilization with mixed humans + agents
 - **M3** (2026-08): public open-source release with 3 months of dogfooding metrics
 - **M4** (2026-10): cloud hosted alpha
@@ -84,54 +85,84 @@ See [docs/planning/TODO.md](docs/planning/TODO.md) for the full roadmap.
 
 ## Quick Start
 
-Two paths: the **local dev** path works today; the **Docker** path lands at M3.
+Two paths: the **Docker work stack** is the primary path (matches what
+ysh dogfoods + what M3 ships). The **local dev** path is for fast
+inner-loop iteration on the mora-knode source itself.
 
-### Local development (today)
+### Docker work stack (recommended, today)
 
 ```bash
-# 1. Clone
 git clone <repo> mora-knode && cd mora-knode
+cp .env.example .env
+docker compose up -d
+```
 
-# 2. Start MongoDB
-#    src/backend/appsettings.Development.json points at
-#    mongodb://localhost:27017 — local mongod or Docker mongo:7 both fine.
+| Service  | URL                                       |
+|----------|-------------------------------------------|
+| frontend | http://localhost:8081                     |
+| backend  | http://localhost:5163  (`/health`)        |
+| Gitea    | http://localhost:3000  (open + create admin on first visit) |
+| mongo    | mongodb://localhost:27017                 |
 
-# 3. Backend (port 5163)
-cd src/backend && dotnet run
+First boot pulls images and builds the backend + frontend (~5–10 min).
+Subsequent ups reuse the cache. See [docker/README.md](docker/README.md)
+for env overrides, the host-mongod cutover procedure, and rollback
+steps.
 
-# 4. Frontend — separate terminal
+### Local dev (fast inner loop on mora-knode source)
+
+For rebuilding and re-running mora-knode itself faster than the Docker
+build cycle. Point the local `dotnet run` / `flutter run` at the
+docker mongo:
+
+```bash
+# 1. Make sure docker compose up is running (mongo at :27017).
+
+# 2. Backend on the host
+cd src/backend
+# (optional) cp appsettings.Local.example.json appsettings.Local.json
+#            and override MONGO_DB / port if you need a separate DB
+dotnet run
+
+# 3. Frontend on the host
 cd src/frontend && flutter run -d chrome
 ```
 
-The browser opens with the seed data loaded. Pick a dev user from the sidebar
-switcher to scope what you see — this is the placeholder until token auth
-arrives in M2.
-
-### Docker (M3)
-
-```bash
-docker compose up           # backend + Flutter Web on :5000
-```
-
-Lands when [`docker/`](docs/planning/TODO.md) is added in Phase 2 Stage 1.
+Pick a dev user from the sidebar switcher to scope what you see — this
+is the placeholder until you set up agent tokens in M2.
 
 ### BYOA setup (M2 preview)
 
 ```bash
 # Web UI → Agents → "+ Add"  (Name: manager-01, RBAC preset: Manager)
 # UI generates copy-pasteable env vars for Claude Code / Cursor / Python / curl.
-export MORA_KNODE_API_URL=http://localhost:5163
+export MORA_KNODE_API=http://localhost:5163
 export MORA_KNODE_AGENT_ID=...
 export MORA_KNODE_AGENT_TOKEN=...
+
+# Or run the agent inside an isolated container — same env vars, plus
+# host.docker.internal as the API host:
+docker build -t mora-agent-pod -f docker/agent-pod.Dockerfile .
+docker run -d --name pod-manager-a \
+  -e MORA_KNODE_API=http://host.docker.internal:5163 \
+  -e MORA_KNODE_AGENT_ID=... \
+  -e MORA_KNODE_AGENT_TOKEN=mk_... \
+  -e MORA_KNODE_AGENT_ROLE=manager \
+  -v "$PWD/worktree-a:/work" \
+  mora-agent-pod
+docker exec -it pod-manager-a bash
+# inside: mora-pod-scaffold --role manager  &&  npm install -g @anthropic-ai/claude-code
 ```
 
-See [docs/architecture/ADR-006-byoa-onboarding-ux.md](docs/architecture/ADR-006-byoa-onboarding-ux.md) for the onboarding UX spec, and [docs/dogfooding/agent-operations.md](docs/dogfooding/agent-operations.md) for the recommended operating patterns.
+See [docs/architecture/ADR-006-byoa-onboarding-ux.md](docs/architecture/ADR-006-byoa-onboarding-ux.md) for the onboarding UX spec, [docs/dogfooding/agent-operations.md](docs/dogfooding/agent-operations.md) for the recommended operating patterns, and [docker/agent-pod-README.md](docker/agent-pod-README.md) for the pod operator's quickstart.
 
 ## Verifying the agent flow (E2E)
 
-With the backend running, you can verify the plan-gate + work-queue loop:
+With the work stack running, you can verify the plan-gate + work-queue loop:
 
 ```bash
+# defaults to http://localhost:5163; override with MORA_KNODE_API to point
+# at a different stack (e.g. a remote LAN host).
 python tools/demo_agent_flow.py
 ```
 
@@ -180,6 +211,8 @@ CLAUDE.md          Project conventions
 | [ADR-008](docs/architecture/ADR-008-flutter-web-desktop-only.md) | Flutter Web desktop only |
 | [external-agent-api.md](docs/api/external-agent-api.md) | External agent REST API reference (v1) + operating model roadmap |
 | [agent-operations.md](docs/dogfooding/agent-operations.md) | External agent ops patterns (incl. 2-layer delegation) |
+| [agent-pod-README.md](docker/agent-pod-README.md) | Operator quickstart for the AI agent pod docker image |
+| [ADR-010](docs/architecture/ADR-010-self-hosted-infra.md) | Single self-hosted work stack + agent-pod isolation (this Phase 2 infra) |
 | [trends-fit-review](docs/research/2026-04-29-ai-agent-trends-fit-review.md) | Market positioning, risks, business model direction |
 
 ## Demo (planned for M3 release)

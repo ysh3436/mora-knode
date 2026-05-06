@@ -354,10 +354,18 @@ curl -X POST http://localhost:5163/api/agents \
 
 응답에서 `rawToken` 을 외부 도구 환경변수로:
 ```bash
-export MORA_KNODE_API_URL=http://localhost:5163
+# 같은 호스트
+export MORA_KNODE_API=http://localhost:5163
+# AI agent 가 docker container 안에 있다면:
+# export MORA_KNODE_API=http://host.docker.internal:5163
+# 다른 LAN 머신이라면:
+# export MORA_KNODE_API=http://192.168.x.x:5163
+
 export MORA_KNODE_AGENT_ID=<응답의 agent.id>
 export MORA_KNODE_AGENT_TOKEN=<응답의 rawToken>
 ```
+
+> AI agent 를 docker container 로 운영할 때는 [docker/agent-pod.Dockerfile](../../docker/agent-pod.Dockerfile) + [docker/agent-pod-README.md](../../docker/agent-pod-README.md) 참조. base image 가 entrypoint 에서 `MORA_KNODE_API` health check + token 검증을 자동 수행.
 
 ### 5.3 Phase 2 — work-queue polling
 

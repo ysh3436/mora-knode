@@ -59,6 +59,9 @@ M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../
 - [x] **PR 4**: `AgentEndpoints` 신설 + Program.cs 등록 — shipped (2aa654a, 8955308, 75e9c2f). Bearer + X-Agent-Id 실 검증 동작. 정확한 endpoint 사양은 [../api/external-agent-api.md](../api/external-agent-api.md). 일부 항목은 v2 예정 — claim/release lock, query filter, /api/agents/runs
 - [ ] **(검토 항목) MCP 서버 스캐폴딩** (적합도 검토 P0-1) — `tools/mora-knode-mcp/` 또는 `src/mcp-server/` 위치 결정. PR 4 의 API 표면 안정 후
 
+### Phase 2 — 인프라 선행 (2026-05-07 ~ 2026-05-10) — **MK-110 신규 root**
+M2 dogfooding 시작 (5/22) 직전, 단일 self-hosted work stack (mongo + backend + frontend + Gitea) + AI agent pod base image 셋업. host mongod 폐지 + cutover. ADR-010 결정. 자식 task: MK-110.1~110.7. 상세는 [ADR-010](../architecture/ADR-010-self-hosted-infra.md), [docker/README.md](../../docker/README.md), [docker/agent-pod-README.md](../../docker/agent-pod-README.md).
+
 ### Phase 2: 외부 에이전트 dogfooding 시뮬레이션 — M2 (2026-05-22 ~ 2026-06-15)
 **mora-knode 안에 외부 에이전트 코드를 만들지 않는다** ([ADR-005](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)). ysh 가 자기 외부 도구 (Claude Code / Cursor / 자체 봇) 로 에이전트를 운영하며 mora-knode API 를 사용. 권장 셋업은 [../dogfooding/agent-operations.md](../dogfooding/agent-operations.md).
 

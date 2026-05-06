@@ -22,7 +22,8 @@ from datetime import datetime
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 
 
 def request(method, path, *, body=None, headers=None, allow_status=None):

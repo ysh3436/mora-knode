@@ -16,7 +16,8 @@ import urllib.request
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 HUMAN_ID = "69f33ac19970f43fa673b115"
 
 # Tasks that have a clean copy in the v1 backup. Map by id so we can

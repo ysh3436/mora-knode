@@ -17,7 +17,8 @@ import urllib.request
 # print Korean titles + em-dashes without UnicodeEncodeError.
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 
 
 def get(path):

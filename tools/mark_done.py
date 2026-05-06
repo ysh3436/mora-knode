@@ -2,19 +2,22 @@
 cp949 hazard that mojibakes Korean titles on PUT round-trip.
 Usage: python tools/mark_done.py <taskId>"""
 import json
+import os
 import sys
 import urllib.request
+
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 
 if len(sys.argv) < 2:
     print("usage: python tools/mark_done.py <taskId>")
     sys.exit(2)
 
 tid = sys.argv[1]
-with urllib.request.urlopen(f"http://localhost:5163/api/tasks/{tid}") as r:
+with urllib.request.urlopen(f"{BASE}/api/tasks/{tid}") as r:
     task = json.loads(r.read())
 task["status"] = "Done"
 req = urllib.request.Request(
-    f"http://localhost:5163/api/tasks/{tid}",
+    f"{BASE}/api/tasks/{tid}",
     data=json.dumps(task, ensure_ascii=False).encode("utf-8"),
     method="PUT",
 )

@@ -1,96 +1,157 @@
-# Docker — coordination layer
+# Docker — work stack + agent pod
 
-Always-on stack that every AI worktree treats as ground truth. In-app
-tasks, agent tokens, plans, work-queue all live in **one** Mongo. The
-host's `dotnet run` / `flutter run` is still the fastest dev iteration
-loop; this stack is for "stable env to point my AI at" + sharing +
-eventual deployment.
+Two pieces, one workflow:
+
+1. **`docker-compose.yml`** spins up the **work stack** (mongo + backend +
+   frontend + Gitea). One stack, always-on, single source of truth for
+   in-app tasks / agent tokens / plans / git remote.
+2. **`agent-pod.Dockerfile`** builds the **AI agent pod** image — the
+   container an external agent (CrewAI + paired CLI) lives in. dev /
+   test isolation lives at the pod level, not in extra mora-knode
+   stacks. See [agent-pod-README.md](agent-pod-README.md).
+
+Both decisions are recorded in
+[ADR-010](../docs/architecture/ADR-010-self-hosted-infra.md).
 
 ## Quick start
 
 ```bash
-docker compose -f docker-compose.dev.yml up
+cp .env.example .env       # in the repo root, gitignored
+docker compose up -d
 ```
 
 When healthy:
-- frontend → http://localhost:8081
-- backend → http://localhost:5163
-- mongo → mongodb://localhost:27017
 
-First boot pulls images and builds the backend / frontend (5–10 min on
-slow links). Subsequent ups reuse the cache.
+| Service  | URL                                       |
+|----------|-------------------------------------------|
+| frontend | http://localhost:8081                     |
+| backend  | http://localhost:5163  (`/health` returns `{"status":"ok"}`) |
+| mongo    | mongodb://localhost:27017                 |
+| Gitea    | http://localhost:3000  (web), :2222 (ssh) |
 
-To rebuild after code changes:
-
-```bash
-docker compose -f docker-compose.dev.yml up --build
-```
-
-To stop and wipe DB:
+First boot pulls images and builds backend + frontend (~5–10 min on a
+slow link). Subsequent `up` cycles reuse the cache.
 
 ```bash
-docker compose -f docker-compose.dev.yml down -v
+docker compose up -d --build       # rebuild after code changes
+docker compose down                # stop, keep volumes
+docker compose down -v             # stop and wipe data — careful, work DB lives here
 ```
 
 ## Environment overrides
 
-Either set in your shell or drop them in `.env` next to `docker-compose.dev.yml`
-(gitignored — the example below is reference only):
+All runtime configuration flows through env vars. Edit `.env` in the
+repo root (gitignored — see `.env.example` for the template):
 
-| var              | default                       | meaning |
-|------------------|-------------------------------|---------|
-| `MONGO_DB`       | `mora_knode_dev`              | database name on the mongo instance |
-| `MONGO_PORT`     | `27017`                       | host port for mongo (change to run a second stack) |
-| `BACKEND_PORT`   | `5163`                        | host port for backend |
-| `FRONTEND_PORT`  | `8081`                        | host port for frontend |
-| `MORA_KNODE_API` | `http://localhost:5163`       | API base URL **baked into the frontend bundle at build time** — change it if hosting under a different domain |
+| var               | default                  | meaning |
+|-------------------|--------------------------|---------|
+| `MONGO_DB`        | `mora_knode_work`        | database name on the mongo instance |
+| `MONGO_PORT`      | `27017`                  | host port for mongo |
+| `BACKEND_PORT`    | `5163`                   | host port for backend |
+| `FRONTEND_PORT`   | `8081`                   | host port for frontend |
+| `GITEA_HTTP_PORT` | `3000`                   | host port for Gitea web / HTTP git |
+| `GITEA_SSH_PORT`  | `2222`                   | host port for Gitea SSH git |
+| `MORA_KNODE_API`  | `http://localhost:5163`  | API base URL **baked into the frontend bundle at build time** |
 
-Example `.env`:
+## Gitea — first-run setup
 
-```
-MONGO_DB=mora_knode_dev
-BACKEND_PORT=5163
-FRONTEND_PORT=8081
-```
-
-## Running a parallel test stack (preview)
-
-Once the work-queue endpoint lands (MK-82), each AI session can claim
-work from the coordination stack and run its own throwaway test
-environment alongside. The pattern:
+Gitea uses SQLite (volume `gitea-data`) — fine for a 1-person dogfooding
+loop. To upgrade later: stop the stack, swap the env to point at a
+postgres service, restore from backup. Out of scope for v1.
 
 ```bash
-# coordination (always on, real DB)
-docker compose -p main -f docker-compose.dev.yml up -d
+# 1. Open http://localhost:3000 in a browser → install screen.
+#    Defaults are mostly fine; pick your admin username + password.
 
-# isolated test stack — different project name + different ports + different DB
-MONGO_PORT=27018 BACKEND_PORT=5263 FRONTEND_PORT=8181 MONGO_DB=mora_knode_test_a \
-  docker compose -p test-a -f docker-compose.dev.yml up
+# 2. Create the mirror repo:
+#    UI → '+' → New repository → owner=<you>, name=mora-knode
+
+# 3. Add the local Gitea as a git remote and push:
+git remote add gitea http://localhost:3000/<you>/mora-knode.git
+git push gitea master
 ```
 
-`-p test-a` gives the second stack its own container/network/volume
-namespace so they don't collide with the main one.
+Gitea's HTTP API (port 3000) is enough for the dogfooding loop. SSH
+(port 2222) is provided for completeness but the Windows firewall may
+block it; HTTP works around this.
 
-## Why these specific images
+## Cutover — retiring the host mongod
 
-- **mongo:7** — matches the local dev convention. Volume `mongo-data`
-  persists across `up` cycles (use `down -v` to wipe).
-- **mcr.microsoft.com/dotnet/sdk:10.0 + aspnet:10.0** — multi-stage
-  build keeps the runtime image slim. `appsettings.Local.json` is
-  intentionally not copied; runtime config flows through env vars
-  (`Mongo__ConnectionString`, `ASPNETCORE_ENVIRONMENT`).
-- **ghcr.io/cirruslabs/flutter:stable** — official-ish flutter image
-  with the SDK preinstalled. The `MORA_KNODE_API` arg is baked at
-  *build time* because Flutter web reads `String.fromEnvironment` at
-  compile, not runtime.
-- **nginx:alpine** — tiny static server with SPA fallback (see
-  `nginx.conf`).
+If you used to run mongod directly on the host with a `mora_knode_dev`
+database, migrate it into the docker mongo as `mora_knode_work` once.
+This is a one-shot procedure, ~30 minutes. Roll-back is C.7 below.
 
-## What's NOT in this stack
+```powershell
+# C.1  preflight: confirm host mongod is up + dump
+mongosh --eval "db.runCommand({ping:1})"
+mongosh mora_knode_dev --eval "db.getCollectionNames().forEach(c => print(c, db[c].countDocuments()))"
+mkdir tools\backups\cutover-2026-05-NN
 
-- No reverse proxy / ingress — frontend hits backend on the host port
-  directly. Add a reverse proxy when you stop pointing dev browsers at
+# C.2  backup
+mongodump --db mora_knode_dev --out tools\backups\cutover-2026-05-NN\
+
+# C.3  free port 27017 + start docker mongo only
+net stop MongoDB
+copy .env.example .env
+docker compose up -d mongo
+docker compose ps          # mongo: healthy
+
+# C.4  restore into the docker mongo, renaming dev -> work
+mongorestore --port 27017 `
+  --nsInclude="mora_knode_dev.*" `
+  --nsFrom="mora_knode_dev.*" `
+  --nsTo="mora_knode_work.*" `
+  tools\backups\cutover-2026-05-NN\
+mongosh --port 27017 mora_knode_work --eval "db.getCollectionNames().forEach(c => print(c, db[c].countDocuments()))"
+
+# C.5  start the rest of the stack + verify data preserved
+docker compose up -d
+curl http://localhost:5163/health
+curl http://localhost:5163/api/projects | python -c "import json,sys; print([p['name'] for p in json.load(sys.stdin)])"
+# expect: 'mora-knode itself' is in the list
+
+# C.6  retire the host mongod permanently
+#      services.msc → MongoDB Server → Startup type = Disabled
+#      (do not uninstall — keep it as a fallback for a few weeks)
+
+# C.7  rollback (only if C.4 / C.5 fail)
+docker compose down
+net start MongoDB
+dotnet run --project src\backend
+```
+
+## Running an agent pod alongside
+
+Once the work stack is up and an agent identity has been issued in the
+mora-knode UI, build and run the pod image — see
+[agent-pod-README.md](agent-pod-README.md) for the full operator
+workflow. Short version:
+
+```bash
+docker build -t mora-agent-pod -f docker/agent-pod.Dockerfile .
+
+docker run -d --name pod-developer-a \
+  -e MORA_KNODE_API=http://host.docker.internal:5163 \
+  -e MORA_KNODE_AGENT_ID=<resource-id> \
+  -e MORA_KNODE_AGENT_TOKEN=mk_<...> \
+  -e MORA_KNODE_AGENT_ROLE=developer \
+  -v "$PWD/worktree-a:/work" \
+  mora-agent-pod
+```
+
+The pod's entrypoint validates the env, hits `$MORA_KNODE_API/health`,
+verifies the token, and points at `mora-pod-scaffold` for `/work`
+setup.
+
+## What this stack does NOT include
+
+- **Replica set / authentication on mongo** — local-dev defaults; do
+  not expose port 27017 outside the host without putting auth on first.
+- **CI / build pipeline** — not in scope until M3.
+- **Reverse proxy / TLS** — frontend hits backend on the host port
+  directly. Add a proxy when you stop pointing dev browsers at
   `localhost`.
-- No production-grade Mongo (no replica set, no auth) — this is a
-  development environment.
-- No CI integration — Phase 2+.
+- **dev / test stacks of mora-knode itself** — see ADR-010: isolation
+  for AI work moved to pod level (multiple `mora-agent-pod` containers
+  with different worktree mounts and prefix conventions in the work
+  DB) rather than spawning extra mora-knode stacks.

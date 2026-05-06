@@ -37,13 +37,21 @@ mora-knode 입장에서 모두 동등한 외부 클라이언트.
 
 ### 2.3 환경변수 (외부 도구 측 권장)
 ```
-MORA_KNODE_API_URL=http://localhost:5000
+MORA_KNODE_API=http://localhost:5163        # work stack on the same host
+# 컨테이너 안이라면:
+# MORA_KNODE_API=http://host.docker.internal:5163
+# 다른 LAN 머신이라면:
+# MORA_KNODE_API=http://192.168.x.x:5163
+
 MORA_KNODE_AGENT_ID=<agent identifier received at registration>
 MORA_KNODE_AGENT_TOKEN=<api token received at registration>
+
 # LLM 키는 외부 도구 자기 관리 — mora-knode 는 모름
 ANTHROPIC_API_KEY=...   # if using Claude
 OPENAI_API_KEY=...       # if using OpenAI
 ```
+
+> 참고: `tools/*.py` 도 동일하게 `MORA_KNODE_API` 환경변수를 읽는다 (없으면 `http://localhost:5163` default). worktree 별 다른 stack 가리킬 때 `$env:MORA_KNODE_API = "..."` 또는 `MORA_KNODE_API=... python tools/...` 로 override.
 
 ## 3. 권장 역할 분담 (강제 아님)
 
@@ -159,6 +167,8 @@ Manager 는 이 구조에 맞춰 제출, Developer 는 이 구조를 읽어 실�
 - 외부 도구 자체적으로 일일 비용 / 토큰 한도 / 자동 중단을 관리 (Claude Code 의 quota, OpenAI 의 budget alerts 등 활용)
 
 ## 8. ysh 의 dogfooding 셋업 예시
+
+> 본 §8 의 Layer 1 (CrewAI) / Layer 2 (paired CLI) 패턴은 [docker/agent-pod.Dockerfile](../../docker/agent-pod.Dockerfile) + [docker/agent-pod-README.md](../../docker/agent-pod-README.md) 의 실제 image 로 출발하면 가장 빠르다. base image 는 Debian + Python + Node + git + CrewAI 까지 사전 설치. 짝 CLI (Claude Code / Codex 등) 는 사용자 subscription 에 맞춰 pod 안에서 능동 설치 (ADR-005).
 
 ### 8.1 단순 셋업 (시작 단계, 단일 layer)
 

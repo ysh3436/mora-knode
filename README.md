@@ -178,6 +178,7 @@ CLAUDE.md          Project conventions
 | [ADR-005](docs/architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md) | Why mora-knode doesn't call LLMs |
 | [ADR-006](docs/architecture/ADR-006-byoa-onboarding-ux.md) | 5-minute BYOA setup UX |
 | [ADR-008](docs/architecture/ADR-008-flutter-web-desktop-only.md) | Flutter Web desktop only |
+| [external-agent-api.md](docs/api/external-agent-api.md) | External agent REST API reference (v1) + operating model roadmap |
 | [agent-operations.md](docs/dogfooding/agent-operations.md) | External agent ops patterns (incl. 2-layer delegation) |
 | [trends-fit-review](docs/research/2026-04-29-ai-agent-trends-fit-review.md) | Market positioning, risks, business model direction |
 

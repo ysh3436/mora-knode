@@ -7,6 +7,8 @@
 
 > **중요**: mora-knode 는 LLM·SDK·모델·키를 모른다 ([ADR-005](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)). 본 문서는 외부에서 자기 에이전트를 운영할 때의 권장 패턴이며, mora-knode 는 어떤 도구로 만들어진 에이전트든 받아준다.
 
+> 본 문서는 운영 패턴 (강제 아님). API 의 정확한 호출 사양 / 운영 모델 비교 / 우선순위·알람 로드맵은 [docs/api/external-agent-api.md](../api/external-agent-api.md) 참조.
+
 ## 1. 개요
 
 mora-knode 는 매트릭스 PM 플랫폼이며, 외부 AI 에이전트가 [Agent Identity & API](../architecture/ADR-004-agent-identity-and-api.md) 를 통해 1급 시민으로 일한다. 본 가이드는 다음을 다룬다:
@@ -47,14 +49,14 @@ OPENAI_API_KEY=...       # if using OpenAI
 
 Lean Logic — 작은 매트릭스에서 잘 작동했던 패턴. 매트릭스가 커지면 더 분화 가능.
 
-| 역할 | 책임 | 권장 모델 (예시, 자유) |
+| 역할 | 책임 | 자주 쓰는 조합 (참고용, 강제 아님) |
 |---|---|---|
 | Manager | task 분해, plan 작성, acceptance criteria 정의 | Opus 4.7 (`claude-opus-4-7`) — 추론 강도 우선 |
 | Developer | 승인된 plan 실행, 코드 작성, PR 생성 | Sonnet 4.6 (`claude-sonnet-4-6`) — 코드 처리량 우선 |
 | Researcher | 새 기술/API 탐색, 결과 plan context 로 첨부 | Haiku 4.5 또는 Sonnet 4.6 |
 | QA | PR 체크아웃, 테스트 실행, 버그 시 수정 task 생성 | Sonnet 4.6 |
 
-**모델 선택은 운영자 자유** — mora-knode 는 어느 모델을 썼는지 알지 못하며 추적도 안 함. 외부 도구가 자기 콘솔에서 관리.
+**모델 선택은 운영자 자유** — 위 표는 ysh 의 현재 셋업 예시일 뿐. mora-knode 는 어느 모델을 썼는지 알지 못하며 추적도 안 함 ([ADR-005](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)).
 
 ## 4. 권장 워크플로우
 
@@ -62,33 +64,41 @@ Lean Logic — 작은 매트릭스에서 잘 작동했던 패턴. 매트릭스�
 
 ```
 [사용자 또는 Manager 가 task 생성]
-   ↓ (TaskItem 생성, Status=NotStarted)
+   ↓ (TaskItem 생성, Status=Created)
 [Manager 가 plan v1 작성 후 mora-knode 에 제출]
-   ↓ POST /api/agents/plans/{taskId}/versions
-   ↓ (AgentPlanHistory 저장, Status → PlanReview)
-[리뷰어 (사람 또는 다른 에이전트) 가 검토]
-   ├─ approve → Status=PlanApproved → Developer 에이전트가 work-queue 에서 pull
-   ├─ revise  → Manager 가 v2 작성 → 다시 PlanReview
-   └─ reject  → Status=Cancelled
+   ↓ POST /api/agents/plans   (taskId 는 request body)
+   ↓ (AgentPlan 저장, Status=PendingReview, task.Status → PlanReview)
+[리뷰어 (Human/Manager/Reviewer 중 한 명) 가 검토]
+   ├─ approve → plan.Status=Approved, task.Status=InProgress
+   │            → Developer 에이전트가 work-queue 에서 pull
+   ├─ reject  → plan.Status=Rejected (comment 필수), task.Status=InProgress
+   │            → Manager 가 새 plan v2 제출 (이전 plan 보존)
+   └─ revert  → 검토 결정 무효화 (원 reviewer 또는 Manager), task.Status=PlanReview
 ```
 
+> 정확한 endpoint 사양 / 응답 형식 / 권한 매트릭스: [API 레퍼런스 §3.2](../api/external-agent-api.md)
+
 mora-knode 측 사양:
-- Manager 든 사용자든 *누가* 만든 plan 인지는 `AgentPlanHistory.CreatedBy` 에 식별자만 기록
-- 같은 task 의 여러 plan 버전을 보존 (revision 메트릭의 데이터 소스)
+- *누가* 만든 plan 인지는 `AgentPlan.SubmittedByResourceId` 에 식별자만 기록
+- 같은 task 의 여러 plan 버전을 보존 (revision 메트릭의 데이터 소스). plan 은 **수정 불가**, revise = 새 plan 제출
 - revision 5회 초과 시 "기획 난항" 경고 (mora-knode 가 발생, 사용자 직접 개입 필요)
 
 ### 4.2 Work-queue Pull 패턴 (Developer/QA 등)
 
 ```
-[Developer 에이전트 polling]
-   ↓ GET /api/agents/work-queue?role=Developer&status=PlanApproved
-[자기에게 할당된 PlanApproved task 1개 pull]
-   ↓ (mora-knode 가 lock 발급, Status → InProgress)
+[Developer 에이전트 polling, 30s~5m 간격]
+   ↓ GET /api/agents/work-queue   (v1: 자기에게 assigned 된 non-terminal task + latest plan)
+[클라이언트 사이드 우선순위 정렬 → 첫 task 선택]
+   ↓ (예: priority=Urgent → High → Normal, deadline tiebreaker)
+[plan.Status=Approved 인 task 만 작업 시작]
+   ↓ PUT /api/tasks/{taskId} { status: "InProgress", changeReason, changedBy }
 [plan 실행 — 코드 작성 / PR 생성]
-   ↓ POST /api/agents/runs (선택적: 자기 실행 메트릭 제출)
-[완료 또는 실패 보고]
-   ↓ PUT /api/tasks/{taskId} { Status=Done } 또는 PUT /api/agents/runs/{runId}/fail
+[완료 또는 핸드오프]
+   ↓ POST /api/tasks/{taskId}/comments  (PR URL / 결과 / 블로커 보고)
+   ↓ PUT /api/tasks/{taskId} { status: "WorkReview" }   (사람이 PR 검토)
 ```
+
+> v1 미구현 (v2 예정): query filter (`?role=`, `?status=`, `?sort=`), `claim/release` lock, `POST /api/agents/runs`. 자세한 트레이드오프와 도입 시점은 [API 레퍼런스 §6 / §8](../api/external-agent-api.md).
 
 ### 4.3 사용자 CLI (선택, 외부 도구 자유)
 

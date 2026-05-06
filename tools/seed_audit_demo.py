@@ -19,7 +19,8 @@ from datetime import datetime, timedelta
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 HUMAN_ID = "69f33ac19970f43fa673b115"  # ysh — change-log ChangedBy attribution
 
 

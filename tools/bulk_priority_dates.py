@@ -6,7 +6,8 @@ Idempotent — re-running just rewrites the same values.
 import json
 import urllib.request
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 
 
 def get_task(tid):

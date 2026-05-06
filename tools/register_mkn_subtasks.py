@@ -8,7 +8,8 @@ children, so guard with grep before re-running.
 import json
 import urllib.request
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 PROJECT_ID = "69f4404e24095755bdd41bdb"  # mora-knode itself
 PARENT_ID = "69f48856f97eed91f6c10eab"   # existing MK-N task
 

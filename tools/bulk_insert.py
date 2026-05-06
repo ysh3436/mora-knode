@@ -53,6 +53,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.request
@@ -203,7 +204,7 @@ def insert_task(
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("plan", help="JSON plan file")
-    ap.add_argument("--base-url", default="http://localhost:5163")
+    ap.add_argument("--base-url", default=os.environ.get("MORA_KNODE_API", "http://localhost:5163"))
     args = ap.parse_args()
 
     with open(args.plan, encoding="utf-8") as f:

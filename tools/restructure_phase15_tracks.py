@@ -27,7 +27,8 @@ import io
 
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-BASE = "http://localhost:5163"
+import os
+BASE = os.environ.get("MORA_KNODE_API", "http://localhost:5163")
 PROJECT_ID = "69f4404e24095755bdd41bdb"
 PARENT_ID = "69f4b3ef114fed107bb64afe"  # MK-75
 MK77 = "69f4b3ef114fed107bb64b00"

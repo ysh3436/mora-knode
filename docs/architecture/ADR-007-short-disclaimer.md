@@ -1,8 +1,8 @@
 # ADR-007: Short disclaimer for M3 public release — AI agent operation responsibility
 
-- 상태: Accepted
+- 상태: Partially superseded — **2026-05-06 license model revised: AGPL v3 → All Rights Reserved**. README License 섹션 / DISCLAIMER.md 의 라이센스 관련 문구는 ARR 로 갱신됨. AI 에이전트 운영 면책 (이 ADR 의 핵심) 은 그대로 유효. 본문에 남은 "AGPL §15–17", "M3 OSS 공개" 등은 작성 시점 결정 기록으로 보존
 - 날짜: 2026-04-29
-- 연관: [LICENSE (AGPL v3)](../../LICENSE), [DISCLAIMER.md](../../DISCLAIMER.md), [ADR-002](ADR-002-manager-approval-gate.md), [ADR-004](ADR-004-agent-identity-and-api.md), [ADR-005](ADR-005-mora-knode-does-not-orchestrate-llms.md)
+- 연관: [LICENSE](../../LICENSE), [DISCLAIMER.md](../../DISCLAIMER.md), [ADR-002](ADR-002-manager-approval-gate.md), [ADR-004](ADR-004-agent-identity-and-api.md), [ADR-005](ADR-005-mora-knode-does-not-orchestrate-llms.md)
 
 ## Context
 

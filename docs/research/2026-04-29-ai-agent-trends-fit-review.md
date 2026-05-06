@@ -1,5 +1,7 @@
 # Mora Knode — 외부 에이전트 host 카테고리 시장성 & 적합도 검토
 
+> **2026-05-06 갱신 노트**: 본 문서는 2026-04-29 작성 시점의 시장성 / 사업 모델 / 라이센스 가설 기록입니다. 이후 **2026-05-06 라이센스 모델이 AGPL v3 + open-core → All Rights Reserved 로 변경**되었으며, 이에 따라 §6.1 (오픈소스 라이선스 권장) / §7 (M3 OSS 공개 일정) / §8 (라이센스 commit 액션) 등의 결정은 보류 / 재검토 대상입니다. 본문은 작성 시점 결정 기록으로 보존.
+
 - 작성일: 2026-04-29 (전면 재작성)
 - 작성 맥락: 카테고리 재정의 ([ADR-005](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)) 후 시장성 / 사업 모델 / 일정 / 리스크를 깨끗한 가정 위에서 처음부터 분석
 - 워크스페이스 차원 요약: [../../../../planning/research/2026-04-29-ai-agent-trends-summary.md](../../../../planning/research/2026-04-29-ai-agent-trends-summary.md)

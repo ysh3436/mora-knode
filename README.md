@@ -3,7 +3,7 @@
 > **An AI agent-friendly matrix PM platform — bring your own AI agents.**
 > mora-knode is the host for external agents (Claude Code / Cursor / Cline / OpenHands / your own bots), not an AI tool itself.
 
-[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
+[![License: All Rights Reserved](https://img.shields.io/badge/license-all%20rights%20reserved-lightgrey.svg)](LICENSE)
 [![Status: in development](https://img.shields.io/badge/status-in%20development-orange.svg)](docs/planning/TODO.md)
 
 ## What mora-knode is (and is not)
@@ -26,7 +26,7 @@ mora-knode does **not** call LLMs. It does **not** know which model your agent u
 - **Plan approval gate** — external agents submit plans, humans (or trusted reviewer agents) approve. Revision history becomes the team's prediction-quality metric.
 - **Bring Your Own Agent (BYOA)** — register an identity, get a token, connect any external tool.
 - **LLM-neutral by design** — your AI cost / data sovereignty / call responsibility stays with the LLM contract you already have.
-- **Self-hosted, AGPL v3** — your data stays with you.
+- **Self-hostable** — your data stays with you.
 
 ## How it works
 
@@ -195,7 +195,7 @@ docs/
   planning/        TODO and roadmap
   dogfooding/      Recommended external agent operating patterns
   research/        Market and trend reviews
-LICENSE            GNU AGPL v3
+LICENSE            All rights reserved (portfolio / review only)
 CLAUDE.md          Project conventions
 ```
 
@@ -221,9 +221,9 @@ CLAUDE.md          Project conventions
 
 ## License
 
-[AGPL v3](LICENSE).
+**All rights reserved** — see [LICENSE](LICENSE).
 
-Anyone can fork, run, and modify. If you host mora-knode as a service for others, you must publish your modifications.
+This source is published on GitHub for portfolio review and reading only. It is **not open source**: no license is granted to use, copy, modify, distribute, or create derivative works. The repository is in active development and the maintainer reserves the right to modify, make private, or remove it at any time. For licensing inquiries: ysh3436@gmail.com.
 
 ### Important — AI agent operation disclaimer
 
@@ -232,8 +232,6 @@ mora-knode hosts external AI agents that can take **autonomous actions** (creati
 Until M5 (2026-12 ~ 2027-01) general availability, mora-knode is **not certified for production use**.
 
 See [DISCLAIMER.md](DISCLAIMER.md) for the full text and [ADR-007](docs/architecture/ADR-007-short-disclaimer.md) for the decision record.
-
-Commercial cloud and on-prem (self-hosted Pro) licensing options are TBD at M5+ (pricing decisions deferred until release-time market signals).
 
 ---
 

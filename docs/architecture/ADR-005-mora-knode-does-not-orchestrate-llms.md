@@ -1,6 +1,6 @@
 # ADR-005: mora-knode 는 LLM 을 오케스트레이션하지 않는다
 
-- 상태: Accepted
+- 상태: Accepted (LLM 비오케스트레이션 결정 자체는 유효). 단 본문의 "AGPL + open-core 정합" 언급은 작성 시점 (2026-04-29) 의 사업 모델 가설이며, **2026-05-06 라이센스 모델이 All Rights Reserved 로 변경되면서 이 부분의 전제는 더 이상 유효하지 않음**. 본 ADR 의 핵심 결정 (LLM 호출 / 모델 / SDK / 키 비차별) 은 라이센스와 무관하므로 그대로 유효
 - 날짜: 2026-04-29
 - 연관: [ADR-004 (Agent Identity & API)](ADR-004-agent-identity-and-api.md), [ADR-002 (Plan 게이트)](ADR-002-manager-approval-gate.md)
 

@@ -1,6 +1,6 @@
 # Disclaimer
 
-Mora Knode is provided as-is under [AGPL v3](LICENSE) §15–17 (warranty disclaimer and limitation of liability). This document supplements the license with operational disclaimers specific to the AI-agent host model — situations the AGPL (drafted in 2007) did not anticipate.
+Mora Knode is provided as-is. The source code is published for portfolio review only — see [LICENSE](LICENSE). This document supplements that notice with operational disclaimers specific to the AI-agent host model.
 
 ## 1. Autonomous AI agent actions
 
@@ -26,7 +26,7 @@ You are solely responsible for:
 
 ## 3. mora-knode's responsibility (limited)
 
-mora-knode is responsible — to the extent provided by AGPL v3 §15–17 — for the correctness of its orchestration logic: that the plan gate enforces approval, that RBAC denies unauthorized actions, that the audit trail records changes.
+To the limited extent any responsibility is asserted, it concerns only the correctness of mora-knode's own orchestration logic — that the plan gate enforces approval, that RBAC denies unauthorized actions, that the audit trail records changes. The source is otherwise published as-is, with no warranty of any kind.
 
 mora-knode is **not** responsible for:
 

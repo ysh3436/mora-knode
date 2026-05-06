@@ -102,19 +102,19 @@ public class Seeder
             Name = "ysh", Role = "Owner", CapacityPercent = 100,
             Kind = ResourceKind.Human, Rbac = RbacPreset.Manager
         }, ct);
-        var dohyun = await _resources.CreateAsync(new Resource
+        var alice = await _resources.CreateAsync(new Resource
         {
-            Name = "dohyun", Role = "Contributor", CapacityPercent = 100,
+            Name = "alice", Role = "Contributor", CapacityPercent = 100,
             Kind = ResourceKind.Human, Rbac = RbacPreset.Developer
         }, ct);
-        var mira = await _resources.CreateAsync(new Resource
+        var bob = await _resources.CreateAsync(new Resource
         {
-            Name = "mira", Role = "QA Lead", CapacityPercent = 80,
+            Name = "bob", Role = "QA Lead", CapacityPercent = 80,
             Kind = ResourceKind.Human, Rbac = RbacPreset.Reviewer
         }, ct);
-        var junho = await _resources.CreateAsync(new Resource
+        var carol = await _resources.CreateAsync(new Resource
         {
-            Name = "junho", Role = "Tester", CapacityPercent = 60,
+            Name = "carol", Role = "Tester", CapacityPercent = 60,
             Kind = ResourceKind.Human, Rbac = RbacPreset.QA
         }, ct);
         var dev01 = await _resources.CreateAsync(new Resource
@@ -291,8 +291,8 @@ public class Seeder
 
         // Frontend foundation: 3 revisions
         await BumpTimeline(t3, 6, "Riverpod scope expanded", "ysh");
-        await BumpTimeline(t3, 7, "Calendar grid added late", "dohyun");
-        await BumpTimeline(t3, 8, "Hot reload friction in week grid", "dohyun");
+        await BumpTimeline(t3, 7, "Calendar grid added late", "alice");
+        await BumpTimeline(t3, 8, "Hot reload friction in week grid", "alice");
 
         // 7. Assignments
         var assigns = new List<Assignment>();
@@ -316,20 +316,20 @@ public class Seeder
         assigns.Add(A(ysh, t17, 30, 13, 14));        // future commitment
         assigns.Add(A(ysh, t8, 50, 3, 8));           // bleeds into next week
 
-        // dohyun — moderate, no overlap on assigned dates
-        assigns.Add(A(dohyun, t9, 60, -1, 2));
-        assigns.Add(A(dohyun, t13, 50, -7, -2));
-        assigns.Add(A(dohyun, t15, 40, -3, 2));
-        assigns.Add(A(dohyun, t16, 50, 5, 13));      // future block
-        assigns.Add(A(dohyun, t3, 40, 0, 5));        // shares with ysh
+        // alice — moderate, no overlap on assigned dates
+        assigns.Add(A(alice, t9, 60, -1, 2));
+        assigns.Add(A(alice, t13, 50, -7, -2));
+        assigns.Add(A(alice, t15, 40, -3, 2));
+        assigns.Add(A(alice, t16, 50, 5, 13));      // future block
+        assigns.Add(A(alice, t3, 40, 0, 5));        // shares with ysh
 
-        // mira — light review work
-        assigns.Add(A(mira, t15, 20, -1, 2));
-        assigns.Add(A(mira, t18, 30, 15, 22));
+        // bob — light review work
+        assigns.Add(A(bob, t15, 20, -1, 2));
+        assigns.Add(A(bob, t18, 30, 15, 22));
 
-        // junho (QA, 60% capacity)
-        assigns.Add(A(junho, t13, 30, -4, -2));
-        assigns.Add(A(junho, t17, 60, 13, 14));
+        // carol (QA, 60% capacity)
+        assigns.Add(A(carol, t13, 30, -4, -2));
+        assigns.Add(A(carol, t17, 60, 13, 14));
 
         // dev-01 (agent, 100%)
         assigns.Add(A(dev01, t2, 50, -5, 1));

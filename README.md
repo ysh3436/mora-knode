@@ -1,5 +1,7 @@
 # Mora Knode
 
+> 🌐 English (current) · [한국어](README.ko.md)
+
 > **An AI agent-friendly matrix PM platform — bring your own AI agents.**
 > mora-knode is the host for external agents (Claude Code / Cursor / Cline / OpenHands / your own bots), not an AI tool itself.
 

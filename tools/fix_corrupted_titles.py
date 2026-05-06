@@ -22,7 +22,7 @@ HUMAN_ID = "69f33ac19970f43fa673b115"
 
 # Tasks that have a clean copy in the v1 backup. Map by id so we can
 # pull both Title and Description verbatim.
-BACKUP_FILE = "d:/NilPop/projects/mora-knode/tools/backups/tasks_pre_v2_20260501_160901.json"
+BACKUP_FILE = "tools/backups/tasks_pre_v2_20260501_160901.json"
 BACKUP_IDS = [
     "69f4badc114fed107bb64b0e",  # MK-82
     "69f4badc114fed107bb64b0f",  # MK-83

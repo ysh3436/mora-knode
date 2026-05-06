@@ -160,30 +160,30 @@
     },
     {
       "title": "Phase 2 확장 — Stage 1 (M2 이후)",
-      "description": "M2 dogfooding 에서 식별된 우선순위 폴리시 + 적합도 검토 (research/2026-04-29-ai-agent-trends-fit-review.md §8) 의 P0~P1 항목 채택. 항목별 우선순위는 시뮬레이션 결과 따라 조정.\n\nP0-N / P1-N 표기 = 적합도 검토 우선순위 등급 + 항목 번호. 각각 별도 PR 단위.",
+      "description": "M2 dogfooding 에서 식별된 우선순위 폴리시 + 적합도 검토 (research/2026-04-29-ai-agent-trends-fit-review.md §8) 항목 채택. 항목별 우선순위는 시뮬레이션 결과 따라 조정. 각각 별도 PR 단위.",
       "children": [
         {
-          "title": "MCP 서버 스캐폴딩 (P0-1)",
+          "title": "MCP 서버 스캐폴딩",
           "description": "외부 MCP client (Claude Desktop, Cursor 등) 가 mora-knode API 를 도구 (tool) 로 직접 호출할 수 있게 한다.\n\nMCP = Model Context Protocol. 표준화된 인터페이스로 LLM 클라이언트가 외부 도구를 호출. 스캐폴딩이 있으면 agent onboarding 이 \"환경변수 + 토큰 + sub-agent 정의\" 단계가 \"MCP server 등록\" 한 번으로 줄어 진입 장벽 대폭 낮아짐. Phase 1.5 의 위치 결정 task 의 후속 — 결정된 위치에 실제 MCP server 구현."
         },
         {
-          "title": "워크스페이스 .claude 공통 skill (P0-2)",
+          "title": "워크스페이스 .claude 공통 skill",
           "description": "mora-knode 운영 (task 작성 / agent 등록 / plan 검토 등) 을 NilPop 워크스페이스 공통 skill 로 추출.\n\n위치 — NilPop 루트의 .claude/skills/ (mora-knode 가 아닌 NilPop 전체 공통). 다른 NilPop 프로젝트도 같은 흐름 재사용 가능. 예: \"새 task 를 in-app 에 시드하는 skill\", \"agent 새로 등록하는 skill\" 등 ysh 가 자주 반복하는 흐름을 skill 화."
         },
         {
-          "title": "Conventional Commit 검증 hook (P0-3)",
+          "title": "Conventional Commit 검증 hook",
           "description": "CLAUDE.md 의 Conventional Commits 규약 (`<type>(<scope>): <subject>`) 을 commit-msg hook 으로 강제.\n\n자동 changelog / 일관된 히스토리 / dogfooding 시뮬레이션의 audit 가독성 모두 conventional commit 위에서 동작. 사람이든 agent 든 머지 직전에 자동 검증 — 어기면 commit 거부."
         },
         {
-          "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐 (P1-5)",
+          "title": "Manager 승인 게이트 UI 명시화 / PlanReview 큐",
           "description": "PlanReview status 인 task 들이 한 화면에 모이는 검토 큐.\n\nADR-002 의 승인 게이트가 UI 상에서 명시적으로 보이는 것이 핵심 — agent 가 늘어날수록 ysh 의 메인 작업 surface 가 됨. 사이드바의 \"Plans\" 섹션이 현재 placeholder (Coming) — 이 PR 로 실제 채움. 각 행에 plan 본문 미리보기 + approve / revise / reject 빠른 액션."
         },
         {
-          "title": "revision 횟수 가시화 (P1-6)",
+          "title": "revision 횟수 가시화",
           "description": "agent 의 plan 품질 (재시도 횟수) 을 인스펙터와 간트에서 한눈에.\n\n자주 revise 되는 task / agent 패턴이 발견되면 — 해당 agent 의 prompt / context 가 부족하거나 task description 이 불명확. 이 시그널로 Context Engine (P1-7) 또는 description 가이드 개선 같은 후속 작업 우선순위 결정."
         },
         {
-          "title": "Context Engine 최소 버전 (P1-7)",
+          "title": "Context Engine 최소 버전",
           "description": "agent 가 plan 제출 / work-queue claim 시점에 mora-knode 가 자동으로 관련 context 를 첨부해서 plan 품질을 끌어올린다.\n\n현재 agent 는 task 본문만 보고 plan 작성 — 인접 task / 관련 ADR / 변경 이력 / 코드 위치 등을 모르면 헛다리 plan 가능 (revision cycle 증가). Context Engine 은 mora-knode 가 알고 있는 관련 정보 (parent task, sibling titles, 최근 ChangeLog, 관련 마일스톤) 를 자동으로 묶어 첨부. 첫 버전은 단순 모음, 추후 코드 스니펫 / ADR 본문 / 인접 프로젝트 연결로 확장."
         },
         {

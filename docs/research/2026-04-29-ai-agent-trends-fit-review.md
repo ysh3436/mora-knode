@@ -9,7 +9,7 @@
 
 > 본 검토는 mora-knode 가 **"외부 AI 에이전트의 협업 host 인 매트릭스 PM 플랫폼"** 이라는 카테고리 정의 위에서 출발한다. mora-knode 는 LLM 을 호출하지 않으며 어떤 모델 / SDK / 키도 모른다 ([ADR-005](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)). 외부 에이전트는 mora-knode 가 발급한 ID / 토큰 / RBAC 으로 1급 시민으로 일한다 ([ADR-004](../architecture/ADR-004-agent-identity-and-api.md)).
 >
-> **운영 가정 (2026-04-29 결정)**: ysh 1인 솔로 개발, **design partner 모집 안 함**, 가격 / 비용 모델은 **M5 정식 출시 시점에 재검토**. 타겟만 회사 규모 (5~50명 매트릭스 SW 회사) 로 설계 / 검증.
+> **운영 가정 (2026-04-29 결정)**: 솔로 개발, 가격 / 비용 모델은 **M5 정식 출시 시점에 재검토**. 타겟은 매트릭스 기반 협업이 의미 있는 SW 팀.
 
 ---
 
@@ -18,7 +18,7 @@
 1. **카테고리**: 제3 카테고리 — Plane / Taskade (AI 내장) 와 Factory / IBM Bob (자체 SDLC 자동화) 사이의 *외부 에이전트 host*. GitHub ↔ Cursor 관계와 동형
 2. **트렌드 정합성**: MCP / A2A 표준화 / multi-agent specialist / human-in-the-loop 게이트는 강한 tailwind. "Agent SDK 채택 가속" 트렌드는 *의도적 비채택* — mora-knode 카테고리에 정확
 3. **시장 niche**: 직접 비교 도구 사실상 부재. 5-feature 교집합 first-mover, 시간 창 6~12 개월 — 단 평가는 자기 위주 편향 가능 (§4 비판 검토)
-4. **타겟**: 5~50명 매트릭스 SW 회사. ysh 솔로 dogfooding → M3 오픈소스 공개 → M5 정식 출시 까지 **외부 협업 / partner 없이 단독 진행**
+4. **타겟**: 매트릭스 기반 협업 SW 팀. 솔로 dogfooding → M3 오픈소스 공개 → M5 정식 출시 까지 단독 진행
 5. **사업 모델 방향 (참고)**: AGPL v3 + open-core + BYOA. **가격 / Tier 결정은 M5 (2026-12 ~ 2027-01) 정식 출시 시점에 재검토** — 지금은 미룸
 6. **일정**: M1 = 2026-05-07, M2 = 2026-06-15, M3 (오픈소스 공개) = 2026-08, M4 (cloud alpha) = 2026-10, M5 (정식 출시) = 2026-12 ~ 2027-01. PRD 일정 (M1 = 04-30) 은 5~10% 성공률
 7. **최우선 단기 액션**: P0-1 MCP 서버 스캐폴딩 + P0-4 LICENSE 사전 commit + P1-8 BYOA 온보딩 UX

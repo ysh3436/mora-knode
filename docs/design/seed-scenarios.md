@@ -70,14 +70,14 @@ timezone: Asia/Seoul
 | # | Name | Kind | RBAC | Capacity | Role hint | 비고 |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | **ysh** | Human | **Manager** | 100% | Owner | 1차 테스트 사용자, 전체 권한 ≈ Manager |
-| 2 | **dohyun** | Human | **Developer** | 100% | Contributor | 2차 테스트 사용자, 권한 제한 (plan approve 불가) |
-| 3 | **mira** | Human | **Reviewer** | 80% | QA Lead | 3번째 사람, plan 검토 전용 (편집 못함) |
-| 4 | **junho** | Human | **QA** | 60% | Tester | 검증 task 접근 |
+| 2 | **alice** | Human | **Developer** | 100% | Contributor | 2차 테스트 사용자, 권한 제한 (plan approve 불가) |
+| 3 | **bob** | Human | **Reviewer** | 80% | QA Lead | 3번째 사람, plan 검토 전용 (편집 못함) |
+| 4 | **carol** | Human | **QA** | 60% | Tester | 검증 task 접근 |
 | 5 | dev-01 | Agent | Developer | 100% | implementer | "Claude Code 기반 코드 작성 에이전트" |
 | 6 | researcher-01 | Agent | Manager | 100% | planner | "외부 자료 조사 + plan 제출" |
 | 7 | qa-01 | Agent | QA | 80% | tester | "회귀 시나리오 자동 실행" |
 
-→ 권한 시연 핵심: **ysh (Manager)** vs **dohyun (Developer)** 두 명을 dev-mode 사용자 스위처로 갈아끼우면서 동일 화면의 어포던스 차이 확인.
+→ 권한 시연 핵심: **ysh (Manager)** vs **alice (Developer)** 두 명을 dev-mode 사용자 스위처로 갈아끼우면서 동일 화면의 어포던스 차이 확인.
 
 ### 3.3 권한 표 (ADR-004 §3 발췌, UI 가시성에 그대로 반영)
 | 권한 / 가시성 | Manager | Reviewer | Developer | QA | Human(전체) |
@@ -91,7 +91,7 @@ timezone: Asia/Seoul
 | **태스크 가시 범위** | **전체** | **전체** | **할당된 것 + 그 조상** | **할당된 것 + 그 조상** | **전체** |
 | **매트릭스 행 가시 범위** | **전체** | **전체** | **본인 행만** | **본인 행만** | **전체** |
 
-→ **dohyun (Developer)** 로 로그인하면 plan approve 버튼 disabled / 숨김. WorkCalendar 설정 진입 막힘. 그리고 **할당이 없는 프로젝트는 좌측 sidebar 와 전체 뷰에 안 보임** — 단, 부모 task 는 자식이 할당되면 함께 보여서 컨텍스트 유지. **ysh (Manager)** 로 갈아타면 전부 보임.
+→ **alice (Developer)** 로 로그인하면 plan approve 버튼 disabled / 숨김. WorkCalendar 설정 진입 막힘. 그리고 **할당이 없는 프로젝트는 좌측 sidebar 와 전체 뷰에 안 보임** — 단, 부모 task 는 자식이 할당되면 함께 보여서 컨텍스트 유지. **ysh (Manager)** 로 갈아타면 전부 보임.
 
 ### 3.4 가시 범위 규칙 (View scoping)
 
@@ -109,11 +109,11 @@ timezone: Asia/Seoul
 
 **검증 시나리오:**
 - ysh (Manager) → 5 프로젝트 모두 보임, 30+ task 모두 보임, 매트릭스 7 행 모두 보임
-- dohyun (Developer) → ysh 가 dohyun 에게 client-acme #17 만 배정했다면, dohyun 에겐 client-acme 프로젝트와 task #17 + 그 부모만 보이고 다른 4개 프로젝트는 sidebar 에 없음
-- mira (Reviewer) → 전체 보임 (검토 권한)
-- junho (QA) → 본인 할당된 #19 만 + 부모
+- alice (Developer) → ysh 가 alice 에게 client-acme #17 만 배정했다면, alice 에겐 client-acme 프로젝트와 task #17 + 그 부모만 보이고 다른 4개 프로젝트는 sidebar 에 없음
+- bob (Reviewer) → 전체 보임 (검토 권한)
+- carol (QA) → 본인 할당된 #19 만 + 부모
 
-→ seed 데이터에서 dohyun 에겐 일부러 client-acme 와 internal-tools 의 일부 task 만 배정해서, 1차 시각 차이가 가장 크게 보이도록 한다.
+→ seed 데이터에서 alice 에겐 일부러 client-acme 와 internal-tools 의 일부 task 만 배정해서, 1차 시각 차이가 가장 크게 보이도록 한다.
 
 ### 3.5 Projects (5)
 | ID 슬러그 | Name | Status | Description |
@@ -160,9 +160,9 @@ timezone: Asia/Seoul
 
 **C. client-acme (10 tasks)** — milestone driven
 16. Phase 1: Discovery *(Done, L3 timed)*
-17. Phase 1: Design review *(InProgress, ysh 와 dohyun 둘 다 배정)*
+17. Phase 1: Design review *(InProgress, ysh 와 alice 둘 다 배정)*
 18. Phase 1: Implementation *(NotStarted, L2 +5..+13)*
-19. Phase 1: QA pass *(NotStarted, L2 +13..+14, junho QA 배정)*
+19. Phase 1: QA pass *(NotStarted, L2 +13..+14, carol QA 배정)*
 20. ... (총 10건 유사 분포)
 
 **D. spike-mcp (1 task)** — 거의 빈 프로젝트
@@ -178,9 +178,9 @@ timezone: Asia/Seoul
 오버로드 시나리오 의도적 삽입:
 - **ysh** : (오늘+0~+3) 누적 110% 초과 — 매트릭스 빨강 ⚠ 표시 검증
 - **dev-01** : (오늘-1~+1) 100% 정확 — 노랑 경계
-- **dohyun** : (오늘+5~+10) 50% 정도 — 초록 안전
-- **junho** : (오늘+13~+14) 60% — QA pass 단기 집중
-- **mira**, **researcher-01**, **qa-01** : 분산 배정
+- **alice** : (오늘+5~+10) 50% 정도 — 초록 안전
+- **carol** : (오늘+13~+14) 60% — QA pass 단기 집중
+- **bob**, **researcher-01**, **qa-01** : 분산 배정
 
 업무일 외 (Sat/Sun) 에는 의도적으로 배정 안 함 (WorkCalendar 검증).
 
@@ -223,9 +223,9 @@ UI 표기:
 Switch user (dev only)
 ─────────────────────
 ● ysh        Manager
-○ dohyun     Developer
-○ mira       Reviewer
-○ junho      QA
+○ alice     Developer
+○ bob       Reviewer
+○ carol      QA
 ```
 
 ## 5. 적재 방법
@@ -258,23 +258,23 @@ seed 적재 후 UI 가 다음을 보여줘야 (모두 표시되면 와이어프�
 - [ ] All work Gantt: Day / Week / Month 줌 모두 막대 그려짐. Day 줌에서 timed task 의 부분 폭 확인
 - [ ] All work Calendar Month: 종일 task 막대 + 시간 task ◷ 라벨 동시 보임
 - [ ] All work Calendar Week (b): 상단 all-day band + 시간대 grid 박스 동시 보임. 비업무일 컬럼 옅은 회색
-- [ ] Resource matrix (Manager): ysh ⚠ 빨강, dev-01 노랑, dohyun 초록, Sat/Sun 옅은 회색
+- [ ] Resource matrix (Manager): ysh ⚠ 빨강, dev-01 노랑, alice 초록, Sat/Sun 옅은 회색
 - [ ] Inspector — task: L1 종일 / L3 timed 두 표현 다른 것 확인
 - [ ] Inspector — change log: task #12 (Cron rollback) 에 5건 누적 보임
 - [ ] Milestones 섹션: 임박 / 지난 / 미래 모두 표시
 - [ ] Archived 프로젝트는 기본 필터에서 숨김 (토글로 표시)
 
-### 6.2 권한 어포던스 (ysh ↔ dohyun 전환)
+### 6.2 권한 어포던스 (ysh ↔ alice 전환)
 - [ ] **ysh (Manager)** 시점: "Approve plan" / "Reject" / "Revise" 버튼 활성, WorkCalendar 설정 진입 가능
-- [ ] **dohyun (Developer)** 시점: 같은 버튼들 disabled / 숨김. WorkCalendar 설정 진입 불가 (sidebar Settings 항목 자체 숨김)
+- [ ] **alice (Developer)** 시점: 같은 버튼들 disabled / 숨김. WorkCalendar 설정 진입 불가 (sidebar Settings 항목 자체 숨김)
 
-### 6.3 데이터 가시 범위 (ysh ↔ dohyun 전환)
+### 6.3 데이터 가시 범위 (ysh ↔ alice 전환)
 - [ ] **ysh (Manager)** : 좌측 sidebar 에 5 프로젝트 모두, 리소스 7명 모두, 매트릭스 7행 모두
-- [ ] **dohyun (Developer)** : 좌측 sidebar 에 본인 할당 있는 2~3 프로젝트만, 다른 프로젝트는 안 보임
-- [ ] **dohyun** : All work 에서 본인 task + 부모만, 형제 / 다른 갈래 안 보임. 부모는 read-only 표시 (편집 불가)
-- [ ] **dohyun** : Resource matrix 에 본인 1행만 표시
-- [ ] **dohyun** : Inspector 에서 같은 task 의 다른 assignee 는 익명 칩 (`👤 ✱`) 표시
-- [ ] **mira (Reviewer)** : 전체 가시 (검토 권한). 단 task 편집 / status 변경 어포던스는 비활성
+- [ ] **alice (Developer)** : 좌측 sidebar 에 본인 할당 있는 2~3 프로젝트만, 다른 프로젝트는 안 보임
+- [ ] **alice** : All work 에서 본인 task + 부모만, 형제 / 다른 갈래 안 보임. 부모는 read-only 표시 (편집 불가)
+- [ ] **alice** : Resource matrix 에 본인 1행만 표시
+- [ ] **alice** : Inspector 에서 같은 task 의 다른 assignee 는 익명 칩 (`👤 ✱`) 표시
+- [ ] **bob (Reviewer)** : 전체 가시 (검토 권한). 단 task 편집 / status 변경 어포던스는 비활성
 
 ## 7. 다음 단계
 1. 본 문서 검토 → 시나리오 양 / 케이스 추가/제거

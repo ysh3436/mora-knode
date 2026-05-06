@@ -11,14 +11,14 @@ Tree:
   QA
 
 Resource → department mapping:
-  ysh, dohyun → Frontend
+  ysh, alice → Frontend
   dev-01      → Backend
   researcher-01 → Research
-  mira, junho, qa-01 → QA
+  bob, carol, qa-01 → QA
 
 Project membership:
-  mora-knode itself: ysh, dohyun, dev-01, researcher-01, qa-01
-  [데모] NilPop internal tools: dohyun, mira
+  mora-knode itself: ysh, alice, dev-01, researcher-01, qa-01
+  [데모] NilPop internal tools: alice, bob
 
 Run with backend up at http://localhost:5163.
 """
@@ -97,11 +97,11 @@ def main():
     code, resources = request("GET", "/api/resources")
     mapping = [
         ("ysh", fe_id),
-        ("dohyun", fe_id),
+        ("alice", fe_id),
         ("dev-01", be_id),
         ("researcher-01", research_id),
-        ("mira", qa_id),
-        ("junho", qa_id),
+        ("bob", qa_id),
+        ("carol", qa_id),
         ("qa-01", qa_id),
     ]
     for name, dept_id in mapping:
@@ -122,8 +122,8 @@ def main():
     print("# 3. Assign resources to projects")
     code, projects = request("GET", "/api/projects")
     membership = [
-        ("mora-knode itself", ["ysh", "dohyun", "dev-01", "researcher-01", "qa-01"]),
-        ("[데모] NilPop internal tools", ["dohyun", "mira"]),
+        ("mora-knode itself", ["ysh", "alice", "dev-01", "researcher-01", "qa-01"]),
+        ("[데모] NilPop internal tools", ["alice", "bob"]),
     ]
     for proj_name, members in membership:
         proj = find_project(projects, proj_name)

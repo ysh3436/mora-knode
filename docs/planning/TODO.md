@@ -2,7 +2,7 @@
 
 - slug: mora-knode
 - 오너: ysh
-- 최종 수정: 2026-05-01 (M1 진행 상황 체크포인트 + in-app task 이관 시작)
+- 최종 수정: 2026-05-06 (Phase 1.5 shipped 반영 + API 레퍼런스 신설 + v2/v3 로드맵 정렬)
 
 > **추적 매체 변경 (2026-05-01)**: Phase 1.5 부터의 세부 항목은 mora-knode 자체 안의 프로젝트 **"mora-knode itself"** 의 task 로 이관되었습니다 (dogfooding). 본 파일은 phase / 마일스톤 overview 만 유지하고, 세부 진행은 in-app 에서 수정·추적합니다. 일괄 적재 도구: [tools/bulk_insert.py](../../tools/bulk_insert.py), 시드 plan: [plans/mora-knode-itself.json](../../plans/mora-knode-itself.json).
 - 관련: [../prd.md](../prd.md), [../architecture/ADR-002-manager-approval-gate.md](../architecture/ADR-002-manager-approval-gate.md), [../architecture/ADR-004-agent-identity-and-api.md](../architecture/ADR-004-agent-identity-and-api.md), [../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md](../architecture/ADR-005-mora-knode-does-not-orchestrate-llms.md)
@@ -54,24 +54,9 @@ M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../
   - `ResourceKind { Human, Agent }` 이미 정의됨
   - Frontend enum / l10n (ko/en) / status pill 색·라벨 / 아이콘 동기화 완료. Blocked 의미 강화 (차단 → 보류), Cancelled (취소) / Dropped (중단) 추가
   - `TaskHierarchyEndpoints.AggregateStatus` 도 새 status 들 인지 (terminal Cancelled/Dropped 는 부모 Done 집계에 포함, InReview 는 부모로 propagate)
-- [ ] **PR 2**: TaskItem / Resource 필드 추가
-  - `TaskItem`: `AcceptanceCriteria`, `Git`, `RetryCount`, `LastError`, `AssignedRoleHint`
-  - 신규 value type `GitInfo`
-  - `Resource`: `Kind`, `AgentDescription` (옛 `AgentModel` 도입 안 함 — ADR-005)
-  - MongoDB 누락 필드 null 직렬화 확인
-- [ ] **PR 3**: 신규 도메인 + Repository
-  - `AgentPlanHistory` (+ `PlanStatus` enum, `ApprovedBy` 포함)
-  - `AgentRun` (Token/Cost 모두 optional — ADR-005)
-  - `MongoContext` 컬렉션 핸들 추가
-  - `AgentPlanRepository`, `AgentRunRepository` 구현
-  - 인덱스: `agentPlans {taskId:1, version:-1}`, `agentRuns {taskId:1, startedAt:-1}`, `agentRuns {agentId:1, startedAt:-1}`
-- [ ] **PR 4**: `AgentEndpoints` 신설 + Program.cs 등록
-  - Agent identity / 토큰 / RBAC: `/api/agents`, `/api/agents/{id}/tokens`, `/api/agents/{id}/permissions`
-  - Plan 게이트: `/api/agents/plans/pending|{taskId}|approve|revise|reject|versions`
-  - Work-queue: `/api/agents/work-queue`, `/api/agents/work-queue/{id}/claim|release`
-  - 실행 메트릭 (optional): `/api/agents/runs`
-  - Bearer 토큰 + X-Agent-Id 헤더 검증 (M1 단계는 placeholder, M2 에서 실제 검증)
-  - 수동 curl 테스트 체크리스트
+- [x] **PR 2**: TaskItem / Resource 필드 추가 — shipped (Resource.Kind: fa8ef8e, AgentDescription / GitInfo / AcceptanceCriteria 등은 in-app MK-76~80 으로 분할 머지)
+- [x] **PR 3**: 신규 도메인 + Repository — shipped (2aa654a feat(agents): plan gate + work-queue, AgentPlan + AgentToken + Repository + 인덱스)
+- [x] **PR 4**: `AgentEndpoints` 신설 + Program.cs 등록 — shipped (2aa654a, 8955308, 75e9c2f). Bearer + X-Agent-Id 실 검증 동작. 정확한 endpoint 사양은 [../api/external-agent-api.md](../api/external-agent-api.md). 일부 항목은 v2 예정 — claim/release lock, query filter, /api/agents/runs
 - [ ] **(검토 항목) MCP 서버 스캐폴딩** (적합도 검토 P0-1) — `tools/mora-knode-mcp/` 또는 `src/mcp-server/` 위치 결정. PR 4 의 API 표면 안정 후
 
 ### Phase 2: 외부 에이전트 dogfooding 시뮬레이션 — M2 (2026-05-22 ~ 2026-06-15)
@@ -88,6 +73,10 @@ M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../
   - 간트 / audit / revision 메트릭 확인
 - [ ] 2주 시뮬레이션 운용 (5개 프로젝트 / 50개 태스크 목표)
 - [ ] 시뮬레이션 안정화 (3회 연속 성공)
+- [ ] **(v2 검토 트리거 모니터링)** 본 phase 운영 중 다음 신호 관찰 — [../api/external-agent-api.md](../api/external-agent-api.md) §6/§7/§8 의 도입 트리거 표 기반:
+  - polling 지연 (30s~5m) 으로 사람 검토 사이클 병목 → SSE push (M3 직전) 트리거
+  - plan 이 검토 안 되고 쌓임 → Slack webhook (M2 후반) 트리거
+  - 같은 task 를 2 에이전트가 동시 시도 → 옵션 B 서버 정렬 query 또는 옵션 C claim lock 트리거
 
 ### Phase 2 확장 (Stage 1, M2 이후)
 - [ ] 적합도 검토 P0~P1 채택 결정 — [../research/2026-04-29-ai-agent-trends-fit-review.md](../research/2026-04-29-ai-agent-trends-fit-review.md) §8
@@ -103,7 +92,8 @@ M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../
   - "Runs" 탭 (선택적 토큰/비용 표시)
   - 매트릭스 리소스 매니저 에이전트 아이콘
   - **Agent 관리 화면** ([ADR-006](../architecture/ADR-006-byoa-onboarding-ux.md)) — UI form 등록 / 토큰 발급 / RBAC 5 프리셋 / 환경변수 자동 generator (Claude Code / Cursor / Python / curl) / 5분 셋업 UX 목표
-- [ ] Human-in-the-loop 알림 (Slack / 이메일)
+- [ ] Human-in-the-loop 알림 — **Slack webhook v2** (M2 후반, 1 day, [../api/external-agent-api.md](../api/external-agent-api.md) §7)
+- [ ] **서버 정렬 query (옵션 B)** 도입 결정 — `GET /api/agents/work-queue?sort=priority|deadline|blocked` (~0.5 day, [../api/external-agent-api.md](../api/external-agent-api.md) §8)
 - [ ] `docker/` 디렉터리 신설 (backend.Dockerfile, docker-compose.yml — orchestrator Dockerfile 없음, ADR-005)
 - [ ] `docker compose up` 으로 mongo + backend end-to-end 환경 검증
 
@@ -114,17 +104,22 @@ M1 완성 직후. 상세: [../architecture/schema-integration-for-agents.md](../
 - [ ] Public 전환 + 유통 (HN Show HN, Indie Hackers, r/selfhosted, X)
 - [ ] 외부 에이전트 1차 issue triage (메인테이너 부담 통제)
 - [ ] M3 공개 후 60일 자동 점검 — 이슈 / PR 폭증 시 즉시 대응 (적합도 검토 §9.5)
+- [ ] **SSE push 모드 v2** — `GET /api/agents/work-queue/stream` (MongoDB Change Streams + replica set 전환, [../api/external-agent-api.md](../api/external-agent-api.md) §6)
+- [ ] **Email 알람 v3** — SMTP / SaaS 옵션, 공개 사용자 보편 채널 ([../api/external-agent-api.md](../api/external-agent-api.md) §7)
 
 ### Phase 4: cloud alpha (M4, 2026-10 이후)
 - [ ] SSO (SAML / OIDC) 통합
 - [ ] cloud hosted alpha
-- [ ] PR 6 (선택): Push 모드 (Change Streams 기반 work-queue stream)
+- [ ] ~~PR 6 (선택): Push 모드~~ → M3 직전 SSE 로 흡수됨 (위 Phase 3 항목)
+- [ ] **Generic webhook v4** — `POST /api/agents/{id}/webhooks` 등록 + CloudEvents 형식, Slack / Email 의 generic 화 ([../api/external-agent-api.md](../api/external-agent-api.md) §7)
+- [ ] **claim lock + lease v3** — 5+ 에이전트 race 안전, atomic findAndUpdate ([../api/external-agent-api.md](../api/external-agent-api.md) §8 옵션 C)
 - [ ] 데이터 마이그레이션 어댑터 (Jira / Notion / Linear import) — ADR-009 결정 시
 
 ### Phase 5: 정식 출시 (M5, 2026-12 ~ 2027-01)
 - [ ] **가격 / 비용 / Tier 모델 재검토** (적합도 검토 §5.1) — GitHub 별 / 사용자 피드백 / 외부 변수 보고 결정
 - [ ] license-client 통합 (Enterprise self-hosted Pro) — 가격 결정 후
 - [ ] Team / Business tier cloud 출시 — 가격 결정 후
+- [ ] **gRPC streaming 검토** — Cursor / IDE extension / native client 사용자 다수 시 ([../api/external-agent-api.md](../api/external-agent-api.md) §6)
 
 ## 테스트 / 운영 공통 태스크
 - [ ] 단위 테스트 (C# xUnit, Flutter widget test)

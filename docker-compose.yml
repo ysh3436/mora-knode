@@ -1,0 +1,81 @@
+# mora-knode work stack — single source of truth for in-app tasks, agent
+# tokens, plans, work-queue + Gitea git remote + (optional) ysh-facing UI.
+# AI agent isolation lives outside this file (see docker/agent-pod.Dockerfile).
+#
+# Quick start:
+#   cp .env.example .env
+#   docker compose up -d
+#
+# Env (override in .env or shell):
+#   MONGO_DB         default mora_knode_work
+#   MONGO_PORT       default 27017   (host bind; close in production for safety)
+#   BACKEND_PORT     default 5163
+#   FRONTEND_PORT    default 8081
+#   GITEA_HTTP_PORT  default 3000
+#   GITEA_SSH_PORT   default 2222
+#   MORA_KNODE_API   default http://localhost:5163  (frontend build-time)
+
+name: mora-knode
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Mongo__ConnectionString=mongodb://mongo:27017
+      - Mongo__Database=${MONGO_DB:-mora_knode_work}
+    ports:
+      - "${BACKEND_PORT:-5163}:5163"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        MORA_KNODE_API: ${MORA_KNODE_API:-http://localhost:5163}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8081}:80"
+
+  gitea:
+    image: gitea/gitea:1
+    restart: unless-stopped
+    environment:
+      - USER_UID=1000
+      - USER_GID=1000
+      - GITEA__database__DB_TYPE=sqlite3
+      - GITEA__server__DOMAIN=localhost
+      - GITEA__server__ROOT_URL=http://localhost:${GITEA_HTTP_PORT:-3000}/
+      - GITEA__server__SSH_DOMAIN=localhost
+      - GITEA__server__SSH_PORT=${GITEA_SSH_PORT:-2222}
+    volumes:
+      - gitea-data:/data
+    ports:
+      - "${GITEA_HTTP_PORT:-3000}:3000"
+      - "${GITEA_SSH_PORT:-2222}:22"
+
+volumes:
+  mongo-data:
+  gitea-data:

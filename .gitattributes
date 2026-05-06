@@ -1,0 +1,30 @@
+# Keep line endings predictable across Windows / Linux / macOS.
+# Container shell scripts and docker-compose YAML must stay LF.
+
+* text=auto eol=lf
+
+*.cs    text eol=lf
+*.cshtml text eol=lf
+*.csproj text eol=lf
+*.dart  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sh    text eol=lf
+*.py    text eol=lf
+*.conf  text eol=lf
+Dockerfile* text eol=lf
+
+*.bat   text eol=crlf
+*.ps1   text eol=crlf
+
+*.dll   binary
+*.exe   binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary

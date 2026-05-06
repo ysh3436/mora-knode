@@ -1,0 +1,49 @@
+# CrewAI task patterns for the mora-knode pod loop.
+# Sample / starting point — adjust expected_output to match your style.
+#
+# These are the abstract "what to do per poll cycle" tasks; the actual
+# work-queue rows from mora-knode are passed in as context at runtime
+# (see main.py).
+
+draft_plan:
+  description: |
+    A new mora-knode task ({{ task.id }} — "{{ task.title }}") needs
+    a plan. Read its description, acceptance criteria (if any), and
+    project context, then draft a plan with:
+
+    - One-sentence goal
+    - 2-5 acceptance criteria the human reviewer can tick off
+    - Ordered steps with rough estimates in minutes
+    - Risks / assumptions worth flagging before approval
+
+    Submit via POST /api/agents/plans. Stop after submission — the
+    human reviews next.
+  expected_output: "An AgentPlan id (created via the API) and a one-line summary."
+  agent: manager
+
+execute_approved_plan:
+  description: |
+    Task {{ task.id }} ("{{ task.title }}") has an Approved plan
+    ({{ plan.id }}). Read the plan's steps, implement them on a fresh
+    branch named agent/MK-{{ task.number }}-<slug>, push to the local
+    Gitea remote, open a PR, and comment the PR URL back to the task.
+    Then move the task to WorkReview.
+  expected_output: "Gitea PR URL plus the comment id you posted."
+  agent: developer
+
+investigate:
+  description: |
+    Task {{ task.id }} ("{{ task.title }}") needs research before a
+    plan can be drafted. Gather information from docs / web / local
+    code, summarise findings + a recommendation as a comment on the
+    task. Do NOT submit a plan — the Manager does that next.
+  expected_output: "Comment id of the posted findings."
+  agent: researcher
+
+qa_pr:
+  description: |
+    Task {{ task.id }} is in WorkReview with PR {{ pr.url }}. Check
+    out the branch, run the relevant tests, and comment pass/fail. For
+    each bug, file a fresh Created task in the same project.
+  expected_output: "QA result comment id, plus any follow-up task ids you created."
+  agent: qa
